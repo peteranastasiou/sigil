@@ -104,17 +104,17 @@ void Compiler::emitNil_() {
     emitByte_(OpCode::NIL);
 }
 
-void Compiler::emitConstant_(Value value) {
-    emitBytes_(OpCode::CONSTANT, makeConstant_(value));
+void Compiler::emitLiteral_(Value value) {
+    emitBytes_(OpCode::LITERAL, makeLiteral_(value));
 }
 
-uint8_t Compiler::makeConstant_(Value value) {
-    uint8_t constant = currentChunk_()->addConstant(value);
-    if( constant == Chunk::MAX_CONSTANTS ){
-        errorAtPrevious_("Too many constants in one chunk.");
+uint8_t Compiler::makeLiteral_(Value value) {
+    uint8_t literal = currentChunk_()->addLiteral(value);
+    if( literal == Chunk::MAX_LITERALS ){
+        errorAtPrevious_("Too many literals in one chunk.");
         return 0;
     }
-    return constant;
+    return literal;
 }
 
 void Compiler::expression_() {
@@ -221,11 +221,11 @@ void Compiler::parse_(Precedence precedence) {
 uint8_t Compiler::parseVariable_(const char * errorMsg) {
     consume_( Token::IDENTIFIER, errorMsg );
 
-    return makeIdentifierConstant_(previousToken_);
+    return makeIdentifierLiteral_(previousToken_);
 }
 
-uint8_t Compiler::makeIdentifierConstant_(Token & name) {
-    return makeConstant_(Value::object(
+uint8_t Compiler::makeIdentifierLiteral_(Token & name) {
+    return makeLiteral_(Value::object(
         ObjString::newString(vm_, name.start, name.length)
     ));
 }
@@ -282,12 +282,12 @@ void Compiler::binary_() {
 void Compiler::number_() {
     // shouldn't fail as we already validated the token as a number:
     double n = strtod(previousToken_.start, nullptr);
-    emitConstant_(Value::number(n));
+    emitLiteral_(Value::number(n));
 }
 
 void Compiler::string_() {
     ObjString * str = ObjString::newString(vm_, previousToken_.start+1, previousToken_.length-2);
-    emitConstant_(Value::object(str));
+    emitLiteral_(Value::object(str));
 }
 
 void Compiler::variable_(bool canAssign) {
@@ -295,7 +295,7 @@ void Compiler::variable_(bool canAssign) {
 }
 
 void Compiler::namedVariable_(Token token, bool canAssign) {
-    uint8_t global = makeIdentifierConstant_(token);
+    uint8_t global = makeIdentifierLiteral_(token);
 
     // identify whether we are setting or getting a variable:
     if( canAssign && match_(Token::EQUAL) ){

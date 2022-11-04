@@ -8,8 +8,7 @@
 
 namespace OpCode {
 enum {
-    // Literals:
-    CONSTANT,       // Push a constant (literal) from the chunk
+    LITERAL,        // Push a literal value from the chunk
     NIL,            // Push nil to the stack
     TRUE,           // Push true to the stack
     FALSE,          // Push false to the stack
@@ -60,20 +59,20 @@ public:
     // Get a pointer to the bytecode array
     uint8_t * getCode();
 
-    // Add a constant value and return its index
-    uint8_t addConstant(Value value);
+    // Add a literal value and return its index
+    uint8_t addLiteral(Value value);
 
-    // Get a constant value by its index
-    Value getConstant(uint8_t index);
+    // Get a literal value by its index
+    Value getLiteral(uint8_t index);
 
-    uint8_t numConstants();
+    uint8_t numLiterals();
 
-    static uint8_t const MAX_CONSTANTS = 255;  // constant index must fit in a byte (for now)
+    static uint8_t const MAX_LITERALS = 255;  // literal index must fit in a byte (for now)
 
 private:
     std::vector<uint8_t> code;
     std::vector<uint16_t> lines;    // line numbers corresponding to bytecode array
-    std::vector<Value> constants;
+    std::vector<Value> literals;
 
     // Disassembler needs access within the chunk:
     friend class Dissassembler;

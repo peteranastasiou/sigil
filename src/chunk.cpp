@@ -34,27 +34,27 @@ uint8_t * Chunk::getCode() {
     return &code[0];
 }
 
-uint8_t Chunk::addConstant(Value value) {
-    // first, check if constant is already in array:
-    for( int i = 0; i < (int)constants.size(); ++i ){
-        if( value.equals(constants[i]) ){
+uint8_t Chunk::addLiteral(Value value) {
+    // first, check if literal is already in array:
+    for( int i = 0; i < (int)literals.size(); ++i ){
+        if( value.equals(literals[i]) ){
             return (uint8_t)i;
         }
     }
 
-    int size = (int)constants.size();
-    if( size < MAX_CONSTANTS ){
-        constants.push_back(value);
-        return (uint8_t)size; // index of new constant
+    int size = (int)literals.size();
+    if( size < MAX_LITERALS ){
+        literals.push_back(value);
+        return (uint8_t)size; // index of new literal
     }else{
-        return MAX_CONSTANTS; // full!
+        return MAX_LITERALS; // full!
     }
 }
 
-Value Chunk::getConstant(uint8_t index) {
-    return constants[index];
+Value Chunk::getLiteral(uint8_t index) {
+    return literals[index];
 }
 
-uint8_t Chunk::numConstants() {
-    return (uint8_t)constants.size();
+uint8_t Chunk::numLiterals() {
+    return (uint8_t)literals.size();
 }

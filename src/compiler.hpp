@@ -75,9 +75,9 @@ private:
     void emitFalse_();
     void emitNil_();
     void emitReturn_();
-    void emitConstant_(Value value);
-    uint8_t makeConstant_(Value value);
-    uint8_t makeIdentifierConstant_(Token & name);
+    void emitLiteral_(Value value);
+    uint8_t makeLiteral_(Value value);
+    uint8_t makeIdentifierLiteral_(Token & name);
 
     // error production:
     void errorAtCurrent_(const char* message);
