@@ -62,6 +62,7 @@ static void runFile(const char* path) {
 }
 
 int main(int argc, char const * argv[]) {
+    printf("%i\n", (int)sizeof(Value));
     if( argc == 1 ){
         repl();
     }else if( argc == 2 ){
