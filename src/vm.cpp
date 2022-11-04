@@ -181,6 +181,17 @@ InterpretResult Vm::run_() {
                 // don't pop: the assignment can be used in an expression
                 break;
             }
+            case OpCode::GET_LOCAL: {
+                // local is already on the stack at the predicted index:
+                uint8_t stackIdx = readByte_();
+                push(stack_[stackIdx]);
+                break;
+            }
+            case OpCode::SET_LOCAL: {
+                uint8_t stackIdx = readByte_();  // stack position of the local
+                stack_[stackIdx] = peek(0);      // note: no pop: assignment can be an expression
+                break;
+            }
             case OpCode::EQUAL: {
                 push(Value::boolean( pop().equals(pop()) ));
                 break;

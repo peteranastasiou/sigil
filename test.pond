@@ -5,4 +5,10 @@
 {
     var a = 10;
     var b = 20;
+    {
+        b = 7;
+        var a = 30;
+        print a;
+    }
+    print a;
 }

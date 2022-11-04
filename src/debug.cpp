@@ -42,6 +42,8 @@ int Dissassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
         case OpCode::DEFINE_GLOBAL: return literalInstruction_("DEFINE_GLOBAL", chunk, offset);
         case OpCode::GET_GLOBAL:    return literalInstruction_("GET_GLOBAL", chunk, offset);
         case OpCode::SET_GLOBAL:    return literalInstruction_("SET_GLOBAL", chunk, offset);
+        case OpCode::GET_LOCAL:     return argInstruction_("GET_LOCAL", chunk, offset);
+        case OpCode::SET_LOCAL:     return argInstruction_("SET_LOCAL", chunk, offset);
         case OpCode::EQUAL:         return simpleInstruction_("EQUAL"); 
         case OpCode::NOT_EQUAL:     return simpleInstruction_("NOT_EQUAL");     
         case OpCode::GREATER:       return simpleInstruction_("GREATER");   

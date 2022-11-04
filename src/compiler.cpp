@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-bool Environment::addLocal(Token name) {
+bool Environment::addLocal(Token & name) {
     if( localCount == MAX_LOCALS ){
         return false;
     }
@@ -15,6 +15,19 @@ bool Environment::addLocal(Token name) {
     local->name = name;
     local->depth = scopeDepth;
     return true;
+}
+
+
+int Environment::resolveLocal(Token & name) {
+    // search for a local by name in the environment
+    // NOTE: searching from higher depth to lower, to support shadowing correctly
+    for( int i = localCount-1; i >= 0; i-- ){
+        if( name.equals(locals[i].name) ){
+            return i;
+        }
+    }
+    // not found
+    return -1;
 }
 
 uint8_t Environment::freeLocals() {
@@ -183,6 +196,7 @@ void Compiler::statement_() {
         consume_(Token::SEMICOLON, "Expected ';' after statement.");
         emitByte_(OpCode::PRINT);
     }else if( match_(Token::LEFT_BRACE) ){
+        // recurse into a nested scope:
         beginScope_();
         block_();
         endScope_();
@@ -377,20 +391,31 @@ void Compiler::variable_(bool canAssign) {
     namedVariable_(previousToken_, canAssign);
 }
 
-void Compiler::namedVariable_(Token token, bool canAssign) {
-    uint8_t global = makeIdentifierLiteral_(token);
+void Compiler::namedVariable_(Token & token, bool canAssign) {
+    uint8_t getOp, setOp; // opcodes for getting and setting the variable
+    // arg is the opcode argument: either a stack index (for locals), or literal index of name (for globals)
+    int arg = currentEnv_->resolveLocal(token);
+    if( arg != -1 ){
+        // its a local variable
+        getOp = OpCode::GET_LOCAL;
+        setOp = OpCode::SET_LOCAL;
+    }else{
+        // its a global variable
+        arg = makeIdentifierLiteral_(token);
+        getOp = OpCode::GET_GLOBAL;
+        setOp = OpCode::SET_GLOBAL;
+    }
 
     // identify whether we are setting or getting a variable:
     if( canAssign && match_(Token::EQUAL) ){
-        // setting
+        // setting the variable:
         expression_();  // the value to set
-        emitBytes_(OpCode::SET_GLOBAL, global);
+        emitBytes_(setOp, (uint8_t)arg);
     }else{
-        // getting
-        emitBytes_(OpCode::GET_GLOBAL, global);
+        // getting the variable:
+        emitBytes_(getOp, (uint8_t)arg);
     }
 }
-
 
 // Macros to define lambdas to call each function with or without parameter `canAssign`
 #define ASSIGNMENT_RULE(fn) [this](bool canAssign){ this->fn(canAssign); }

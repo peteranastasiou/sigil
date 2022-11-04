@@ -41,7 +41,8 @@ struct Environment {
     uint8_t localCount = 0;
     uint16_t scopeDepth = 0;
 
-    bool addLocal(Token name);
+    bool addLocal(Token & name);
+    int resolveLocal(Token & name);
     uint8_t freeLocals();
 };
 
@@ -81,7 +82,7 @@ private:
     void number_();
     void string_();
     void variable_(bool canAssign);
-    void namedVariable_(Token token, bool canAssign);
+    void namedVariable_(Token & token, bool canAssign);
     void unary_();
     void binary_();
     void grouping_();  // parentheses in expressions
