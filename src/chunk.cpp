@@ -35,6 +35,13 @@ uint8_t * Chunk::getCode() {
 }
 
 uint8_t Chunk::addConstant(Value value) {
+    // first, check if constant is already in array:
+    for( int i = 0; i < (int)constants.size(); ++i ){
+        if( value.equals(constants[i]) ){
+            return (uint8_t)i;
+        }
+    }
+
     int size = (int)constants.size();
     if( size < MAX_CONSTANTS ){
         constants.push_back(value);

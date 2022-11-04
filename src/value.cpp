@@ -11,13 +11,14 @@ bool Value::equals(Value other) const {
         case BOOL:    return as.boolean == other.as.boolean;
         case NUMBER:  return as.number == as.number;
         case OBJECT:{
+            if( as.obj->type != other.as.obj->type ) return false;
             if( as.obj->type == Obj::Type::STRING ){
                 // all strings are interned --> therefore can compare pointers
                 return asObjString() == other.asObjString();
             }
             return false; // TODO other object types
         }
-        default:      return false;   // Unreachable
+        default: return false;   // Unreachable
     }
 }
 
