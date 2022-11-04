@@ -13,6 +13,7 @@ enum {
     TRUE,           // Push true to the stack
     FALSE,          // Push false to the stack
     POP,            // Pop 1 value from the stack
+    POP_N,          // Pop N values from the stack
     DEFINE_GLOBAL,  // Define a global variable
     GET_GLOBAL,     // Push the value of a global to the stack
     SET_GLOBAL,     // Set the value of a variable

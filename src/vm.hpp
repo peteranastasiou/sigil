@@ -24,6 +24,7 @@ public:
     // stack operations:
     void push(Value value);
     Value pop();
+    void pop(int n);
     Value peek(int index);  // index counts from top (end) of stack
 
     // adding/removing objects, called from Obj(), ~Obj()

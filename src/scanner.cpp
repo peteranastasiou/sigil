@@ -1,7 +1,14 @@
 
 #include "scanner.hpp"
 
-#include "string.h"
+#include <string.h>
+#include <stdio.h>
+
+
+bool Token::equals(Token & other) {
+    if( length != other.length ) return false;
+    return memcmp(start, other.start, length) == 0;
+}
 
 Scanner::Scanner() {
 }
@@ -39,6 +46,7 @@ void Scanner::skipWhitespace_() {
                 while( peek_()!='\n' && !isAtEnd_() ){
                     advance_();
                 }
+                break;
 
             default:
                 return;
@@ -198,5 +206,6 @@ Token Scanner::scanToken() {
         case '"': return makeStringToken_();
     }
 
+    printf("Unexpected '%c'\n", c);
     return makeErrorToken_("Unexpected character.");
 }

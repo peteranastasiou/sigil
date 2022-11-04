@@ -6,6 +6,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+bool Environment::addLocal(Token name) {
+    if( localCount == MAX_LOCALS ){
+        return false;
+    }
+
+    Local * local = &locals[localCount++];
+    local->name = name;
+    local->depth = scopeDepth;
+    return true;
+}
+
+uint8_t Environment::freeLocals() {
+    uint8_t nFreed = 0;
+    // remove all locals which have fallen out of scope:
+    while( localCount > 0 && locals[localCount-1].depth > scopeDepth ){
+        localCount--;
+        nFreed++;
+    }
+    return nFreed;
+}
 
 Compiler::Compiler(Vm * vm) : vm_(vm) {
 }
@@ -15,6 +35,8 @@ Compiler::~Compiler() {
 
 bool Compiler::compile(char const * source, Chunk & chunk) {
     scanner_.init(source);
+    Environment env;
+    currentEnv_ = &env;
     compilingChunk_ = &chunk;
 
     hadError_ = false;
@@ -146,6 +168,11 @@ void Compiler::varDeclaration_() {
 }
 
 void Compiler::defineVariable_(uint8_t global) {
+    // We don't need to do anything at runtime for local variables 
+    // as the value is left on the stack:
+    if( currentEnv_->scopeDepth > 0 ) return;
+
+    // global variables get defined at runtime:
     emitBytes_(OpCode::DEFINE_GLOBAL, global);
 }
 
@@ -155,6 +182,10 @@ void Compiler::statement_() {
         expression_();
         consume_(Token::SEMICOLON, "Expected ';' after statement.");
         emitByte_(OpCode::PRINT);
+    }else if( match_(Token::LEFT_BRACE) ){
+        beginScope_();
+        block_();
+        endScope_();
     }else{
         // expression statement:
         expression_();
@@ -185,6 +216,27 @@ void Compiler::synchronise_() {
         }
         advance_();
     }
+}
+
+void Compiler::beginScope_() {
+    currentEnv_->scopeDepth++;
+}
+
+void Compiler::endScope_() {
+    currentEnv_->scopeDepth--;
+
+    // At the end of a scope, remove all local variables from the value stack
+    uint8_t n = currentEnv_->freeLocals();
+    emitBytes_(OpCode::POP_N, n);
+}
+
+void Compiler::block_() {
+    // parse declarations (and statements) until hit the closing brace
+    while( currentToken_.type != Token::RIGHT_BRACE && 
+           currentToken_.type != Token::END ){
+        declaration_();
+    }
+    consume_(Token::RIGHT_BRACE, "Expected '}' after block.");
 }
 
 void Compiler::parse_(Precedence precedence) {
@@ -221,6 +273,12 @@ void Compiler::parse_(Precedence precedence) {
 uint8_t Compiler::parseVariable_(const char * errorMsg) {
     consume_( Token::IDENTIFIER, errorMsg );
 
+    declareVariable_();
+
+    // if its a local being declared, we don't need to store its name as a literal: 
+    if( currentEnv_->scopeDepth > 0 ) return 0;
+
+    // globals get their names stored as a literal:
     return makeIdentifierLiteral_(previousToken_);
 }
 
@@ -228,6 +286,31 @@ uint8_t Compiler::makeIdentifierLiteral_(Token & name) {
     return makeLiteral_(Value::object(
         ObjString::newString(vm_, name.start, name.length)
     ));
+}
+
+void Compiler::declareVariable_() {
+    // Don't need to track globals (resolved at runtime):
+    if( currentEnv_->scopeDepth == 0 ) return;
+
+    // the name of the new local variable:
+    Token * name = &previousToken_;
+
+    // ensure the variable is not already declared in this scope!
+    for( int i = currentEnv_->localCount-1; i>=0; i-- ){
+        Local * local = &currentEnv_->locals[i];
+        if( local->depth != -1 &&  // ???
+            local->depth < currentEnv_->scopeDepth ){
+            break;  // left the scope - stop searching
+        }
+        if( name->equals(local->name) ){
+            errorAtPrevious_("Already a variable with this name in this scope.");
+        }
+    }
+
+    // New local variable to track:
+    if( !currentEnv_->addLocal(*name) ){
+        errorAtPrevious_("Too many local variables in function.");
+    }
 }
 
 void Compiler::grouping_() {

@@ -28,7 +28,24 @@ struct ParseRule {
     Precedence precedence;
 };
 
+struct Local {
+    Token name;
+    int depth;
+};
 
+// Note: lox calls this a Compiler:
+struct Environment {
+    static int const MAX_LOCALS = 255;
+
+    Local locals[MAX_LOCALS];
+    uint8_t localCount = 0;
+    uint16_t scopeDepth = 0;
+
+    bool addLocal(Token name);
+    uint8_t freeLocals();
+};
+
+// Note: lox calls this a Parser:
 class Compiler {
 public:
     Compiler(Vm * vm);
@@ -56,6 +73,9 @@ private:
     void defineVariable_(uint8_t global);
     void statement_();
     void synchronise_();
+    void beginScope_();
+    void block_();
+    void endScope_();
     void parse_(Precedence precedence);  // parse expressions with >= precendence
     uint8_t parseVariable_(const char * errorMsg);
     void number_();
@@ -78,6 +98,8 @@ private:
     void emitLiteral_(Value value);
     uint8_t makeLiteral_(Value value);
     uint8_t makeIdentifierLiteral_(Token & name);
+    void declareVariable_();
+    void addLocal_();
 
     // error production:
     void errorAtCurrent_(const char* message);
@@ -87,6 +109,7 @@ private:
     Vm * vm_;
     Scanner scanner_;
     Chunk * compilingChunk_;
+    Environment * currentEnv_;
     Token currentToken_;
     Token previousToken_;
     bool hadError_;

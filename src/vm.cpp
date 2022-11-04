@@ -44,12 +44,14 @@ void Vm::push(Value value) {
 }
 
 Value Vm::pop() {
+    assert( stackTop_ != stack_ );
     stackTop_--;
-    if( stackTop_ == stack_-1 ){
-        printf("Fatal: pop empty stack\n");
-        exit(1);
-    }
     return *stackTop_;
+}
+
+void Vm::pop(int n) {
+    assert( stackTop_ - n >= stack_ );
+    stackTop_ -= n;
 }
 
 Value Vm::peek(int index) {
@@ -148,6 +150,7 @@ InterpretResult Vm::run_() {
             case OpCode::TRUE: push(Value::boolean(true)); break;
             case OpCode::FALSE: push(Value::boolean(false)); break;
             case OpCode::POP: pop(); break;
+            case OpCode::POP_N: pop(readByte_()); break;
             case OpCode::DEFINE_GLOBAL: {
                 ObjString * name = readString_();
                 if( !globals_.add(name, peek(0)) ){

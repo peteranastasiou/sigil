@@ -38,6 +38,7 @@ int Dissassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
         case OpCode::FALSE:         return simpleInstruction_("FALSE");
         case OpCode::ADD:           return simpleInstruction_("ADD");
         case OpCode::POP:           return simpleInstruction_("POP");
+        case OpCode::POP_N:         return argInstruction_("POP_N", chunk, offset);
         case OpCode::DEFINE_GLOBAL: return literalInstruction_("DEFINE_GLOBAL", chunk, offset);
         case OpCode::GET_GLOBAL:    return literalInstruction_("GET_GLOBAL", chunk, offset);
         case OpCode::SET_GLOBAL:    return literalInstruction_("SET_GLOBAL", chunk, offset);
@@ -65,6 +66,12 @@ int Dissassembler::literalInstruction_(char const * name, Chunk * chunk, int off
     printf("%-16s %4d '", name, literalIdx);
     chunk->literals[literalIdx].print();
     printf("'\n");
+    return 2;
+}
+
+int Dissassembler::argInstruction_(char const * name, Chunk * chunk, int offset){
+    uint8_t arg = chunk->code[offset + 1];
+    printf("%-16s %4d\n", name, arg);
     return 2;
 }
 

@@ -33,6 +33,8 @@ struct Token {
     char const * start;
     uint16_t length;
     uint16_t line;
+
+    bool equals(Token & tok);
 };
 
 class Scanner {
