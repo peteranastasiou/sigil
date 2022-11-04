@@ -32,15 +32,15 @@ int Dissassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
 
     uint8_t instr = chunk->code[(size_t)offset];
     switch(instr){
-        case OpCode::CONSTANT:      return constantInstruction_("CONSTANT", chunk, offset);
+        case OpCode::LITERAL:       return literalInstruction_("LITERAL", chunk, offset);
         case OpCode::NIL:           return simpleInstruction_("NIL");
         case OpCode::TRUE:          return simpleInstruction_("TRUE");
         case OpCode::FALSE:         return simpleInstruction_("FALSE");
         case OpCode::ADD:           return simpleInstruction_("ADD");
         case OpCode::POP:           return simpleInstruction_("POP");
-        case OpCode::DEFINE_GLOBAL: return constantInstruction_("DEFINE_GLOBAL", chunk, offset);
-        case OpCode::GET_GLOBAL:    return constantInstruction_("GET_GLOBAL", chunk, offset);
-        case OpCode::SET_GLOBAL:    return constantInstruction_("SET_GLOBAL", chunk, offset);
+        case OpCode::DEFINE_GLOBAL: return literalInstruction_("DEFINE_GLOBAL", chunk, offset);
+        case OpCode::GET_GLOBAL:    return literalInstruction_("GET_GLOBAL", chunk, offset);
+        case OpCode::SET_GLOBAL:    return literalInstruction_("SET_GLOBAL", chunk, offset);
         case OpCode::EQUAL:         return simpleInstruction_("EQUAL"); 
         case OpCode::NOT_EQUAL:     return simpleInstruction_("NOT_EQUAL");     
         case OpCode::GREATER:       return simpleInstruction_("GREATER");   
@@ -60,10 +60,10 @@ int Dissassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
     }
 }
 
-int Dissassembler::constantInstruction_(char const * name, Chunk * chunk, int offset){
-    uint8_t constantIdx = chunk->code[offset + 1];
-    printf("%-16s %4d '", name, constantIdx);
-    chunk->constants[constantIdx].print();
+int Dissassembler::literalInstruction_(char const * name, Chunk * chunk, int offset){
+    uint8_t literalIdx = chunk->code[offset + 1];
+    printf("%-16s %4d '", name, literalIdx);
+    chunk->literals[literalIdx].print();
     printf("'\n");
     return 2;
 }

@@ -91,16 +91,16 @@ void Vm::concatenate_() {
     push( Value::object(ObjString::concatenate(this, a, b)) );
 }
 
-Value Vm::readConstant_() {
-    // look up constant from bytecode reference
-    return chunk_->getConstant(readByte_());
+Value Vm::readLiteral_() {
+    // look up literal from bytecode reference
+    return chunk_->getLiteral(readByte_());
 }
 
 ObjString * Vm::readString_() {
-    // look up constant from bytecode and cast to string:
-    Value constant = readConstant_();
-    assert(constant.isString());
-    return constant.asObjString();
+    // look up literal from bytecode and cast to string:
+    Value literal = readLiteral_();
+    assert(literal.isString());
+    return literal.asObjString();
 }
 
 InterpretResult Vm::run_() {
@@ -110,10 +110,10 @@ InterpretResult Vm::run_() {
     internedStrings_.debug();
     debugObjectLinkedList(objects_);
 
-    printf("Constants:\n");
-    for( uint8_t i =0; i < chunk_->numConstants(); ++i ){
+    printf("Literals:\n");
+    for( uint8_t i =0; i < chunk_->numLiterals(); ++i ){
         printf(" %i ", i);
-        Value v = chunk_->getConstant(i);
+        Value v = chunk_->getLiteral(i);
         if( v.isObject() ) printf("%p [", v.as.obj);
         v.print();
         printf("]\n");
@@ -140,8 +140,8 @@ InterpretResult Vm::run_() {
 
         uint8_t instr = readByte_();
         switch( instr ){
-            case OpCode::CONSTANT:{
-                push(readConstant_());
+            case OpCode::LITERAL:{
+                push(readLiteral_());
                 break;
             }
             case OpCode::NIL: push(Value::nil()); break;

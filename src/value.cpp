@@ -9,7 +9,7 @@ bool Value::equals(Value other) const {
     switch( type ){
         case NIL:     return true;
         case BOOL:    return as.boolean == other.as.boolean;
-        case NUMBER:  return as.number == as.number;
+        case NUMBER:  return as.number == other.as.number;
         case OBJECT:{
             if( as.obj->type != other.as.obj->type ) return false;
             if( as.obj->type == Obj::Type::STRING ){

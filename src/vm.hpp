@@ -41,7 +41,7 @@ private:
     bool isTruthy_(Value value);
     void concatenate_();
     void runtimeError_(const char* format, ...);
-    Value readConstant_();
+    Value readLiteral_();
     ObjString * readString_();
     void freeObjects_();
 
