@@ -338,6 +338,7 @@ ParseRule const * Compiler::getRule_(Token::Type type) {
         [Token::STRING]        = {RULE(string_),   NULL,          Precedence::NONE},
         [Token::NUMBER]        = {RULE(number_),   NULL,          Precedence::NONE},
         [Token::AND]           = {NULL,            NULL,          Precedence::NONE},
+        [Token::CONST]         = {NULL,            NULL,          Precedence::NONE},
         [Token::ELSE]          = {NULL,            NULL,          Precedence::NONE},
         [Token::FALSE]         = {RULE(emitFalse_),NULL,          Precedence::NONE},
         [Token::FOR]           = {NULL,            NULL,          Precedence::NONE},

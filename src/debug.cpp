@@ -121,6 +121,7 @@ char const * tokenTypeToStr(Token::Type t) {
         case Token::STRING:         return "STRING";
         case Token::NUMBER:         return "NUMBER";
         case Token::AND:            return "AND";
+        case Token::CONST:          return "CONST";
         case Token::ELSE:           return "ELSE";
         case Token::FALSE:          return "FALSE";
         case Token::FOR:            return "FOR";

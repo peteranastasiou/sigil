@@ -99,6 +99,8 @@ Token::Type Scanner::identifierType_() {
     // Use a trie to determine if the identifier is a keyword:
     switch( start_[0] ){
         case 'a': return checkKeyword_(1, 2, "nd", Token::AND);
+        case 'c': return checkKeyword_(1, 4, "onst", Token::CONST);
+        case 'e': return checkKeyword_(1, 3, "lse", Token::ELSE);
         case 'f': {
             // "f..." might be "false", "for" or "fn":
             // first check if identifier is longer than 1 char:
@@ -111,7 +113,6 @@ Token::Type Scanner::identifierType_() {
             }
             break;
         }
-        case 'e': return checkKeyword_(1, 3, "lse", Token::ELSE);
         case 'i': return checkKeyword_(1, 1, "f", Token::IF);
         case 'n': return checkKeyword_(1, 2, "il", Token::NIL);
         case 'o': return checkKeyword_(1, 1, "r", Token::OR);
