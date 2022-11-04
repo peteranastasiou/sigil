@@ -7,7 +7,7 @@ CC = g++
 DEBUG = 0
 
 # Whether to enable verbose execution trace debugging
-DEBUG_TRACE_EXECUTION = 1
+DEBUG_TRACE_EXECUTION = 0
 
 # Compilation flags
 CFLAGS = -std=c++17 -W -Wall -Wextra -Werror -Wno-unused -Wconversion -MMD -MP -fno-exceptions

@@ -60,6 +60,11 @@ bool HashMap::set(ObjString * key, Value value) {
     return map_.insert_or_assign(key, value).second;
 }
 
+bool HashMap::add(ObjString * key, Value value) {
+    // returns pair of iterator and bool successfull:
+    return map_.insert({key, value}).second;
+}
+
 bool HashMap::get(ObjString * key, Value & value) {
     auto search = map_.find(key);
     if( search == map_.end() ) return false;

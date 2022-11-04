@@ -149,9 +149,11 @@ InterpretResult Vm::run_() {
             case OpCode::FALSE: push(Value::boolean(false)); break;
             case OpCode::POP: pop(); break;
             case OpCode::DEFINE_GLOBAL: {
-                // NOTE: re-defining globals is allowed!
                 ObjString * name = readString_();
-                globals_.set(name, peek(0));
+                if( !globals_.add(name, peek(0)) ){
+                    runtimeError_("Redeclaration of variable '%s'.", name->get());
+                    return InterpretResult::RUNTIME_ERR;
+                }
                 pop(); // Note: lox has this late pop as `set` might trigger garbage collection
                 break;
             }

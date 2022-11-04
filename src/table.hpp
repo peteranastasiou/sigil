@@ -54,6 +54,13 @@ public:
     bool set(ObjString * key, Value value);
 
     /**
+     * Add a new key/value pair.
+     * Doesn't update existing key values.
+     * @return false if key already exists
+     */
+    bool add(ObjString * key, Value value);
+
+    /**
      * Look up a value for the given key
      * @return true if the key/value exists
      */
