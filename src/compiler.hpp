@@ -88,7 +88,7 @@ private:
     void advance_();
     void consume_(Token::Type type, const char* message);
     bool match_(Token::Type type);
-    Chunk * currentChunk_();
+    Chunk * getCurrentChunk_();
     ParseRule const * getRule_(Token::Type type);
 
     // parsing different types of things:
@@ -97,6 +97,7 @@ private:
     void varDeclaration_();
     void defineVariable_(uint8_t global);
     void statement_();
+    void ifStatement_();
     void synchronise_();
     void beginScope_();
     void block_();
@@ -124,7 +125,8 @@ private:
     uint8_t makeLiteral_(Value value);
     uint8_t makeIdentifierLiteral_(Token & name);
     void declareVariable_();
-    void addLocal_();
+    int emitJump_(uint8_t instr);
+    void setJumpDestination_(int offset);
 
     // error production:
     void errorAtCurrent_(const char* message);

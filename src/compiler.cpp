@@ -119,7 +119,7 @@ bool Compiler::match_(Token::Type type) {
     return false;
 }
 
-Chunk * Compiler::currentChunk_() {
+Chunk * Compiler::getCurrentChunk_() {
     return compilingChunk_;
 }
 
@@ -128,7 +128,7 @@ void Compiler::emitByte_(uint8_t byte) {
 }
 
 void Compiler::emitByteAtLine_(uint8_t byte, uint16_t line) {
-    currentChunk_()->write(byte, line);
+    getCurrentChunk_()->write(byte, line);
 }
 
 void Compiler::endCompilation_() {
@@ -156,7 +156,7 @@ void Compiler::emitLiteral_(Value value) {
 }
 
 uint8_t Compiler::makeLiteral_(Value value) {
-    uint8_t literal = currentChunk_()->addLiteral(value);
+    uint8_t literal = getCurrentChunk_()->addLiteral(value);
     if( literal == Chunk::MAX_LITERALS ){
         errorAtPrevious_("Too many literals in one chunk.");
         return 0;
@@ -212,17 +212,41 @@ void Compiler::statement_() {
         expression_();
         consume_(Token::SEMICOLON, "Expected ';' after statement.");
         emitByte_(OpCode::PRINT);
+
+    }else if( match_(Token::IF) ){
+        ifStatement_();
+
     }else if( match_(Token::LEFT_BRACE) ){
         // recurse into a nested scope:
         beginScope_();
         block_();
         endScope_();
+
     }else{
         // expression statement:
         expression_();
         consume_(Token::SEMICOLON, "Expected ';' after statement.");
         emitByte_(OpCode::POP); // discard the result
     }
+}
+
+void Compiler::ifStatement_() {
+    // the condition part surrounded by parens:
+    consume_(Token::LEFT_PAREN, "Expected '(' after if");
+    expression_();
+    consume_(Token::RIGHT_PAREN, "Expected ')' after condition");
+    // the jump instruction (we don't know how far yet)
+    int jumpToElse = emitJump_(OpCode::JUMP_IF_FALSE);
+    emitByte_(OpCode::POP);  // remove the condition value
+    // the `then` block:
+    statement_();
+    // jump over the `else` block:
+    int jumpToEnd = emitJump_(OpCode::JUMP);
+    // this is where `else` starts:
+    setJumpDestination_(jumpToElse);
+    emitByte_(OpCode::POP);  // remove the condition value
+    if( match_(Token::ELSE) ) statement_();
+    setJumpDestination_(jumpToEnd);
 }
 
 void Compiler::synchronise_() {
@@ -341,6 +365,28 @@ void Compiler::declareVariable_() {
     if( !currentEnv_->addLocal(*name) ){
         errorAtPrevious_("Too many local variables in function.");
     }
+}
+
+int Compiler::emitJump_(uint8_t instr) {
+    emitByte_(instr);
+    // placeholder value:
+    emitByte_(0xFF);
+    emitByte_(0xFF);
+    // location of placeholder
+    return getCurrentChunk_()->count() - 2;
+}
+
+void Compiler::setJumpDestination_(int offset) {
+    Chunk * chunk = getCurrentChunk_();
+
+    // how far to jump:
+    int jumpLen = chunk->count() - offset - 2;
+    if( jumpLen > UINT16_MAX ){
+        errorAtPrevious_("Too much code to jump over.");
+    }
+    // set value:
+    chunk->getCode()[offset] = (uint8_t)(jumpLen >> 8);
+    chunk->getCode()[offset+1] = (uint8_t)(jumpLen & 0xFF);
 }
 
 void Compiler::grouping_() {

@@ -5,13 +5,13 @@
 #include <stdlib.h>
 
 
-Dissassembler::Dissassembler(){
+Disassembler::Disassembler(){
 }
 
-Dissassembler::~Dissassembler(){
+Disassembler::~Disassembler(){
 }
 
-void Dissassembler::disassembleChunk(Chunk * chunk, char const * name){
+void Disassembler::disassembleChunk(Chunk * chunk, char const * name){
     printf("== %s ==\n", name);
 
     for( int offset = 0; offset < chunk->count(); ) {
@@ -21,12 +21,12 @@ void Dissassembler::disassembleChunk(Chunk * chunk, char const * name){
     }
 }
 
-int Dissassembler::disassembleInstruction(Chunk * chunk, int offset){
+int Disassembler::disassembleInstruction(Chunk * chunk, int offset){
     int line = chunk->getLineNumber(offset);
     return disassembleInstruction_(chunk, offset, line);
 }
 
-int Dissassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
+int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
     printf("%04i ", offset);
     printf("%4d ", line);
 
@@ -56,6 +56,8 @@ int Dissassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
         case OpCode::NEGATE:        return simpleInstruction_("NEGATE");
         case OpCode::NOT:           return simpleInstruction_("NOT");
         case OpCode::PRINT:         return simpleInstruction_("PRINT");
+        case OpCode::JUMP:          return jumpInstruction_("JUMP", 1, chunk, offset);
+        case OpCode::JUMP_IF_FALSE: return jumpInstruction_("JUMP_IF_FALSE", 1, chunk, offset);
         case OpCode::RETURN:        return simpleInstruction_("RETURN");
         default:
             printf("Unknown opcode %i\n", instr);
@@ -63,7 +65,7 @@ int Dissassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
     }
 }
 
-int Dissassembler::literalInstruction_(char const * name, Chunk * chunk, int offset){
+int Disassembler::literalInstruction_(char const * name, Chunk * chunk, int offset){
     uint8_t literalIdx = chunk->code[offset + 1];
     printf("%-16s %4d '", name, literalIdx);
     chunk->literals[literalIdx].print();
@@ -71,15 +73,22 @@ int Dissassembler::literalInstruction_(char const * name, Chunk * chunk, int off
     return 2;
 }
 
-int Dissassembler::argInstruction_(char const * name, Chunk * chunk, int offset){
+int Disassembler::argInstruction_(char const * name, Chunk * chunk, int offset){
     uint8_t arg = chunk->code[offset + 1];
     printf("%-16s %4d\n", name, arg);
     return 2;
 }
 
-int Dissassembler::simpleInstruction_(char const * name){
+int Disassembler::simpleInstruction_(char const * name){
     printf("%s\n", name);
     return 1;
+}
+
+int Disassembler::jumpInstruction_(const char* name, int sign, Chunk* chunk, int offset) {
+    int jumpLen = (chunk->code[offset + 1] << 8) | chunk->code[offset + 2];
+    printf("%-16s %4d -> %d\n", name, offset,
+            offset + 3 + sign * jumpLen);
+    return 3;
 }
 
 void debugScanner(char const * source) {

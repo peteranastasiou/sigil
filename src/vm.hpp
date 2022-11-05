@@ -37,6 +37,7 @@ public:
 private:
     InterpretResult run_();
     inline uint8_t readByte_() { return *ip_++; }
+    uint16_t readUint16_();
     inline void resetStack_() { stackTop_ = stack_; }
     bool binaryOp_(uint8_t op);
     bool isTruthy_(Value value);

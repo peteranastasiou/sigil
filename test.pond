@@ -2,14 +2,21 @@
 # var a = "hi"+2/3;
 # print a;
 
-{
-    var a = 10;
-    var b = 20;
-    {
-        b = 7;
-        var a = 30;
-        print a;
-    }
-    print a;
-    print b;
+#{
+#    var a = 10;
+#    var b = 20;
+#    {
+#        b = 7;
+#        var a = 30;
+#        print a;
+#    }
+#    print a;
+#    print b;
+#}
+
+var a = 15;
+if( a==5 ){
+    print("a is " + a);
+} else {
+    print("a is not 5, its " + a);
 }

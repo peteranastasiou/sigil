@@ -58,7 +58,12 @@ Value Vm::peek(int index) {
     return stackTop_[-1 - index];
 }
 
-bool Vm::binaryOp_(uint8_t op){
+uint16_t Vm::readUint16_() {
+    ip_ += 2;
+    return (uint16_t)((ip_[-2] << 8) | ip_[-1]);
+}
+
+bool Vm::binaryOp_(uint8_t op) {
     if( !peek(0).isNumber() || !peek(1).isNumber() ){
         runtimeError_("Operands must be numbers.");
         return false;
@@ -107,7 +112,7 @@ ObjString * Vm::readString_() {
 
 InterpretResult Vm::run_() {
 #ifdef DEBUG_TRACE_EXECUTION
-    Dissassembler disasm;  
+    Disassembler disasm;  
 
     internedStrings_.debug();
     debugObjectLinkedList(objects_);
@@ -123,6 +128,8 @@ InterpretResult Vm::run_() {
     printf("Globals:\n");
     globals_.debug();
     printf("====\n");
+
+    disasm.disassembleChunk(chunk_, "Main");
 
 #endif
 
@@ -242,6 +249,17 @@ InterpretResult Vm::run_() {
             case OpCode::PRINT:{
                 pop().print();
                 printf("\n");
+                break;
+            }
+            case OpCode::JUMP:{
+                uint16_t offset = readUint16_();
+                ip_ += offset;
+                break;
+            }
+            case OpCode::JUMP_IF_FALSE:{
+                uint16_t offset = readUint16_();
+                // when condition is false, jump over the if statement body
+                if( !isTruthy_(peek(0)) ) ip_ += offset;
                 break;
             }
             case OpCode::RETURN:{

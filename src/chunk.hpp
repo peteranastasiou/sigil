@@ -35,6 +35,8 @@ enum {
     NOT,
     // Control flow:
     PRINT,
+    JUMP,
+    JUMP_IF_FALSE,
     RETURN,
 };
 }
@@ -78,6 +80,6 @@ private:
     std::vector<Value> literals;
 
     // Disassembler needs access within the chunk:
-    friend class Dissassembler;
+    friend class Disassembler;
 };
 
