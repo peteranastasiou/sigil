@@ -30,7 +30,12 @@ struct ParseRule {
 
 struct Local {
     Token name;
-    int depth;
+    int16_t depth;
+    uint8_t init;
+
+    // Values used by Environment::resolveLocal()
+    static int const NOT_INITIALISED = -1;
+    static int const NOT_FOUND = -2;
 };
 
 // Note: lox calls this a Compiler:
@@ -41,8 +46,27 @@ struct Environment {
     uint8_t localCount = 0;
     uint16_t scopeDepth = 0;
 
+    /**
+     * track a local variables position in the stack
+     * @return false if too many locals
+     */
     bool addLocal(Token & name);
+
+    /**
+     * lookup a local variables position in the stack
+     * @return positional index or NOT_FOUND or NOT_INITIALISED
+     */
     int resolveLocal(Token & name);
+    
+    /**
+     * mark latest local as initialised
+     */
+    void initialiseLocal();
+    
+    /**
+     * release all locals which are no longer in scope
+     * @return number of locals freed
+     */
     uint8_t freeLocals();
 };
 

@@ -57,12 +57,11 @@ static void runFile(const char* path) {
     InterpretResult result = vm.interpret(source);
     free(source);
 
-    // if (result == INTERPRET_COMPILE_ERROR) exit(65);
-    // if (result == INTERPRET_RUNTIME_ERROR) exit(70);
+    if (result == InterpretResult::COMPILE_ERR) exit(65);
+    if (result == InterpretResult::RUNTIME_ERR) exit(70);
 }
 
 int main(int argc, char const * argv[]) {
-    printf("%i\n", (int)sizeof(Value));
     if( argc == 1 ){
         repl();
     }else if( argc == 2 ){

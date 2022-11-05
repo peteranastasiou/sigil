@@ -14,20 +14,32 @@ bool Environment::addLocal(Token & name) {
     Local * local = &locals[localCount++];
     local->name = name;
     local->depth = scopeDepth;
+    local->init = false;
     return true;
 }
 
+void Environment::initialiseLocal() {
+    // Now we can replace the NOT_INITIALISED value with the actual depth:
+    locals[localCount-1].init = true;
+}
 
 int Environment::resolveLocal(Token & name) {
     // search for a local by name in the environment
     // NOTE: searching from higher depth to lower, to support shadowing correctly
     for( int i = localCount-1; i >= 0; i-- ){
-        if( name.equals(locals[i].name) ){
+        Local * local = &locals[i];
+        if( name.equals(local->name) ){
+            // Handle special case where it hasn't been initialised before reference
+            // e.g. var a = a;
+            if( !local->init ){
+                return Local::NOT_INITIALISED;
+            }
+
+            // The local index happens to also be its position on the stack at runtime:
             return i;
         }
     }
-    // not found
-    return -1;
+    return Local::NOT_FOUND;
 }
 
 uint8_t Environment::freeLocals() {
@@ -168,7 +180,8 @@ void Compiler::declaration_() {
 }
 
 void Compiler::varDeclaration_() {
-    uint8_t global = parseVariable_("Expected variable name.");
+    // Load the variable name, getting the literals index (if global) or 0 (if local):
+    uint8_t globalName = parseVariable_("Expected variable name.");
 
     // assigned an initial value?
     if( match_(Token::EQUAL) ){
@@ -177,13 +190,17 @@ void Compiler::varDeclaration_() {
         emitByte_(OpCode::NIL); // default value is nil
     }
     consume_(Token::SEMICOLON, "Expected ';' after var declaration.");
-    defineVariable_(global);
+    defineVariable_(globalName);
 }
 
 void Compiler::defineVariable_(uint8_t global) {
-    // We don't need to do anything at runtime for local variables 
-    // as the value is left on the stack:
-    if( currentEnv_->scopeDepth > 0 ) return;
+    if( currentEnv_->scopeDepth > 0 ){
+        // record that the local var is now initialised
+        currentEnv_->initialiseLocal();
+        // Don't need to do produce any bytecode here
+        // At runtime the local's value will already on the stack
+        return;
+    }
 
     // global variables get defined at runtime:
     emitBytes_(OpCode::DEFINE_GLOBAL, global);
@@ -312,8 +329,7 @@ void Compiler::declareVariable_() {
     // ensure the variable is not already declared in this scope!
     for( int i = currentEnv_->localCount-1; i>=0; i-- ){
         Local * local = &currentEnv_->locals[i];
-        if( local->depth != -1 &&  // ???
-            local->depth < currentEnv_->scopeDepth ){
+        if( local->depth < currentEnv_->scopeDepth ){
             break;  // left the scope - stop searching
         }
         if( name->equals(local->name) ){
@@ -392,18 +408,22 @@ void Compiler::variable_(bool canAssign) {
 }
 
 void Compiler::namedVariable_(Token & token, bool canAssign) {
-    uint8_t getOp, setOp; // opcodes for getting and setting the variable
-    // arg is the opcode argument: either a stack index (for locals), or literal index of name (for globals)
-    int arg = currentEnv_->resolveLocal(token);
-    if( arg != -1 ){
+    uint8_t getOp, setOp, arg; // opcodes for getting and setting the variable, and their argument
+
+    // first, try to look up
+    int res = currentEnv_->resolveLocal(token);
+    if( res == Local::NOT_INITIALISED ){
+        errorAtPrevious_("Local variable referenced before definition.");
+    } else if( res == Local::NOT_FOUND ){
+        // its a global variable
+        getOp = OpCode::GET_GLOBAL;
+        setOp = OpCode::SET_GLOBAL;
+        arg = makeIdentifierLiteral_(token);  // arg is the literal index of the globals name
+    }else{
         // its a local variable
         getOp = OpCode::GET_LOCAL;
         setOp = OpCode::SET_LOCAL;
-    }else{
-        // its a global variable
-        arg = makeIdentifierLiteral_(token);
-        getOp = OpCode::GET_GLOBAL;
-        setOp = OpCode::SET_GLOBAL;
+        arg = (uint8_t)res;  // arg is the stack position of the local var
     }
 
     // identify whether we are setting or getting a variable:

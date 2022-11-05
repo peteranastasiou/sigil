@@ -11,4 +11,5 @@
         print a;
     }
     print a;
+    print b;
 }
