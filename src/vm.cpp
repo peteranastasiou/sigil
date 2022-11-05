@@ -253,7 +253,12 @@ InterpretResult Vm::run_() {
             }
             case OpCode::JUMP:{
                 uint16_t offset = readUint16_();
-                ip_ += offset;
+                ip_ += offset;  // jump forwards
+                break;
+            }
+            case OpCode::LOOP:{
+                uint16_t offset = readUint16_();
+                ip_ -= offset;  // jump backwards
                 break;
             }
             case OpCode::JUMP_IF_TRUE:{
@@ -264,6 +269,16 @@ InterpretResult Vm::run_() {
             case OpCode::JUMP_IF_FALSE:{
                 uint16_t offset = readUint16_();
                 if( !isTruthy_(peek(0)) ) ip_ += offset;
+                break;
+            }
+            case OpCode::JUMP_IF_TRUE_POP:{
+                uint16_t offset = readUint16_();
+                if( isTruthy_(pop()) ) ip_ += offset;
+                break;
+            }
+            case OpCode::JUMP_IF_FALSE_POP:{
+                uint16_t offset = readUint16_();
+                if( !isTruthy_(pop()) ) ip_ += offset;
                 break;
             }
             case OpCode::RETURN:{

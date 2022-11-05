@@ -57,8 +57,11 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
         case OpCode::NOT:           return simpleInstruction_("NOT");
         case OpCode::PRINT:         return simpleInstruction_("PRINT");
         case OpCode::JUMP:          return jumpInstruction_("JUMP", 1, chunk, offset);
+        case OpCode::LOOP:          return jumpInstruction_("LOOP", 1, chunk, offset);
         case OpCode::JUMP_IF_TRUE: return jumpInstruction_("JUMP_IF_TRUE", 1, chunk, offset);
         case OpCode::JUMP_IF_FALSE: return jumpInstruction_("JUMP_IF_FALSE", 1, chunk, offset);
+        case OpCode::JUMP_IF_TRUE_POP: return jumpInstruction_("JUMP_IF_TRUE_POP", 1, chunk, offset);
+        case OpCode::JUMP_IF_FALSE_POP: return jumpInstruction_("JUMP_IF_FALSE_POP", 1, chunk, offset);
         case OpCode::RETURN:        return simpleInstruction_("RETURN");
         default:
             printf("Unknown opcode %i\n", instr);

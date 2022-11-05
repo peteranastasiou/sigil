@@ -100,6 +100,7 @@ private:
     void or_();
     void statement_();
     void ifStatement_();
+    void whileStatement_();
     void synchronise_();
     void beginScope_();
     void block_();
@@ -129,6 +130,7 @@ private:
     void declareVariable_();
     int emitJump_(uint8_t instr);
     void setJumpDestination_(int offset);
+    void emitLoop_(int loopStart);
 
     // error production:
     void errorAtCurrent_(const char* message);

@@ -234,6 +234,9 @@ void Compiler::statement_() {
     }else if( match_(Token::IF) ){
         ifStatement_();
 
+    }else if( match_(Token::WHILE) ){
+        whileStatement_();
+
     }else if( match_(Token::LEFT_BRACE) ){
         // recurse into a nested scope:
         beginScope_();
@@ -250,20 +253,40 @@ void Compiler::statement_() {
 
 void Compiler::ifStatement_() {
     // the condition part surrounded by parens:
-    consume_(Token::LEFT_PAREN, "Expected '(' after if");
+    consume_(Token::LEFT_PAREN, "Expected '(' after 'if'.");
     expression_();
-    consume_(Token::RIGHT_PAREN, "Expected ')' after condition");
+    consume_(Token::RIGHT_PAREN, "Expected ')' after condition.");
     // the jump instruction (we don't know how far yet)
-    int jumpToElse = emitJump_(OpCode::JUMP_IF_FALSE);
-    emitByte_(OpCode::POP);  // remove the condition value
+    int jumpOverThen = emitJump_(OpCode::JUMP_IF_FALSE_POP);
     // the `then` block:
     statement_();
-    // jump over the `else` block:
-    int jumpToEnd = emitJump_(OpCode::JUMP);
-    // this is where `else` starts:
-    setJumpDestination_(jumpToElse);
-    emitByte_(OpCode::POP);  // remove the condition value
-    if( match_(Token::ELSE) ) statement_();
+    // optional `else` block:
+    if( match_(Token::ELSE) ){
+        // jump over the `else` block:
+        int jumpOverElse = emitJump_(OpCode::JUMP);
+        // this is where `else` starts:
+        setJumpDestination_(jumpOverThen);
+        // the `else` block:
+        statement_();
+        setJumpDestination_(jumpOverElse);
+    }else{
+        // no else block, simply jump to here if false:
+        setJumpDestination_(jumpOverThen);
+    }
+}
+
+void Compiler::whileStatement_() {
+    consume_(Token::LEFT_PAREN, "Expected '(' after 'while'.");
+    // check the condition (this is where we loop):
+    int loopStart = getCurrentChunk_()->count();
+    expression_();
+    consume_(Token::RIGHT_PAREN, "Expected ')' after condition.");
+    // jump over the body if falsy
+    int jumpToEnd = emitJump_(OpCode::JUMP_IF_FALSE_POP);
+    statement_();
+    // loop back up
+    emitLoop_(loopStart);
+    // escape the loop to here:
     setJumpDestination_(jumpToEnd);
 }
 
@@ -405,6 +428,15 @@ void Compiler::setJumpDestination_(int offset) {
     // set value:
     chunk->getCode()[offset] = (uint8_t)(jumpLen >> 8);
     chunk->getCode()[offset+1] = (uint8_t)(jumpLen & 0xFF);
+}
+
+
+void Compiler::emitLoop_(int loopStart) {
+    emitByte_(OpCode::LOOP);
+    int offset = getCurrentChunk_()->count() - loopStart + 2;
+    if( offset > UINT16_MAX ) errorAtPrevious_("Loop body is too large.");
+    emitByte_((uint8_t)((offset >> 8) & 0xff));
+    emitByte_((uint8_t)(offset & 0xff));
 }
 
 void Compiler::grouping_() {

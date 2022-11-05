@@ -35,9 +35,12 @@ enum {
     NOT,
     // Control flow:
     PRINT,
-    JUMP,
-    JUMP_IF_TRUE,
-    JUMP_IF_FALSE,
+    JUMP,               // Unconditionally jump forward by bytecode offset 
+    LOOP,               // Unconditionally jump backwards by bytecode offset 
+    JUMP_IF_TRUE,       // If top of stack is truthy, jump fwd by bytecode offset
+    JUMP_IF_FALSE,      // If top of stack is falsy, jump fwd by bytecode offset
+    JUMP_IF_TRUE_POP,   // Same as JUMP_IF_FALSE, but also pops the value
+    JUMP_IF_FALSE_POP,  // Same as JUMP_IF_TRUE, but also pops the value
     RETURN,
 };
 }
