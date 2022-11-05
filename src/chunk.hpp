@@ -36,6 +36,7 @@ enum {
     // Control flow:
     PRINT,
     JUMP,
+    JUMP_IF_TRUE,
     JUMP_IF_FALSE,
     RETURN,
 };

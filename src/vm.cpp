@@ -256,9 +256,13 @@ InterpretResult Vm::run_() {
                 ip_ += offset;
                 break;
             }
+            case OpCode::JUMP_IF_TRUE:{
+                uint16_t offset = readUint16_();
+                if( isTruthy_(peek(0)) ) ip_ += offset;
+                break;
+            }
             case OpCode::JUMP_IF_FALSE:{
                 uint16_t offset = readUint16_();
-                // when condition is false, jump over the if statement body
                 if( !isTruthy_(peek(0)) ) ip_ += offset;
                 break;
             }

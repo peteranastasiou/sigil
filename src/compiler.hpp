@@ -96,6 +96,8 @@ private:
     void declaration_();
     void varDeclaration_();
     void defineVariable_(uint8_t global);
+    void and_();
+    void or_();
     void statement_();
     void ifStatement_();
     void synchronise_();

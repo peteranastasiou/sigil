@@ -14,9 +14,11 @@
 #    print b;
 #}
 
-var a = 15;
+var a = 16;
 if( a==5 ){
-    print("a is " + a);
+    print("bleep" + a);
+} else if( a==15 ) {
+    print("bloop" + a);
 } else {
-    print("a is not 5, its " + a);
+    print("blork" + a);
 }

@@ -206,6 +206,24 @@ void Compiler::defineVariable_(uint8_t global) {
     emitBytes_(OpCode::DEFINE_GLOBAL, global);
 }
 
+void Compiler::and_() {
+    // left hand side has already been compiled, 
+    // if its falsy, we want to jump over the right hand side (short circuiting)
+    int jumpOverRhs = emitJump_(OpCode::JUMP_IF_FALSE);
+    emitByte_(OpCode::POP);   // don't need the lhs anymore, if we got here - its true!
+    parse_(Precedence::AND);  // the rhs value
+    setJumpDestination_(jumpOverRhs);
+}
+
+void Compiler::or_() {
+    // left hand side has already been compiled.
+    // if its truthy, jump over the right hand side (short circuiting)
+    int jumpOverRhs = emitJump_(OpCode::JUMP_IF_TRUE);
+    emitByte_(OpCode::POP);  // don't need the lhs anymore
+    parse_(Precedence::OR);  // the rhs value
+    setJumpDestination_(jumpOverRhs);
+}
+
 void Compiler::statement_() {
     if( match_(Token::PRINT) ){
         // print statement takes a single value:
@@ -511,7 +529,7 @@ ParseRule const * Compiler::getRule_(Token::Type type) {
         [Token::IDENTIFIER]    = {ASSIGNMENT_RULE(variable_), NULL,  Precedence::NONE},
         [Token::STRING]        = {RULE(string_),   NULL,          Precedence::NONE},
         [Token::NUMBER]        = {RULE(number_),   NULL,          Precedence::NONE},
-        [Token::AND]           = {NULL,            NULL,          Precedence::NONE},
+        [Token::AND]           = {NULL,            RULE(and_),    Precedence::NONE},
         [Token::CONST]         = {NULL,            NULL,          Precedence::NONE},
         [Token::ELSE]          = {NULL,            NULL,          Precedence::NONE},
         [Token::FALSE]         = {RULE(emitFalse_),NULL,          Precedence::NONE},
@@ -519,7 +537,7 @@ ParseRule const * Compiler::getRule_(Token::Type type) {
         [Token::FN]            = {NULL,            NULL,          Precedence::NONE},
         [Token::IF]            = {NULL,            NULL,          Precedence::NONE},
         [Token::NIL]           = {RULE(emitNil_),  NULL,          Precedence::NONE},
-        [Token::OR]            = {NULL,            NULL,          Precedence::NONE},
+        [Token::OR]            = {NULL,            RULE(or_),     Precedence::NONE},
         [Token::PRINT]         = {NULL,            NULL,          Precedence::NONE},
         [Token::RETURN]        = {NULL,            NULL,          Precedence::NONE},
         [Token::TRUE]          = {RULE(emitTrue_), NULL,          Precedence::NONE},
