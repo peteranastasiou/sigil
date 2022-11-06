@@ -21,7 +21,7 @@ struct Token {
         // Literals:
         IDENTIFIER, STRING, NUMBER,   // TODO int
         // Keywords:
-        AND, CONST, ELSE, FALSE,
+        AND, CONST, ELIF, ELSE, FALSE,
         FOR, FN, IF, NIL, OR,
         PRINT, RETURN,
         TRUE, VAR, WHILE,

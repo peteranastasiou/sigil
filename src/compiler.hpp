@@ -105,6 +105,7 @@ private:
     void synchronise_();
     void beginScope_();
     void block_();
+    void nestedBlock_();
     void endScope_();
     void parse_(Precedence precedence);  // parse expressions with >= precendence
     void number_();

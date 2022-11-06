@@ -130,6 +130,7 @@ InterpretResult Vm::run_() {
     printf("====\n");
 
     disasm.disassembleChunk(chunk_, "Main");
+    printf("====\n");
 
 #endif
 

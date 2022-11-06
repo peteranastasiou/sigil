@@ -108,7 +108,15 @@ Token::Type Scanner::identifierType_() {
     switch( start_[0] ){
         case 'a': return checkKeyword_(1, 2, "nd", Token::AND);
         case 'c': return checkKeyword_(1, 4, "onst", Token::CONST);
-        case 'e': return checkKeyword_(1, 3, "lse", Token::ELSE);
+        case 'e': {
+            // "e..." might be "else" or "elif":
+            // check correct number of chars, and that next char is l:
+            if( current_ - start_ == 4 && start_[1] == 'l' ){
+                if( start_[2] == 's' && start_[3] == 'e' ) return Token::ELSE;
+                if( start_[2] == 'i' && start_[3] == 'f' ) return Token::ELIF;
+            }
+            break;
+        }
         case 'f': {
             // "f..." might be "false", "for" or "fn":
             // first check if identifier is longer than 1 char:

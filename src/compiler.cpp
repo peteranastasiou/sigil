@@ -5,6 +5,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <vector>
+
 
 bool Environment::addLocal(Token & name, bool isConst) {
     if( localCount == MAX_LOCALS ){
@@ -284,9 +286,7 @@ void Compiler::statement_() {
 
     }else if( match_(Token::LEFT_BRACE) ){
         // recurse into a nested scope:
-        beginScope_();
-        block_();
-        endScope_();
+        nestedBlock_();
 
     }else{
         // expression statement:
@@ -297,38 +297,59 @@ void Compiler::statement_() {
 }
 
 void Compiler::ifStatement_() {
-    // the condition part surrounded by parens:
-    consume_(Token::LEFT_PAREN, "Expected '(' after 'if'.");
+    // the condition part:
     expression_();
-    consume_(Token::RIGHT_PAREN, "Expected ')' after condition.");
-    // the jump instruction (we don't know how far yet)
-    int jumpOverThen = emitJump_(OpCode::JUMP_IF_FALSE_POP);
-    // the `then` block:
-    statement_();
+    // jump over the block to the next part:
+    int jumpOver = emitJump_(OpCode::JUMP_IF_FALSE_POP);
+    // the block
+    consume_(Token::LEFT_BRACE, "Expected '{' after condition.");
+    nestedBlock_();
+
+    // track all the jumps which go straight to the end
+    std::vector<int> jumpsToEnd;
+
+    // optional `elif` blocks:
+    while( match_(Token::ELIF) ){
+        // protect against fallthrough
+        jumpsToEnd.push_back(emitJump_(OpCode::JUMP));
+        // jump over the previous if/elif-block to here:
+        setJumpDestination_(jumpOver);
+        // the condition part:
+        expression_();
+        // jump over the block to the next part:
+        jumpOver = emitJump_(OpCode::JUMP_IF_FALSE_POP);
+        // the block
+        consume_(Token::LEFT_BRACE, "Expected '{' after 'elif'.");
+        nestedBlock_();
+    }
+
     // optional `else` block:
     if( match_(Token::ELSE) ){
-        // jump over the `else` block:
-        int jumpOverElse = emitJump_(OpCode::JUMP);
-        // this is where `else` starts:
-        setJumpDestination_(jumpOverThen);
-        // the `else` block:
-        statement_();
-        setJumpDestination_(jumpOverElse);
+        // protect against fallthrough
+        jumpsToEnd.push_back(emitJump_(OpCode::JUMP));
+        // jump over the previous if/elif-block to here:
+        setJumpDestination_(jumpOver);
+        // the block
+        consume_(Token::LEFT_BRACE, "Expected '{' after 'else'.");
+        nestedBlock_();
     }else{
-        // no else block, simply jump to here if false:
-        setJumpDestination_(jumpOverThen);
+        // no else block, so the last "jumpOver" goes to here:
+        setJumpDestination_(jumpOver);
+    }
+    // link up all the end jumps to here
+    for( int jump : jumpsToEnd ){
+        setJumpDestination_(jump);
     }
 }
 
 void Compiler::whileStatement_() {
-    consume_(Token::LEFT_PAREN, "Expected '(' after 'while'.");
     // check the condition (this is where we loop):
     int loopStart = getCurrentChunk_()->count();
     expression_();
-    consume_(Token::RIGHT_PAREN, "Expected ')' after condition.");
     // jump over the body if falsy
     int jumpToEnd = emitJump_(OpCode::JUMP_IF_FALSE_POP);
-    statement_();
+    consume_(Token::LEFT_BRACE, "Expected '{' after condition.");
+    nestedBlock_();
     // loop back up
     emitLoop_(loopStart);
     // escape the loop to here:
@@ -369,7 +390,7 @@ void Compiler::endScope_() {
 
     // At the end of a scope, remove all local variables from the value stack
     uint8_t n = currentEnv_->freeLocals();
-    emitBytes_(OpCode::POP_N, n);
+    if( n > 0 ) emitBytes_(OpCode::POP_N, n);
 }
 
 void Compiler::block_() {
@@ -379,6 +400,12 @@ void Compiler::block_() {
         declaration_();
     }
     consume_(Token::RIGHT_BRACE, "Expected '}' after block.");
+}
+
+void Compiler::nestedBlock_() {
+    beginScope_();
+    block_();
+    endScope_();
 }
 
 void Compiler::parse_(Precedence precedence) {
@@ -580,6 +607,7 @@ ParseRule const * Compiler::getRule_(Token::Type type) {
         [Token::NUMBER]        = {RULE(number_),   NULL,          Precedence::NONE},
         [Token::AND]           = {NULL,            RULE(and_),    Precedence::NONE},
         [Token::CONST]         = {NULL,            NULL,          Precedence::NONE},
+        [Token::ELIF]          = {NULL,            NULL,          Precedence::NONE},
         [Token::ELSE]          = {NULL,            NULL,          Precedence::NONE},
         [Token::FALSE]         = {RULE(emitFalse_),NULL,          Precedence::NONE},
         [Token::FOR]           = {NULL,            NULL,          Precedence::NONE},
