@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-bool Environment::addLocal(Token & name) {
+bool Environment::addLocal(Token & name, bool isConst) {
     if( localCount == MAX_LOCALS ){
         return false;
     }
@@ -14,16 +14,17 @@ bool Environment::addLocal(Token & name) {
     Local * local = &locals[localCount++];
     local->name = name;
     local->depth = scopeDepth;
-    local->init = false;
+    local->isDefined = false;
+    local->isConst = isConst;
     return true;
 }
 
-void Environment::initialiseLocal() {
+void Environment::defineLocal() {
     // Now we can replace the NOT_INITIALISED value with the actual depth:
-    locals[localCount-1].init = true;
+    locals[localCount-1].isDefined = true;
 }
 
-int Environment::resolveLocal(Token & name) {
+int Environment::resolveLocal(Token & name, bool & isConst) {
     // search for a local by name in the environment
     // NOTE: searching from higher depth to lower, to support shadowing correctly
     for( int i = localCount-1; i >= 0; i-- ){
@@ -31,10 +32,12 @@ int Environment::resolveLocal(Token & name) {
         if( name.equals(local->name) ){
             // Handle special case where it hasn't been initialised before reference
             // e.g. var a = a;
-            if( !local->init ){
+            if( !local->isDefined ){
                 return Local::NOT_INITIALISED;
             }
 
+            // Found it:
+            isConst = local->isConst;
             // The local index happens to also be its position on the stack at runtime:
             return i;
         }
@@ -170,7 +173,9 @@ void Compiler::expression_() {
 
 void Compiler::declaration_() {
     if( match_(Token::VAR) ){
-        varDeclaration_();
+        varDeclaration_(false);
+    }else if( match_(Token::CONST) ){
+        varDeclaration_(true);
     }else{
         statement_();
     }
@@ -179,9 +184,9 @@ void Compiler::declaration_() {
     if( panicMode_ ) synchronise_();
 }
 
-void Compiler::varDeclaration_() {
+void Compiler::varDeclaration_(bool isConst) {
     // Load the variable name, getting the literals index (if global) or 0 (if local):
-    uint8_t globalName = parseVariable_("Expected variable name.");
+    uint8_t globalName = parseVariable_("Expected variable name.", isConst);
 
     // assigned an initial value?
     if( match_(Token::EQUAL) ){
@@ -190,20 +195,60 @@ void Compiler::varDeclaration_() {
         emitByte_(OpCode::NIL); // default value is nil
     }
     consume_(Token::SEMICOLON, "Expected ';' after var declaration.");
-    defineVariable_(globalName);
+    defineVariable_(globalName, isConst);
 }
 
-void Compiler::defineVariable_(uint8_t global) {
+uint8_t Compiler::parseVariable_(const char * errorMsg, bool isConst) {
+    // the name of the variable:
+    consume_( Token::IDENTIFIER, errorMsg );
+
+    // create it (initially undefined)
+    declareVariable_(isConst);
+
+    // if its a local being declared, we don't need to store its name as a literal: 
+    if( currentEnv_->scopeDepth > 0 ) return 0;
+
+    // globals get their names stored as a literal:
+    return makeIdentifierLiteral_(previousToken_);
+}
+
+void Compiler::declareVariable_(bool isConst) {
+    // Don't need to track globals (resolved at runtime):
+    if( currentEnv_->scopeDepth == 0 ) return;
+
+    // the name of the new local variable:
+    Token * name = &previousToken_;
+
+    // ensure the variable is not already declared in this scope!
+    for( int i = currentEnv_->localCount-1; i>=0; i-- ){
+        Local * local = &currentEnv_->locals[i];
+        if( local->depth < currentEnv_->scopeDepth ){
+            break;  // left the scope - stop searching
+        }
+        if( name->equals(local->name) ){
+            errorAtPrevious_("Already a variable with this name in this scope.");
+        }
+    }
+
+    // New local variable to track:
+    if( !currentEnv_->addLocal(*name, isConst) ){
+        errorAtPrevious_("Too many local variables in function.");
+    }
+}
+
+void Compiler::defineVariable_(uint8_t global, bool isConst) {
+    // is it a local?
     if( currentEnv_->scopeDepth > 0 ){
-        // record that the local var is now initialised
-        currentEnv_->initialiseLocal();
+        // record that the local var is now defined
+        currentEnv_->defineLocal();
         // Don't need to do produce any bytecode here
         // At runtime the local's value will already on the stack
         return;
     }
 
     // global variables get defined at runtime:
-    emitBytes_(OpCode::DEFINE_GLOBAL, global);
+    uint8_t opCode = isConst ? OpCode::DEFINE_GLOBAL_CONST : OpCode::DEFINE_GLOBAL_VAR;
+    emitBytes_(opCode, global);
 }
 
 void Compiler::and_() {
@@ -299,6 +344,7 @@ void Compiler::synchronise_() {
 
         // the following tokens look like the start of a new declaration/statement:
         switch( currentToken_.type ){
+            case Token::CONST:
             case Token::FN:
             case Token::VAR:
             case Token::FOR:
@@ -366,46 +412,10 @@ void Compiler::parse_(Precedence precedence) {
     }
 }
 
-uint8_t Compiler::parseVariable_(const char * errorMsg) {
-    consume_( Token::IDENTIFIER, errorMsg );
-
-    declareVariable_();
-
-    // if its a local being declared, we don't need to store its name as a literal: 
-    if( currentEnv_->scopeDepth > 0 ) return 0;
-
-    // globals get their names stored as a literal:
-    return makeIdentifierLiteral_(previousToken_);
-}
-
 uint8_t Compiler::makeIdentifierLiteral_(Token & name) {
     return makeLiteral_(Value::object(
         ObjString::newString(vm_, name.start, name.length)
     ));
-}
-
-void Compiler::declareVariable_() {
-    // Don't need to track globals (resolved at runtime):
-    if( currentEnv_->scopeDepth == 0 ) return;
-
-    // the name of the new local variable:
-    Token * name = &previousToken_;
-
-    // ensure the variable is not already declared in this scope!
-    for( int i = currentEnv_->localCount-1; i>=0; i-- ){
-        Local * local = &currentEnv_->locals[i];
-        if( local->depth < currentEnv_->scopeDepth ){
-            break;  // left the scope - stop searching
-        }
-        if( name->equals(local->name) ){
-            errorAtPrevious_("Already a variable with this name in this scope.");
-        }
-    }
-
-    // New local variable to track:
-    if( !currentEnv_->addLocal(*name) ){
-        errorAtPrevious_("Too many local variables in function.");
-    }
 }
 
 int Compiler::emitJump_(uint8_t instr) {
@@ -500,21 +510,25 @@ void Compiler::string_() {
 }
 
 void Compiler::variable_(bool canAssign) {
-    namedVariable_(previousToken_, canAssign);
+    getSetVariable_(previousToken_, canAssign);
 }
 
-void Compiler::namedVariable_(Token & token, bool canAssign) {
+void Compiler::getSetVariable_(Token & name, bool canAssign) {
     uint8_t getOp, setOp, arg; // opcodes for getting and setting the variable, and their argument
 
     // first, try to look up
-    int res = currentEnv_->resolveLocal(token);
+    bool isConst;
+    int res = currentEnv_->resolveLocal(name, isConst);
     if( res == Local::NOT_INITIALISED ){
         errorAtPrevious_("Local variable referenced before definition.");
+
     } else if( res == Local::NOT_FOUND ){
         // its a global variable
+        isConst = false; // assume not constant - checked at runtime
         getOp = OpCode::GET_GLOBAL;
         setOp = OpCode::SET_GLOBAL;
-        arg = makeIdentifierLiteral_(token);  // arg is the literal index of the globals name
+        arg = makeIdentifierLiteral_(name);  // arg is the literal index of the globals name
+
     }else{
         // its a local variable
         getOp = OpCode::GET_LOCAL;
@@ -524,6 +538,9 @@ void Compiler::namedVariable_(Token & token, bool canAssign) {
 
     // identify whether we are setting or getting a variable:
     if( canAssign && match_(Token::EQUAL) ){
+        if( isConst ){
+            errorAtPrevious_("Cannot redefine a const variable.");
+        }
         // setting the variable:
         expression_();  // the value to set
         emitBytes_(setOp, (uint8_t)arg);

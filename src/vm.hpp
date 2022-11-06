@@ -13,6 +13,11 @@ enum class InterpretResult {
     RUNTIME_ERR
 };
 
+struct Global {
+    Value value;
+    bool isConst;
+};
+
 class Vm {
 public:
     Vm();
@@ -55,5 +60,5 @@ private:
     Value * stackTop_;  // points past the last value in the stack
     Obj * objects_;     // linked list of objects
     StringSet internedStrings_;
-    HashMap globals_; 
+    HashMap<Global> globals_; 
 };

@@ -158,9 +158,11 @@ InterpretResult Vm::run_() {
             case OpCode::FALSE: push(Value::boolean(false)); break;
             case OpCode::POP: pop(); break;
             case OpCode::POP_N: pop(readByte_()); break;
-            case OpCode::DEFINE_GLOBAL: {
+            case OpCode::DEFINE_GLOBAL_VAR:
+            case OpCode::DEFINE_GLOBAL_CONST: {
                 ObjString * name = readString_();
-                if( !globals_.add(name, peek(0)) ){
+                bool isConst = instr==OpCode::DEFINE_GLOBAL_CONST;
+                if( !globals_.add(name, {peek(0), isConst}) ){
                     runtimeError_("Redeclaration of variable '%s'.", name->get());
                     return InterpretResult::RUNTIME_ERR;
                 }
@@ -169,22 +171,26 @@ InterpretResult Vm::run_() {
             }
             case OpCode::GET_GLOBAL: {
                 ObjString * name = readString_();
-                Value value;
-                if( !globals_.get(name, value) ){
+                Global global;
+                if( !globals_.get(name, global) ){
                     runtimeError_("Undefined variable '%s'.", name->get());
                     return InterpretResult::RUNTIME_ERR;
                 }
-                push(value);
+                push(global.value);
                 break;
             }
             case OpCode::SET_GLOBAL: {
                 ObjString * name = readString_();
-                if( globals_.set(name, peek(0)) ){
-                    // Didn't expect this to be a new variable!
-                    globals_.remove(name); // undo the operation
+                Global global;
+                if( !globals_.get(name, global) ){
                     runtimeError_("Undefined variable '%s'.", name->get());
                     return InterpretResult::RUNTIME_ERR;
                 }
+                if( global.isConst ){
+                    runtimeError_("Cannot redefine const variable '%s'.", name->get());
+                    return InterpretResult::RUNTIME_ERR;
+                }
+                globals_.set(name, {peek(0), false});
                 // don't pop: the assignment can be used in an expression
                 break;
             }
@@ -293,15 +299,16 @@ InterpretResult Vm::run_() {
 }
 
 void Vm::runtimeError_(const char* format, ...) {
+    int offset = (int)(ip_ - chunk_->getCode() - 1);
+    int line = chunk_->getLineNumber(offset);
+    fprintf(stderr, "%d: ", line);
+
     va_list args;
     va_start(args, format);
     vfprintf(stderr, format, args);
     va_end(args);
     fputs("\n", stderr);
 
-    int offset = (int)(ip_ - chunk_->getCode() - 1);
-    int line = chunk_->getLineNumber(offset);
-    fprintf(stderr, "[line %d] in script\n", line);
     resetStack_();
 }
 

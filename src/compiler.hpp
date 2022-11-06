@@ -31,12 +31,15 @@ struct ParseRule {
 struct Local {
     Token name;
     int16_t depth;
-    uint8_t init;
+    uint8_t isDefined;
+    uint8_t isConst;
 
     // Values used by Environment::resolveLocal()
     static int const NOT_INITIALISED = -1;
     static int const NOT_FOUND = -2;
 };
+
+
 
 // Note: lox calls this a Compiler:
 struct Environment {
@@ -50,18 +53,18 @@ struct Environment {
      * track a local variables position in the stack
      * @return false if too many locals
      */
-    bool addLocal(Token & name);
+    bool addLocal(Token & name, bool isConst);
 
     /**
      * lookup a local variables position in the stack
      * @return positional index or NOT_FOUND or NOT_INITIALISED
      */
-    int resolveLocal(Token & name);
+    int resolveLocal(Token & name, bool & isConst);
     
     /**
      * mark latest local as initialised
      */
-    void initialiseLocal();
+    void defineLocal();
     
     /**
      * release all locals which are no longer in scope
@@ -94,8 +97,6 @@ private:
     // parsing different types of things:
     void expression_();
     void declaration_();
-    void varDeclaration_();
-    void defineVariable_(uint8_t global);
     void and_();
     void or_();
     void statement_();
@@ -106,14 +107,21 @@ private:
     void block_();
     void endScope_();
     void parse_(Precedence precedence);  // parse expressions with >= precendence
-    uint8_t parseVariable_(const char * errorMsg);
     void number_();
     void string_();
     void variable_(bool canAssign);
-    void namedVariable_(Token & token, bool canAssign);
     void unary_();
     void binary_();
     void grouping_();  // parentheses in expressions
+
+    // declaring variables:
+    void varDeclaration_(bool isConst);
+    uint8_t parseVariable_(const char * errorMsg, bool isConst);
+    void declareVariable_(bool isConst);
+    void defineVariable_(uint8_t global, bool isConst);
+
+    // references to variables:
+    void getSetVariable_(Token & token, bool canAssign);
 
     // bytecode helpers:
     void emitByte_(uint8_t byte);
@@ -127,7 +135,6 @@ private:
     void emitLiteral_(Value value);
     uint8_t makeLiteral_(Value value);
     uint8_t makeIdentifierLiteral_(Token & name);
-    void declareVariable_();
     int emitJump_(uint8_t instr);
     void setJumpDestination_(int offset);
     void emitLoop_(int loopStart);

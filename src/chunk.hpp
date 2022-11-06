@@ -14,7 +14,8 @@ enum {
     FALSE,          // Push false to the stack
     POP,            // Pop 1 value from the stack
     POP_N,          // Pop N values from the stack
-    DEFINE_GLOBAL,  // Define a global variable
+    DEFINE_GLOBAL_VAR,   // Define a global variable
+    DEFINE_GLOBAL_CONST, // Define a global variable as const
     GET_GLOBAL,     // Push the value of a global to the stack
     SET_GLOBAL,     // Set the value of a variable
     GET_LOCAL,
