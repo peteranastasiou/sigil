@@ -1,0 +1,20 @@
+
+# TODO with functions all cases can be tested
+
+var a = 1000;
+if( a==5 ){
+    print("A" + a);
+} else if( a==15 ) {
+    print("B" + a);
+} else {
+    print("C" + a);
+}
+
+if( a > 15 ){
+    print("a is big");
+}
+
+if( a < 15 ){
+    print("a is small");
+}
+
