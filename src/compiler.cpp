@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <vector>
 
 
@@ -104,14 +105,17 @@ void Compiler::advance_() {
     }
 }
 
-void Compiler::consume_(Token::Type type, const char* message) {
+void Compiler::consume_(Token::Type type, const char* fmt, ...) {
     // Asserts that the current token is the type specified
     if( currentToken_.type == type ){
         // only advance if token is correct
         advance_();
         return;
     }
-    errorAtCurrent_(message);
+    va_list args;
+    va_start(args, fmt);
+    errorAtVargs_(&currentToken_, fmt, args);
+    va_end(args);
 }
 
 bool Compiler::match_(Token::Type type) {
@@ -231,7 +235,8 @@ void Compiler::declareVariable_(bool isConst) {
             break;  // left the scope - stop searching
         }
         if( name->equals(local->name) ){
-            errorAtPrevious_("Already a variable with this name in this scope.");
+            errorAtPrevious_("Already a variable called '%.*s' in this scope.", 
+                             name->length, name->start);
         }
     }
 
@@ -669,15 +674,28 @@ ParseRule const * Compiler::getRule_(Token::Type type) {
 }
 #undef RULE
 
-void Compiler::errorAtCurrent_(const char* message) {
-    errorAt_(&currentToken_, message);
+void Compiler::errorAtCurrent_(const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    errorAtVargs_(&currentToken_, fmt, args);
+    va_end(args);
 }
 
-void Compiler::errorAtPrevious_(const char* message) {
-  errorAt_(&previousToken_, message);
+void Compiler::errorAtPrevious_(const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    errorAtVargs_(&previousToken_, fmt, args);
+    va_end(args);
 }
 
-void Compiler::errorAt_(Token* token, const char* message) {
+void Compiler::errorAt_(Token* token, const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    errorAtVargs_(token, fmt, args);
+    va_end(args);
+}
+
+void Compiler::errorAtVargs_(Token* token, const char* fmt, va_list args) {
     if( panicMode_ ) return;  // suppress errors after the first
     panicMode_ = true;
 
@@ -691,7 +709,9 @@ void Compiler::errorAt_(Token* token, const char* message) {
         fprintf(stderr, " at '%.*s'", token->length, token->start);
     }
 
-    fprintf(stderr, ": %s\n", message);
+    fprintf(stderr, ": ");
+    vfprintf(stderr, fmt, args);
+    fprintf(stderr, "\n");
     hadError_ = true;
 }
 

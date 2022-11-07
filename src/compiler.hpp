@@ -89,7 +89,7 @@ public:
 private:
     // parser helpers:
     void advance_();
-    void consume_(Token::Type type, const char* message);
+    void consume_(Token::Type type, const char* fmt, ...);
     bool match_(Token::Type type);
     Chunk * getCurrentChunk_();
     ParseRule const * getRule_(Token::Type type);
@@ -144,9 +144,10 @@ private:
     void emitLoop_(int loopStart);
 
     // error production:
-    void errorAtCurrent_(const char* message);
-    void errorAtPrevious_(const char* message);
-    void errorAt_(Token* token, const char* message);
+    void errorAtCurrent_(const char* fmt, ...);
+    void errorAtPrevious_(const char* fmt, ...);
+    void errorAt_(Token* token, const char* fmt, ...);
+    void errorAtVargs_(Token* token, const char* message, va_list args);
 
     Vm * vm_;
     Scanner scanner_;
