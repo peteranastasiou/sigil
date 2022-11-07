@@ -276,8 +276,10 @@ void Compiler::or_() {
 
 bool Compiler::statement_(bool isExpressionBlock) {
     if( match_(Token::PRINT) ){
+        consume_(Token::LEFT_PAREN, "Expected '(' after 'print'.");
         // print statement takes a single value:
         expression_();
+        consume_(Token::RIGHT_PAREN, "Expected ')' after argument.");
         consume_(Token::SEMICOLON, "Expected ';' after statement.");
         emitByte_(OpCode::PRINT);
         return false;  // statement only
