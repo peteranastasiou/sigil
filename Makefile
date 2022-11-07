@@ -4,10 +4,10 @@
 CC = g++
 
 # Whether to build for debugging instead of release
-DEBUG = 0
+DEBUG = 1
 
 # Whether to enable verbose execution trace debugging
-DEBUG_TRACE_EXECUTION = 0
+VERBOSE = 0
 
 # Compilation flags
 CFLAGS = -std=c++17 -W -Wall -Wextra -Werror -Wno-unused -Wconversion -MMD -MP -fno-exceptions
@@ -44,7 +44,7 @@ endif
 DEFINES = 
 
 # Enable debug messages:
-ifeq ($(DEBUG_TRACE_EXECUTION), 1)
+ifeq ($(VERBOSE), 1)
 	DEFINES += -DDEBUG_TRACE_EXECUTION
 endif
 

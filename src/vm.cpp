@@ -289,6 +289,7 @@ InterpretResult Vm::run_() {
                 break;
             }
             case OpCode::RETURN:{
+                assert(stack_ == stackTop_);
                 return InterpretResult::OK;
             }
             default:{

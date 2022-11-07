@@ -76,7 +76,7 @@ bool Compiler::compile(char const * source, Chunk & chunk) {
     
     // compile declarations until we hit the end
     while( !match_(Token::END) ){
-        declaration_();
+        declaration_(false);
     }
 
     endCompilation_();
@@ -173,17 +173,20 @@ void Compiler::expression_() {
     parse_(Precedence::ASSIGNMENT);
 }
 
-void Compiler::declaration_() {
+bool Compiler::declaration_(bool isExpressionBlock) {
+    bool wasExpression = false;
     if( match_(Token::VAR) ){
         varDeclaration_(false);
     }else if( match_(Token::CONST) ){
         varDeclaration_(true);
     }else{
-        statement_();
+        wasExpression = statement_(isExpressionBlock);
     }
 
-    // End of a statement is a good place to re-sync the parser if its panicking
-    if( panicMode_ ) synchronise_();
+    // End of a statement is a good place to re-sync the parser if it is panicking
+    if( panicMode_ && !wasExpression ) synchronise_();
+
+    return wasExpression;
 }
 
 void Compiler::varDeclaration_(bool isConst) {
@@ -271,39 +274,67 @@ void Compiler::or_() {
     setJumpDestination_(jumpOverRhs);
 }
 
-void Compiler::statement_() {
+bool Compiler::statement_(bool isExpressionBlock) {
     if( match_(Token::PRINT) ){
         // print statement takes a single value:
         expression_();
         consume_(Token::SEMICOLON, "Expected ';' after statement.");
         emitByte_(OpCode::PRINT);
+        return false;  // statement only
 
     }else if( match_(Token::IF) ){
-        ifStatement_();
+        if_(isExpressionBlock);
+        return isExpressionBlock;  // if above line passed, must be true
 
     }else if( match_(Token::WHILE) ){
         whileStatement_();
+        return false;  // statement only (for now!)
 
     }else if( match_(Token::LEFT_BRACE) ){
         // recurse into a nested scope:
-        nestedBlock_();
+        nestedBlock_(isExpressionBlock);
+        return isExpressionBlock;  // if above line passed, must be true
 
     }else{
-        // expression statement:
+        // expression-statement:
         expression_();
-        consume_(Token::SEMICOLON, "Expected ';' after statement.");
-        emitByte_(OpCode::POP); // discard the result
+
+        // what we expect next depends on the context of the expression-statement:
+        if( !isExpressionBlock ){
+            // ordinary statement:
+            consume_(Token::SEMICOLON, "Expected ';' after statement.");
+            emitByte_(OpCode::POP); // discard the result
+            return false;
+        }else if( match_(Token::SEMICOLON) ){
+            // statement within an expression block:
+            emitByte_(OpCode::POP); // discard the result
+            return false;
+        }else if( currentToken_.type == Token::RIGHT_BRACE ){
+            // The end of an expression block, leave the value on the stack:
+            return true;
+        }else{
+            errorAtCurrent_("Expected ';' or '}'.");
+            return false;
+        }
     }
 }
 
+void Compiler::ifExpression_() {
+    if_(true);
+}
+
 void Compiler::ifStatement_() {
+    if_(false);
+}
+
+void Compiler::if_(bool isExpressionBlock) {
     // the condition part:
     expression_();
     // jump over the block to the next part:
     int jumpOver = emitJump_(OpCode::JUMP_IF_FALSE_POP);
     // the block
     consume_(Token::LEFT_BRACE, "Expected '{' after condition.");
-    nestedBlock_();
+    nestedBlock_(isExpressionBlock);
 
     // track all the jumps which go straight to the end
     std::vector<int> jumpsToEnd;
@@ -320,7 +351,7 @@ void Compiler::ifStatement_() {
         jumpOver = emitJump_(OpCode::JUMP_IF_FALSE_POP);
         // the block
         consume_(Token::LEFT_BRACE, "Expected '{' after 'elif'.");
-        nestedBlock_();
+        nestedBlock_(isExpressionBlock);
     }
 
     // optional `else` block:
@@ -331,10 +362,14 @@ void Compiler::ifStatement_() {
         setJumpDestination_(jumpOver);
         // the block
         consume_(Token::LEFT_BRACE, "Expected '{' after 'else'.");
-        nestedBlock_();
+        nestedBlock_(isExpressionBlock);
     }else{
         // no else block, so the last "jumpOver" goes to here:
         setJumpDestination_(jumpOver);
+
+        if( isExpressionBlock ){
+            errorAtPrevious_("Expected 'else' on if expression.");
+        }
     }
     // link up all the end jumps to here
     for( int jump : jumpsToEnd ){
@@ -349,7 +384,7 @@ void Compiler::whileStatement_() {
     // jump over the body if falsy
     int jumpToEnd = emitJump_(OpCode::JUMP_IF_FALSE_POP);
     consume_(Token::LEFT_BRACE, "Expected '{' after condition.");
-    nestedBlock_();
+    nestedBlock_(false);
     // loop back up
     emitLoop_(loopStart);
     // escape the loop to here:
@@ -393,18 +428,23 @@ void Compiler::endScope_() {
     if( n > 0 ) emitBytes_(OpCode::POP_N, n);
 }
 
-void Compiler::block_() {
+void Compiler::block_(bool isExpressionBlock) {
     // parse declarations (and statements) until hit the closing brace
+    bool wasExpression = false;
     while( currentToken_.type != Token::RIGHT_BRACE && 
            currentToken_.type != Token::END ){
-        declaration_();
+        wasExpression = declaration_(isExpressionBlock);
     }
     consume_(Token::RIGHT_BRACE, "Expected '}' after block.");
+
+    if( isExpressionBlock && !wasExpression ){
+        errorAtPrevious_("Expression block must end in an expression.");
+    }
 }
 
-void Compiler::nestedBlock_() {
+void Compiler::nestedBlock_(bool isExpressionBlock) {
     beginScope_();
-    block_();
+    block_(isExpressionBlock);
     endScope_();
 }
 
@@ -586,7 +626,7 @@ ParseRule const * Compiler::getRule_(Token::Type type) {
         // token type             prefix func      infix func     infix precedence
         [Token::LEFT_PAREN]    = {RULE(grouping_), NULL,          Precedence::NONE},
         [Token::RIGHT_PAREN]   = {NULL,            NULL,          Precedence::NONE},
-        [Token::LEFT_BRACE]    = {NULL,            NULL,          Precedence::NONE}, 
+        [Token::LEFT_BRACE]    = {RULE(expressionBlock_),  NULL,  Precedence::NONE}, 
         [Token::RIGHT_BRACE]   = {NULL,            NULL,          Precedence::NONE},
         [Token::COMMA]         = {NULL,            NULL,          Precedence::NONE},
         [Token::MINUS]         = {RULE(unary_),    RULE(binary_), Precedence::TERM},
@@ -612,7 +652,7 @@ ParseRule const * Compiler::getRule_(Token::Type type) {
         [Token::FALSE]         = {RULE(emitFalse_),NULL,          Precedence::NONE},
         [Token::FOR]           = {NULL,            NULL,          Precedence::NONE},
         [Token::FN]            = {NULL,            NULL,          Precedence::NONE},
-        [Token::IF]            = {NULL,            NULL,          Precedence::NONE},
+        [Token::IF]            = {RULE(ifExpression_), NULL,      Precedence::NONE},
         [Token::NIL]           = {RULE(emitNil_),  NULL,          Precedence::NONE},
         [Token::OR]            = {NULL,            RULE(or_),     Precedence::NONE},
         [Token::PRINT]         = {NULL,            NULL,          Precedence::NONE},

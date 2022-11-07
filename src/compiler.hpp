@@ -96,16 +96,19 @@ private:
 
     // parsing different types of things:
     void expression_();
-    void declaration_();
+    bool declaration_(bool isExpression);  // returns wasExpression
+    bool statement_(bool isExpression);    // returns wasExpression
     void and_();
     void or_();
-    void statement_();
     void ifStatement_();
+    void ifExpression_();
+    void if_(bool isExpression);
     void whileStatement_();
     void synchronise_();
     void beginScope_();
-    void block_();
-    void nestedBlock_();
+    void block_(bool isExpression);
+    void expressionBlock_() { block_(true); }
+    void nestedBlock_(bool isExpression);
     void endScope_();
     void parse_(Precedence precedence);  // parse expressions with >= precendence
     void number_();
