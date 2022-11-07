@@ -11,7 +11,7 @@ class ObjString;
 
 struct Obj {
     enum Type {
-        STRING
+        OBJ_STRING
     };
 
     Obj(Vm * vm, Type t);

@@ -160,6 +160,26 @@ void Compiler::emitNil_() {
     emitByte_(OpCode::NIL);
 }
 
+void Compiler::emitBoolType_() {
+    emitByte_(OpCode::TYPE_BOOL);
+}
+
+void Compiler::emitFloatType_() {
+    emitByte_(OpCode::TYPE_FLOAT);
+}
+
+void Compiler::emitObjectType_() {
+    emitByte_(OpCode::TYPE_OBJECT);
+}
+
+void Compiler::emitStringType_() {
+    emitByte_(OpCode::TYPE_STRING);
+}
+
+void Compiler::emitTypeIdType_() {
+    emitByte_(OpCode::TYPE_TYPE);
+}
+
 void Compiler::emitLiteral_(Value value) {
     emitBytes_(OpCode::LITERAL, makeLiteral_(value));
 }
@@ -296,8 +316,8 @@ bool Compiler::statement_(bool isExpressionBlock) {
     } else if( match_(Token::PRINT) ){
         print_();
 
-    } else if( match_(Token::TYPE) ){
-        type_();
+    // } else if( match_(Token::TYPE) ){
+    //     type_();
 
     }else{
         // expression-statement:
@@ -665,19 +685,24 @@ ParseRule const * Compiler::getRule_(Token::Type type) {
         [Token::STRING]        = {RULE(string_),   NULL,          Precedence::NONE},
         [Token::NUMBER]        = {RULE(number_),   NULL,          Precedence::NONE},
         [Token::AND]           = {NULL,            RULE(and_),    Precedence::NONE},
+        [Token::BOOL]          = {RULE(emitBoolType_), NULL,        Precedence::NONE},
         [Token::CONST]         = {NULL,            NULL,          Precedence::NONE},
         [Token::ELIF]          = {NULL,            NULL,          Precedence::NONE},
         [Token::ELSE]          = {NULL,            NULL,          Precedence::NONE},
         [Token::FALSE]         = {RULE(emitFalse_),NULL,          Precedence::NONE},
         [Token::FOR]           = {NULL,            NULL,          Precedence::NONE},
         [Token::FN]            = {NULL,            NULL,          Precedence::NONE},
+        [Token::FLOAT]         = {RULE(emitFloatType_), NULL,     Precedence::NONE},
         [Token::IF]            = {RULE(ifExpression_), NULL,      Precedence::NONE},
         [Token::NIL]           = {RULE(emitNil_),  NULL,          Precedence::NONE},
         [Token::OR]            = {NULL,            RULE(or_),     Precedence::NONE},
-        [Token::PRINT]         = {NULL,            NULL,          Precedence::NONE},
+        [Token::OBJECT]        = {RULE(emitObjectType_), NULL,    Precedence::NONE},
+        [Token::PRINT]         = {RULE(print_),    NULL,          Precedence::NONE},
         [Token::RETURN]        = {NULL,            NULL,          Precedence::NONE},
+        [Token::STRING_TYPE]   = {RULE(emitStringType_), NULL,    Precedence::NONE},
         [Token::TRUE]          = {RULE(emitTrue_), NULL,          Precedence::NONE},
         [Token::TYPE]          = {RULE(type_),     NULL,          Precedence::NONE},
+        [Token::TYPEID]        = {RULE(emitTypeIdType_), NULL,          Precedence::NONE},
         [Token::VAR]           = {NULL,            NULL,          Precedence::NONE},
         [Token::WHILE]         = {NULL,            NULL,          Precedence::NONE},
         [Token::ERROR]         = {NULL,            NULL,          Precedence::NONE},

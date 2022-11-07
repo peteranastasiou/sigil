@@ -21,10 +21,10 @@ struct Token {
         // Literals:
         IDENTIFIER, STRING, NUMBER,   // TODO int
         // Keywords:
-        AND, CONST, ELIF, ELSE, FALSE,
-        FOR, FN, IF, NIL, OR,
-        PRINT, RETURN,
-        TRUE, TYPE, VAR, WHILE,
+        AND, BOOL, CONST, ELIF, ELSE, FALSE,
+        FOR, FN, FLOAT, IF, NIL, OR, OBJECT,
+        PRINT, RETURN, STRING_TYPE,
+        TRUE, TYPE, TYPEID, VAR, WHILE,
         // Special tokens:
         ERROR, END
     };

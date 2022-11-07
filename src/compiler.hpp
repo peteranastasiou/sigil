@@ -138,6 +138,11 @@ private:
     void emitFalse_();
     void emitNil_();
     void emitReturn_();
+    void emitBoolType_();
+    void emitFloatType_();
+    void emitObjectType_();
+    void emitStringType_();
+    void emitTypeIdType_();
     void emitLiteral_(Value value);
     uint8_t makeLiteral_(Value value);
     uint8_t makeIdentifierLiteral_(Token & name);

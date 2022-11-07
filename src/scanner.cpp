@@ -107,6 +107,7 @@ Token::Type Scanner::identifierType_() {
     // Use a trie to determine if the identifier is a keyword:
     switch( start_[0] ){
         case 'a': return checkKeyword_(1, 2, "nd", Token::AND);
+        case 'b': return checkKeyword_(1, 3, "ool", Token::BOOL);
         case 'c': return checkKeyword_(1, 4, "onst", Token::CONST);
         case 'e': {
             // "e..." might be "else" or "elif":
@@ -124,6 +125,7 @@ Token::Type Scanner::identifierType_() {
                 switch( start_[1] ){
                     case 'a': return checkKeyword_(2, 3, "lse", Token::FALSE);
                     case 'o': return checkKeyword_(2, 1, "r", Token::FALSE);
+                    case 'l': return checkKeyword_(2, 3, "oat", Token::FLOAT);
                     case 'n': return Token::FN;
                 }
             }
@@ -131,15 +133,30 @@ Token::Type Scanner::identifierType_() {
         }
         case 'i': return checkKeyword_(1, 1, "f", Token::IF);
         case 'n': return checkKeyword_(1, 2, "il", Token::NIL);
-        case 'o': return checkKeyword_(1, 1, "r", Token::OR);
+        case 'o': {
+            if( current_ - start_ > 1 ){
+                switch( start_[1] ){
+                    case 'b': return checkKeyword_(2, 4, "ject", Token::OBJECT);
+                    case 'r': return Token::OR;
+                }
+            }
+            break;
+        }
         case 'p': return checkKeyword_(1, 4, "rint", Token::PRINT);
         case 'r': return checkKeyword_(1, 5, "eturn", Token::RETURN);
+        case 's': return checkKeyword_(1, 5, "tring", Token::STRING_TYPE);
         case 't': {
-            // could be "true" or "type"
-            if( current_ - start_ == 4 ){
+            // could be "true", "type" or "typeid"
+            if( current_ - start_ > 1 ){
                 switch( start_[1] ){
                     case 'r': return checkKeyword_(2, 2, "ue", Token::TRUE);
-                    case 'y': return checkKeyword_(2, 2, "pe", Token::TYPE);
+                    case 'y': {
+                        if( current_ - start_ == 4 ){
+                            return checkKeyword_(2, 2, "pe", Token::TYPE);
+                        }else{
+                            return checkKeyword_(2, 4, "peid", Token::TYPEID);
+                        }
+                    }
                 }
             }
             break;

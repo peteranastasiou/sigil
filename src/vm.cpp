@@ -119,9 +119,8 @@ InterpretResult Vm::run_() {
 
     printf("Literals:\n");
     for( uint8_t i =0; i < chunk_->numLiterals(); ++i ){
-        printf(" %i ", i);
+        printf(" %i [", i);
         Value v = chunk_->getLiteral(i);
-        if( v.isObject() ) printf("%p [", v.as.obj);
         v.print();
         printf("]\n");
     }
@@ -157,6 +156,11 @@ InterpretResult Vm::run_() {
             case OpCode::NIL: push(Value::nil()); break;
             case OpCode::TRUE: push(Value::boolean(true)); break;
             case OpCode::FALSE: push(Value::boolean(false)); break;
+            case OpCode::TYPE_BOOL: push(Value::typeId(Value::BOOL)); break;
+            case OpCode::TYPE_FLOAT: push(Value::typeId(Value::NUMBER)); break;
+            case OpCode::TYPE_OBJECT: push(Value::typeId(Value::OBJECT)); break;
+            case OpCode::TYPE_STRING: push(Value::typeId(Value::STRING)); break;
+            case OpCode::TYPE_TYPE:   push(Value::typeId(Value::TYPEID)); break;
             case OpCode::POP: pop(); break;
             case OpCode::POP_N: pop(readByte_()); break;
             case OpCode::DEFINE_GLOBAL_VAR:

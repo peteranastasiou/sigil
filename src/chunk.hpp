@@ -8,10 +8,17 @@
 
 namespace OpCode {
 enum {
+    // Literals:
     LITERAL,        // Push a literal value from the chunk
     NIL,            // Push nil to the stack
     TRUE,           // Push true to the stack
     FALSE,          // Push false to the stack
+    TYPE_BOOL,      // TypeId of bool
+    TYPE_FLOAT,     // TypeId of float
+    TYPE_OBJECT,    // TypeId of Object
+    TYPE_STRING,    // TypeId of String
+    TYPE_TYPE,      // TypeId of TypeId
+    // Stack and variable manipulation
     POP,            // Pop 1 value from the stack
     POP_N,          // Pop N values from the stack
     DEFINE_GLOBAL_VAR,   // Define a global variable
@@ -34,8 +41,10 @@ enum {
     // Unary operators: take one value, push one value:
     NEGATE,
     NOT,
-    // Control flow:
+    // Built-ins:
     PRINT,
+    TYPE,
+    // Control flow:
     JUMP,               // Unconditionally jump forward by bytecode offset 
     LOOP,               // Unconditionally jump backwards by bytecode offset 
     JUMP_IF_TRUE,       // If top of stack is truthy, jump fwd by bytecode offset

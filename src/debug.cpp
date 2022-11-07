@@ -36,6 +36,10 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
         case OpCode::NIL:           return simpleInstruction_("NIL");
         case OpCode::TRUE:          return simpleInstruction_("TRUE");
         case OpCode::FALSE:         return simpleInstruction_("FALSE");
+        case OpCode::TYPE_BOOL:     return simpleInstruction_("TYPE_BOOL");
+        case OpCode::TYPE_FLOAT:    return simpleInstruction_("TYPE_FLOAT");
+        case OpCode::TYPE_OBJECT:   return simpleInstruction_("TYPE_OBJECT");
+        case OpCode::TYPE_STRING:   return simpleInstruction_("TYPE_STRING");
         case OpCode::ADD:           return simpleInstruction_("ADD");
         case OpCode::POP:           return simpleInstruction_("POP");
         case OpCode::POP_N:         return argInstruction_("POP_N", chunk, offset);
@@ -57,6 +61,7 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
         case OpCode::NEGATE:        return simpleInstruction_("NEGATE");
         case OpCode::NOT:           return simpleInstruction_("NOT");
         case OpCode::PRINT:         return simpleInstruction_("PRINT");
+        case OpCode::TYPE:          return simpleInstruction_("TYPE");
         case OpCode::JUMP:          return jumpInstruction_("JUMP", 1, chunk, offset);
         case OpCode::LOOP:          return jumpInstruction_("LOOP", 1, chunk, offset);
         case OpCode::JUMP_IF_TRUE: return jumpInstruction_("JUMP_IF_TRUE", 1, chunk, offset);
@@ -155,6 +160,7 @@ char const * tokenTypeToStr(Token::Type t) {
         case Token::PRINT:          return "PRINT";
         case Token::RETURN:         return "RETURN";
         case Token::TRUE:           return "TRUE";
+        case Token::TYPE:           return "TYPE";
         case Token::VAR:            return "VAR";
         case Token::WHILE:          return "WHILE";
         case Token::ERROR:          return "ERROR";
