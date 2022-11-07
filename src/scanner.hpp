@@ -24,7 +24,7 @@ struct Token {
         AND, CONST, ELIF, ELSE, FALSE,
         FOR, FN, IF, NIL, OR,
         PRINT, RETURN,
-        TRUE, VAR, WHILE,
+        TRUE, TYPE, VAR, WHILE,
         // Special tokens:
         ERROR, END
     };

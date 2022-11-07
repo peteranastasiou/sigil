@@ -134,7 +134,16 @@ Token::Type Scanner::identifierType_() {
         case 'o': return checkKeyword_(1, 1, "r", Token::OR);
         case 'p': return checkKeyword_(1, 4, "rint", Token::PRINT);
         case 'r': return checkKeyword_(1, 5, "eturn", Token::RETURN);
-        case 't': return checkKeyword_(1, 3, "rue", Token::TRUE);
+        case 't': {
+            // could be "true" or "type"
+            if( current_ - start_ == 4 ){
+                switch( start_[1] ){
+                    case 'r': return checkKeyword_(2, 2, "ue", Token::TRUE);
+                    case 'y': return checkKeyword_(2, 2, "pe", Token::TYPE);
+                }
+            }
+            break;
+        }
         case 'v': return checkKeyword_(1, 2, "ar", Token::VAR);
         case 'w': return checkKeyword_(1, 4, "hile", Token::WHILE);
     }

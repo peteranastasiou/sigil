@@ -280,16 +280,7 @@ void Compiler::or_() {
 }
 
 bool Compiler::statement_(bool isExpressionBlock) {
-    if( match_(Token::PRINT) ){
-        consume_(Token::LEFT_PAREN, "Expected '(' after 'print'.");
-        // print statement takes a single value:
-        expression_();
-        consume_(Token::RIGHT_PAREN, "Expected ')' after argument.");
-        consume_(Token::SEMICOLON, "Expected ';' after statement.");
-        emitByte_(OpCode::PRINT);
-        return false;  // statement only
-
-    }else if( match_(Token::IF) ){
+    if( match_(Token::IF) ){
         if_(isExpressionBlock);
         return isExpressionBlock;  // if above line passed, must be true
 
@@ -302,27 +293,32 @@ bool Compiler::statement_(bool isExpressionBlock) {
         nestedBlock_(isExpressionBlock);
         return isExpressionBlock;  // if above line passed, must be true
 
+    } else if( match_(Token::PRINT) ){
+        print_();
+
+    } else if( match_(Token::TYPE) ){
+        type_();
+
     }else{
         // expression-statement:
         expression_();
-
-        // what we expect next depends on the context of the expression-statement:
-        if( !isExpressionBlock ){
-            // ordinary statement:
-            consume_(Token::SEMICOLON, "Expected ';' after statement.");
-            emitByte_(OpCode::POP); // discard the result
-            return false;
-        }else if( match_(Token::SEMICOLON) ){
-            // statement within an expression block:
-            emitByte_(OpCode::POP); // discard the result
-            return false;
-        }else if( currentToken_.type == Token::RIGHT_BRACE ){
-            // The end of an expression block, leave the value on the stack:
-            return true;
-        }else{
-            errorAtCurrent_("Expected ';' or '}'.");
-            return false;
-        }
+    }
+    // what we expect next depends on the context of the expression-statement:
+    if( !isExpressionBlock ){
+        // ordinary statement:
+        consume_(Token::SEMICOLON, "Expected ';' after statement.");
+        emitByte_(OpCode::POP); // discard the result
+        return false;
+    }else if( match_(Token::SEMICOLON) ){
+        // statement within an expression block:
+        emitByte_(OpCode::POP); // discard the result
+        return false;
+    }else if( currentToken_.type == Token::RIGHT_BRACE ){
+        // The end of an expression block, leave the value on the stack:
+        return true;
+    }else{
+        errorAtCurrent_("Expected ';' or '}'.");
+        return false;
     }
 }
 
@@ -572,6 +568,22 @@ void Compiler::binary_() {
     }
 }
 
+void Compiler::type_() {
+    consume_(Token::LEFT_PAREN, "Expected '(' after 'type'.");
+    // type built-in takes a single value:
+    expression_();
+    consume_(Token::RIGHT_PAREN, "Expected ')' after argument.");
+    emitByte_(OpCode::TYPE);
+}
+
+void Compiler::print_() {
+    consume_(Token::LEFT_PAREN, "Expected '(' after 'print'.");
+    // print built-in takes a single value:
+    expression_();
+    consume_(Token::RIGHT_PAREN, "Expected ')' after argument.");
+    emitByte_(OpCode::PRINT);
+}
+
 void Compiler::number_() {
     // shouldn't fail as we already validated the token as a number:
     double n = strtod(previousToken_.start, nullptr);
@@ -665,6 +677,7 @@ ParseRule const * Compiler::getRule_(Token::Type type) {
         [Token::PRINT]         = {NULL,            NULL,          Precedence::NONE},
         [Token::RETURN]        = {NULL,            NULL,          Precedence::NONE},
         [Token::TRUE]          = {RULE(emitTrue_), NULL,          Precedence::NONE},
+        [Token::TYPE]          = {RULE(type_),     NULL,          Precedence::NONE},
         [Token::VAR]           = {NULL,            NULL,          Precedence::NONE},
         [Token::WHILE]         = {NULL,            NULL,          Precedence::NONE},
         [Token::ERROR]         = {NULL,            NULL,          Precedence::NONE},

@@ -256,6 +256,11 @@ InterpretResult Vm::run_() {
             case OpCode::PRINT:{
                 pop().print();
                 printf("\n");
+                push(Value::nil());  // print returns nil
+                break;
+            }
+            case OpCode::TYPE:{
+                push(Value::typeId(pop().type));
                 break;
             }
             case OpCode::JUMP:{

@@ -98,8 +98,6 @@ private:
     void expression_();
     bool declaration_(bool isExpression);  // returns wasExpression
     bool statement_(bool isExpression);    // returns wasExpression
-    void and_();
-    void or_();
     void ifStatement_();
     void ifExpression_();
     void if_(bool isExpression);
@@ -111,6 +109,10 @@ private:
     void nestedBlock_(bool isExpression);
     void endScope_();
     void parse_(Precedence precedence);  // parse expressions with >= precendence
+    void type_();
+    void print_();
+    void and_();
+    void or_();
     void number_();
     void string_();
     void variable_(bool canAssign);
