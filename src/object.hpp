@@ -2,7 +2,7 @@
 
 // Predeclare references
 class Vm;
-class ObjString;
+class ObjString;  // defined in str.hpp
 
 /**
  * NOTE: if objects are all created via Vm, then we can do the register/deregister there, 
@@ -11,7 +11,8 @@ class ObjString;
 
 struct Obj {
     enum Type {
-        OBJ_STRING
+        STRING,
+        FUNCTION
     };
 
     Obj(Vm * vm, Type t);

@@ -95,7 +95,7 @@ void Vm::concatenate_() {
     Value bValue = pop();
     ObjString * b = bValue.toString(this);
     ObjString * a = pop().asObjString();
-    push( Value::object(ObjString::concatenate(this, a, b)) );
+    push( Value::string(ObjString::concatenate(this, a, b)) );
 }
 
 Value Vm::readLiteral_() {
@@ -158,9 +158,9 @@ InterpretResult Vm::run_() {
             case OpCode::FALSE: push(Value::boolean(false)); break;
             case OpCode::TYPE_BOOL: push(Value::typeId(Value::BOOL)); break;
             case OpCode::TYPE_FLOAT: push(Value::typeId(Value::NUMBER)); break;
-            case OpCode::TYPE_OBJECT: push(Value::typeId(Value::OBJECT)); break;
+            case OpCode::TYPE_FUNCTION: push(Value::typeId(Value::FUNCTION)); break;
             case OpCode::TYPE_STRING: push(Value::typeId(Value::STRING)); break;
-            case OpCode::TYPE_TYPE:   push(Value::typeId(Value::TYPEID)); break;
+            case OpCode::TYPE_TYPEID:   push(Value::typeId(Value::TYPEID)); break;
             case OpCode::POP: pop(); break;
             case OpCode::POP_N: pop(readByte_()); break;
             case OpCode::DEFINE_GLOBAL_VAR:

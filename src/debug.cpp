@@ -38,7 +38,7 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
         case OpCode::FALSE:         return simpleInstruction_("FALSE");
         case OpCode::TYPE_BOOL:     return simpleInstruction_("TYPE_BOOL");
         case OpCode::TYPE_FLOAT:    return simpleInstruction_("TYPE_FLOAT");
-        case OpCode::TYPE_OBJECT:   return simpleInstruction_("TYPE_OBJECT");
+        case OpCode::TYPE_FUNCTION: return simpleInstruction_("TYPE_FUNCTION");
         case OpCode::TYPE_STRING:   return simpleInstruction_("TYPE_STRING");
         case OpCode::ADD:           return simpleInstruction_("ADD");
         case OpCode::POP:           return simpleInstruction_("POP");
@@ -64,7 +64,7 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
         case OpCode::TYPE:          return simpleInstruction_("TYPE");
         case OpCode::JUMP:          return jumpInstruction_("JUMP", 1, chunk, offset);
         case OpCode::LOOP:          return jumpInstruction_("LOOP", 1, chunk, offset);
-        case OpCode::JUMP_IF_TRUE: return jumpInstruction_("JUMP_IF_TRUE", 1, chunk, offset);
+        case OpCode::JUMP_IF_TRUE:  return jumpInstruction_("JUMP_IF_TRUE", 1, chunk, offset);
         case OpCode::JUMP_IF_FALSE: return jumpInstruction_("JUMP_IF_FALSE", 1, chunk, offset);
         case OpCode::JUMP_IF_TRUE_POP: return jumpInstruction_("JUMP_IF_TRUE_POP", 1, chunk, offset);
         case OpCode::JUMP_IF_FALSE_POP: return jumpInstruction_("JUMP_IF_FALSE_POP", 1, chunk, offset);

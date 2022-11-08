@@ -15,9 +15,9 @@ enum {
     FALSE,          // Push false to the stack
     TYPE_BOOL,      // TypeId of bool
     TYPE_FLOAT,     // TypeId of float
-    TYPE_OBJECT,    // TypeId of Object
+    TYPE_FUNCTION,  // TypeId of Object
     TYPE_STRING,    // TypeId of String
-    TYPE_TYPE,      // TypeId of TypeId
+    TYPE_TYPEID,    // TypeId of TypeId
     // Stack and variable manipulation
     POP,            // Pop 1 value from the stack
     POP_N,          // Pop N values from the stack

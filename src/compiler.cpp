@@ -169,7 +169,7 @@ void Compiler::emitFloatType_() {
 }
 
 void Compiler::emitObjectType_() {
-    emitByte_(OpCode::TYPE_OBJECT);
+    emitByte_(OpCode::TYPE_FUNCTION);
 }
 
 void Compiler::emitStringType_() {
@@ -177,7 +177,7 @@ void Compiler::emitStringType_() {
 }
 
 void Compiler::emitTypeIdType_() {
-    emitByte_(OpCode::TYPE_TYPE);
+    emitByte_(OpCode::TYPE_TYPEID);
 }
 
 void Compiler::emitLiteral_(Value value) {
@@ -503,7 +503,7 @@ void Compiler::parse_(Precedence precedence) {
 }
 
 uint8_t Compiler::makeIdentifierLiteral_(Token & name) {
-    return makeLiteral_(Value::object(
+    return makeLiteral_(Value::string(
         ObjString::newString(vm_, name.start, name.length)
     ));
 }
@@ -612,7 +612,7 @@ void Compiler::number_() {
 
 void Compiler::string_() {
     ObjString * str = ObjString::newString(vm_, previousToken_.start+1, previousToken_.length-2);
-    emitLiteral_(Value::object(str));
+    emitLiteral_(Value::string(str));
 }
 
 void Compiler::variable_(bool canAssign) {
