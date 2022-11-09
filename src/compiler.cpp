@@ -2,11 +2,26 @@
 #include "compiler.hpp"
 #include "debug.hpp"
 #include "vm.hpp"
+#include "function.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <vector>
+
+
+Environment::Environment(Vm * vm, ObjString * name, Type t) {
+    type = t;
+    localCount = 0;
+    scopeDepth = 0;
+    function = new ObjFunction(vm, name);
+
+    // Claim first local for the "stack pointer"??
+    Local * local = &locals[localCount++];
+    local->depth = 0;
+    local->name.start = "";
+    local->name.length = 0;
+}
 
 
 bool Environment::addLocal(Token & name, bool isConst) {
@@ -64,11 +79,12 @@ Compiler::Compiler(Vm * vm) : vm_(vm) {
 Compiler::~Compiler() {
 }
 
-bool Compiler::compile(char const * source, Chunk & chunk) {
+ObjFunction * Compiler::compile(char const * source) {
     scanner_.init(source);
-    Environment env;
-    currentEnv_ = &env;
-    compilingChunk_ = &chunk;
+
+    currentEnv_ = nullptr;
+    Environment env(vm_, nullptr, Environment::SCRIPT);
+    initEnvironment_(env);
 
     hadError_ = false;
     panicMode_ = false;
@@ -80,8 +96,20 @@ bool Compiler::compile(char const * source, Chunk & chunk) {
         declaration_(false);
     }
 
-    endCompilation_();
-    return !hadError_;
+    ObjFunction * function = endEnvironment_();
+    return hadError_ ? nullptr : function;
+}
+
+void Compiler::initEnvironment_(Environment & env) {
+    env.enclosing = currentEnv_;
+    currentEnv_ = &env;
+}
+
+ObjFunction * Compiler::endEnvironment_() {
+    emitReturn_();
+    ObjFunction * fn = currentEnv_->function;
+    currentEnv_ = currentEnv_->enclosing;
+    return fn;
 }
 
 void Compiler::advance_() {
@@ -129,7 +157,7 @@ bool Compiler::match_(Token::Type type) {
 }
 
 Chunk * Compiler::getCurrentChunk_() {
-    return compilingChunk_;
+    return &currentEnv_->function->chunk;
 }
 
 void Compiler::emitByte_(uint8_t byte) {
@@ -138,10 +166,6 @@ void Compiler::emitByte_(uint8_t byte) {
 
 void Compiler::emitByteAtLine_(uint8_t byte, uint16_t line) {
     getCurrentChunk_()->write(byte, line);
-}
-
-void Compiler::endCompilation_() {
-    emitReturn_();
 }
 
 void Compiler::emitReturn_() {

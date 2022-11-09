@@ -39,15 +39,22 @@ struct Local {
     static int const NOT_FOUND = -2;
 };
 
-
-
 // Note: lox calls this a Compiler:
 struct Environment {
     static int const MAX_LOCALS = 255;
+    
+    enum Type {
+        FUNCTION,  // within a function
+        SCRIPT     // top-level code
+    } type;
 
+    Environment * enclosing;  // the parent environment
+    ObjFunction * function = nullptr;
     Local locals[MAX_LOCALS];
-    uint8_t localCount = 0;
-    uint16_t scopeDepth = 0;
+    uint8_t localCount;
+    uint16_t scopeDepth;
+
+    Environment(Vm * vm, ObjString * name, Type t);
 
     /**
      * track a local variables position in the stack
@@ -84,7 +91,7 @@ public:
      * @param source [input]
      * @param chunk [output]
     */
-    bool compile(char const * source, Chunk & chunk);
+    ObjFunction * compile(char const * source);
 
 private:
     // parser helpers:
@@ -133,7 +140,6 @@ private:
     void emitByte_(uint8_t byte);
     void emitByteAtLine_(uint8_t byte, uint16_t line);
     inline void emitBytes_(uint8_t b1, uint8_t b2){ emitByte_(b1); emitByte_(b2); }
-    void endCompilation_();
     void emitTrue_();
     void emitFalse_();
     void emitNil_();
@@ -150,6 +156,10 @@ private:
     void setJumpDestination_(int offset);
     void emitLoop_(int loopStart);
 
+    // Environment:
+    void initEnvironment_(Environment & env);
+    ObjFunction * endEnvironment_();
+
     // error production:
     void errorAtCurrent_(const char* fmt, ...);
     void errorAtPrevious_(const char* fmt, ...);
@@ -158,7 +168,6 @@ private:
 
     Vm * vm_;
     Scanner scanner_;
-    Chunk * compilingChunk_;
     Environment * currentEnv_;
     Token currentToken_;
     Token previousToken_;

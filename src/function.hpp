@@ -6,12 +6,12 @@
 
 
 struct ObjFunction : public Obj {
-    ObjFunction(Vm * vm);
+    ObjFunction(Vm * vm, ObjString * funcName);
     ~ObjFunction();
 
     // implment Obj interface (trivial for strings)
-    virtual ObjString * toString() override { return name; }
-    virtual void print() override { printf("<fn %s>", name->get()); }
+    virtual ObjString * toString(Vm * vm) override;
+    virtual void print() override;
 
     int arity;  // number of expected parameters
     Chunk chunk;

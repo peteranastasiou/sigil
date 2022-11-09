@@ -66,7 +66,7 @@ public:
     virtual ~ObjString();
 
     // implment Obj interface (trivial for strings)
-    virtual ObjString * toString() override { return this; }
+    virtual ObjString * toString(Vm * vm) override { return this; }
     virtual void print() override { printf("%s", chars_); }
 
     // implement String interface:

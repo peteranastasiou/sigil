@@ -53,7 +53,7 @@ ObjString * Value::toString(Vm * vm) {
         case FUNCTION:
         case STRING:
             // Object types:
-            return as.obj->toString();
+            return as.obj->toString(vm);
         default:      return ObjString::newString(vm, "???");
     }
 }

@@ -2,12 +2,35 @@
 #include "vm.hpp"
 #include "debug.hpp"
 #include "compiler.hpp"
+#include "function.hpp"
 
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 
+
+uint16_t CallFrame::readUint16() {
+    ip += 2;
+    return (uint16_t)((ip[-2] << 8) | ip[-1]);
+}
+
+Value CallFrame::readLiteral() {
+    // look up literal from bytecode reference
+    return function->chunk.getLiteral(readByte());
+}
+
+ObjString * CallFrame::readString() {
+    // look up literal from bytecode and cast to string:
+    Value literal = readLiteral();
+    assert(literal.isString());
+    return literal.asObjString();
+}
+
+int CallFrame::chunkOffsetOf(uint8_t * addr) {
+    // get distance of instruction address from the start of the chunk's code array:
+    return (int)(addr - function->chunk.getCode());
+}
 
 Vm::Vm() {
     objects_ = nullptr;
@@ -19,14 +42,28 @@ Vm::~Vm() {
 }
 
 InterpretResult Vm::interpret(char const * source) {
+    // Compile the source string to a function
     Compiler compiler(this);
-    Chunk chunk;
-    if( !compiler.compile(source, chunk) ){
-        return InterpretResult::COMPILE_ERR;
+    ObjFunction * fn = compiler.compile(source);
+    if( fn == nullptr )  return InterpretResult::COMPILE_ERR;
+
+    // NOTE: not in lox!
+    resetStack_();
+
+    // put the function on the value stack
+    push(Value::function(fn));
+
+    // Make a new call frame
+    CallFrame * frame = &frames_[frameCount_++];  // TODO is this okay for the repl!
+    frame->function = fn;
+    frame->ip = fn->chunk.getCode();
+    frame->slots = stack_;  // this root callframe starts at the bottom of the stack
+
+    InterpretResult res = run_();
+    if( res == InterpretResult::OK ){
+        assert(stackTop_ - stack_ == 1);   // only thing left on the stack is the root function
     }
-    chunk_= &chunk;
-    ip_ = chunk_->getCode();
-    return run_();
+    return res;
 }
 
 void Vm::registerObj(Obj * obj){
@@ -56,11 +93,6 @@ void Vm::pop(int n) {
 
 Value Vm::peek(int index) {
     return stackTop_[-1 - index];
-}
-
-uint16_t Vm::readUint16_() {
-    ip_ += 2;
-    return (uint16_t)((ip_[-2] << 8) | ip_[-1]);
 }
 
 bool Vm::binaryOp_(uint8_t op) {
@@ -98,38 +130,34 @@ void Vm::concatenate_() {
     push( Value::string(ObjString::concatenate(this, a, b)) );
 }
 
-Value Vm::readLiteral_() {
-    // look up literal from bytecode reference
-    return chunk_->getLiteral(readByte_());
-}
-
-ObjString * Vm::readString_() {
-    // look up literal from bytecode and cast to string:
-    Value literal = readLiteral_();
-    assert(literal.isString());
-    return literal.asObjString();
+void Vm::resetStack_() {
+    stackTop_ = stack_;
+    frameCount_ = 0;
 }
 
 InterpretResult Vm::run_() {
+    // Grab the top call frame:
+    CallFrame * frame = &frames_[frameCount_ - 1];
+
 #ifdef DEBUG_TRACE_EXECUTION
-    Disassembler disasm;  
+    Disassembler disasm;
 
     internedStrings_.debug();
     debugObjectLinkedList(objects_);
 
-    printf("Literals:\n");
-    for( uint8_t i =0; i < chunk_->numLiterals(); ++i ){
-        printf(" %i [", i);
-        Value v = chunk_->getLiteral(i);
-        v.print();
-        printf("]\n");
-    }
-    printf("Globals:\n");
-    globals_.debug();
-    printf("====\n");
+    // printf("Literals:\n");
+    // for( uint8_t i =0; i < chunk->numLiterals(); ++i ){
+    //     printf(" %i [", i);
+    //     Value v = chunk_->getLiteral(i);
+    //     v.print();
+    //     printf("]\n");
+    // }
+    // printf("Globals:\n");
+    // globals_.debug();
+    // printf("====\n");
 
-    disasm.disassembleChunk(chunk_, "Main");
-    printf("====\n");
+    // disasm.disassembleChunk(chunk, "Main");
+    // printf("====\n");
 
 #endif
 
@@ -144,13 +172,14 @@ InterpretResult Vm::run_() {
         }
         printf("\n");
 
-        disasm.disassembleInstruction(chunk_, (int)(ip_ - chunk_->getCode()));
+        disasm.disassembleInstruction(&frame->function->chunk,
+            frame->chunkOffsetOf(frame->ip));
 #endif
 
-        uint8_t instr = readByte_();
+        uint8_t instr = frame->readByte();
         switch( instr ){
             case OpCode::LITERAL:{
-                push(readLiteral_());
+                push(frame->readLiteral());
                 break;
             }
             case OpCode::NIL: push(Value::nil()); break;
@@ -162,10 +191,10 @@ InterpretResult Vm::run_() {
             case OpCode::TYPE_STRING: push(Value::typeId(Value::STRING)); break;
             case OpCode::TYPE_TYPEID:   push(Value::typeId(Value::TYPEID)); break;
             case OpCode::POP: pop(); break;
-            case OpCode::POP_N: pop(readByte_()); break;
+            case OpCode::POP_N: pop(frame->readByte()); break;
             case OpCode::DEFINE_GLOBAL_VAR:
             case OpCode::DEFINE_GLOBAL_CONST: {
-                ObjString * name = readString_();
+                ObjString * name = frame->readString();
                 bool isConst = instr==OpCode::DEFINE_GLOBAL_CONST;
                 if( !globals_.add(name, {peek(0), isConst}) ){
                     runtimeError_("Redeclaration of variable '%s'.", name->get());
@@ -175,7 +204,7 @@ InterpretResult Vm::run_() {
                 break;
             }
             case OpCode::GET_GLOBAL: {
-                ObjString * name = readString_();
+                ObjString * name = frame->readString();
                 Global global;
                 if( !globals_.get(name, global) ){
                     runtimeError_("Undefined variable '%s'.", name->get());
@@ -185,7 +214,7 @@ InterpretResult Vm::run_() {
                 break;
             }
             case OpCode::SET_GLOBAL: {
-                ObjString * name = readString_();
+                ObjString * name = frame->readString();
                 Global global;
                 if( !globals_.get(name, global) ){
                     runtimeError_("Undefined variable '%s'.", name->get());
@@ -201,13 +230,13 @@ InterpretResult Vm::run_() {
             }
             case OpCode::GET_LOCAL: {
                 // local is already on the stack at the predicted index:
-                uint8_t stackIdx = readByte_();
-                push(stack_[stackIdx]);
+                uint8_t slot = frame->readByte();
+                push(frame->slots[slot]);
                 break;
             }
             case OpCode::SET_LOCAL: {
-                uint8_t stackIdx = readByte_();  // stack position of the local
-                stack_[stackIdx] = peek(0);      // note: no pop: assignment can be an expression
+                uint8_t slot = frame->readByte();  // stack position of the local
+                frame->slots[slot] = peek(0);      // note: no pop: assignment can be an expression
                 break;
             }
             case OpCode::EQUAL: {
@@ -268,37 +297,36 @@ InterpretResult Vm::run_() {
                 break;
             }
             case OpCode::JUMP:{
-                uint16_t offset = readUint16_();
-                ip_ += offset;  // jump forwards
+                uint16_t offset = frame->readUint16();
+                frame->ip += offset;  // jump forwards
                 break;
             }
             case OpCode::LOOP:{
-                uint16_t offset = readUint16_();
-                ip_ -= offset;  // jump backwards
+                uint16_t offset = frame->readUint16();
+                frame->ip -= offset;  // jump backwards
                 break;
             }
             case OpCode::JUMP_IF_TRUE:{
-                uint16_t offset = readUint16_();
-                if( isTruthy_(peek(0)) ) ip_ += offset;
+                uint16_t offset = frame->readUint16();
+                if( isTruthy_(peek(0)) ) frame->ip += offset;
                 break;
             }
             case OpCode::JUMP_IF_FALSE:{
-                uint16_t offset = readUint16_();
-                if( !isTruthy_(peek(0)) ) ip_ += offset;
+                uint16_t offset = frame->readUint16();
+                if( !isTruthy_(peek(0)) ) frame->ip += offset;
                 break;
             }
             case OpCode::JUMP_IF_TRUE_POP:{
-                uint16_t offset = readUint16_();
-                if( isTruthy_(pop()) ) ip_ += offset;
+                uint16_t offset = frame->readUint16();
+                if( isTruthy_(pop()) ) frame->ip += offset;
                 break;
             }
             case OpCode::JUMP_IF_FALSE_POP:{
-                uint16_t offset = readUint16_();
-                if( !isTruthy_(pop()) ) ip_ += offset;
+                uint16_t offset = frame->readUint16();
+                if( !isTruthy_(pop()) ) frame->ip += offset;
                 break;
             }
             case OpCode::RETURN:{
-                assert(stack_ == stackTop_);
                 return InterpretResult::OK;
             }
             default:{
@@ -310,8 +338,11 @@ InterpretResult Vm::run_() {
 }
 
 void Vm::runtimeError_(const char* format, ...) {
-    int offset = (int)(ip_ - chunk_->getCode() - 1);
-    int line = chunk_->getLineNumber(offset);
+    // lookup line number
+    CallFrame * frame = &frames_[frameCount_ - 1];  // top frame
+    int offset = frame->chunkOffsetOf(frame->ip - 1);  // prev instruction
+    uint16_t line = frame->function->chunk.getLineNumber(offset);
+
     fprintf(stderr, "%d: ", line);
 
     va_list args;

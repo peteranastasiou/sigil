@@ -19,7 +19,7 @@ struct Obj {
 
     virtual ~Obj();
 
-    virtual ObjString * toString() = 0;
+    virtual ObjString * toString(Vm * vm) = 0;
     virtual void print() = 0;
 
     Type type;

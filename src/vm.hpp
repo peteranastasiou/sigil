@@ -13,6 +13,18 @@ enum class InterpretResult {
     RUNTIME_ERR
 };
 
+struct CallFrame {
+    inline uint8_t readByte() { return *ip++; }
+    uint16_t readUint16();
+    Value readLiteral();
+    ObjString * readString();
+    int chunkOffsetOf(uint8_t * addr);  // instruction address to chunk offset
+
+    ObjFunction * function;
+    uint8_t * ip;   // instruction pointer
+    Value * slots;  // first value in stack which can be used by function
+};
+
 struct Global {
     Value value;
     bool isConst;
@@ -44,22 +56,19 @@ public:
     StringSet * getInternedStrings(){ return &internedStrings_; }
 
 private:
+    void resetStack_();
     InterpretResult run_();
-    inline uint8_t readByte_() { return *ip_++; }
-    uint16_t readUint16_();
-    inline void resetStack_() { stackTop_ = stack_; }
     bool binaryOp_(uint8_t op);
     bool isTruthy_(Value value);
     void concatenate_();
     void runtimeError_(const char* format, ...);
-    Value readLiteral_();
-    ObjString * readString_();
     void freeObjects_();
 
-    static int const STACK_MAX = 256;
+    static int const FRAMES_MAX = 64;
+    static int const STACK_MAX = FRAMES_MAX * 256;
 
-    Chunk * chunk_;     // current chunk of bytecode
-    uint8_t * ip_;      // instruction pointer
+    CallFrame frames_[FRAMES_MAX];  // TODO to allow continuations/generators, this can't be a stack, GC instead
+    int frameCount_;
     Value stack_[STACK_MAX];
     Value * stackTop_;  // points past the last value in the stack
     Obj * objects_;     // linked list of objects

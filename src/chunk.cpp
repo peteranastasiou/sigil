@@ -2,6 +2,7 @@
 #include "chunk.hpp"
 
 #include <stdlib.h>  // exit
+#include <assert.h>
 
 
 static int const MAX_COUNT_ = 65535;
@@ -52,6 +53,7 @@ uint8_t Chunk::addLiteral(Value value) {
 }
 
 Value Chunk::getLiteral(uint8_t index) {
+    assert(index < literals.size());
     return literals[index];
 }
 
