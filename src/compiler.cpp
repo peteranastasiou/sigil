@@ -38,7 +38,7 @@ bool Environment::addLocal(Token & name, bool isConst) {
 }
 
 void Environment::defineLocal() {
-    // Now we can replace the NOT_INITIALISED value with the actual depth:
+    // Mark local as having a value now:
     locals[localCount-1].isDefined = true;
 }
 
@@ -225,8 +225,12 @@ bool Compiler::declaration_(bool isExpressionBlock) {
     bool wasExpression = false;
     if( match_(Token::VAR) ){
         varDeclaration_(false);
+
     }else if( match_(Token::CONST) ){
         varDeclaration_(true);
+
+    }else if( match_(Token::FN) ){
+        funcDeclaration_();
     }else{
         wasExpression = statement_(isExpressionBlock);
     }
@@ -237,9 +241,50 @@ bool Compiler::declaration_(bool isExpressionBlock) {
     return wasExpression;
 }
 
-void Compiler::varDeclaration_(bool isConst) {
+void Compiler::funcDeclaration_() {
+    bool isLocal = currentEnv_->scopeDepth > 0;
+    bool isConst = true;  // Disallow redefining functions
+
     // Load the variable name, getting the literals index (if global) or 0 (if local):
-    uint8_t globalName = parseVariable_("Expected variable name.", isConst);
+    uint8_t global = parseVariable_("Expected variable name.", isConst, isLocal);
+
+    // If its a local, mark it as already defined (allowing for self-referential functions):
+    // This is not an issue for globals
+    if( isLocal ) currentEnv_->defineLocal();
+
+    function_(Environment::FUNCTION);
+
+    defineVariable_(global, isConst, isLocal);
+}
+
+void Compiler::function_(Environment::Type type) {
+    ObjString * name = ObjString::newString(vm_, 
+        previousToken_.start, previousToken_.length);
+    
+    Environment env(vm_, name, type);
+    initEnvironment_(env);
+    beginScope_();
+
+    // TODO allow declaration as const/var func = fn() { }
+    // (i.e. function as expression)
+    consume_(Token::LEFT_PAREN, "Expect '(' after function name.");
+    consume_(Token::RIGHT_PAREN, "Expect ')' after parameters.");
+    consume_(Token::LEFT_BRACE, "Expect '{' before function body.");
+
+    block_(false);
+
+    // New function literal:
+    ObjFunction * fn = endEnvironment_();
+    uint8_t literal = makeLiteral_(Value::function(fn));
+    emitBytes_(OpCode::LITERAL, literal);
+}
+
+void Compiler::varDeclaration_(bool isConst) {
+    // local and global scoped variables are implemented differently:
+    bool isLocal = currentEnv_->scopeDepth > 0;
+
+    // Load the variable name, getting the literals index (if global) or 0 (if local):
+    uint8_t global = parseVariable_("Expected variable name.", isConst, isLocal);
 
     // assigned an initial value?
     if( match_(Token::EQUAL) ){
@@ -248,27 +293,25 @@ void Compiler::varDeclaration_(bool isConst) {
         emitByte_(OpCode::NIL); // default value is nil
     }
     consume_(Token::SEMICOLON, "Expected ';' after var declaration.");
-    defineVariable_(globalName, isConst);
+
+    defineVariable_(global, isConst, isLocal);
 }
 
-uint8_t Compiler::parseVariable_(const char * errorMsg, bool isConst) {
+uint8_t Compiler::parseVariable_(const char * errorMsg, bool isConst, bool isLocal) {
     // the name of the variable:
     consume_( Token::IDENTIFIER, errorMsg );
 
-    // create it (initially undefined)
-    declareVariable_(isConst);
-
-    // if its a local being declared, we don't need to store its name as a literal: 
-    if( currentEnv_->scopeDepth > 0 ) return 0;
-
-    // globals get their names stored as a literal:
-    return makeIdentifierLiteral_(previousToken_);
+    if(isLocal) {
+        // local variables are registered to the stack
+        declareLocal_(isConst);
+        return 0; // not a global
+    } else {
+        // globals variables have their names stored as a literal:
+        return makeIdentifierLiteral_(previousToken_);
+    }
 }
 
-void Compiler::declareVariable_(bool isConst) {
-    // Don't need to track globals (resolved at runtime):
-    if( currentEnv_->scopeDepth == 0 ) return;
-
+void Compiler::declareLocal_(bool isConst) {
     // the name of the new local variable:
     Token * name = &previousToken_;
 
@@ -290,19 +333,14 @@ void Compiler::declareVariable_(bool isConst) {
     }
 }
 
-void Compiler::defineVariable_(uint8_t global, bool isConst) {
-    // is it a local?
-    if( currentEnv_->scopeDepth > 0 ){
-        // record that the local var is now defined
+void Compiler::defineVariable_(uint8_t global, bool isConst, bool isLocal) {
+    if( isLocal ){
         currentEnv_->defineLocal();
-        // Don't need to do produce any bytecode here
-        // At runtime the local's value will already on the stack
-        return;
+    }else if( isConst ){
+        emitBytes_(OpCode::DEFINE_GLOBAL_CONST, global);
+    }else{
+        emitBytes_(OpCode::DEFINE_GLOBAL_VAR, global);
     }
-
-    // global variables get defined at runtime:
-    uint8_t opCode = isConst ? OpCode::DEFINE_GLOBAL_CONST : OpCode::DEFINE_GLOBAL_VAR;
-    emitBytes_(opCode, global);
 }
 
 void Compiler::and_() {
@@ -477,14 +515,14 @@ void Compiler::endScope_() {
 
 void Compiler::block_(bool isExpressionBlock) {
     // parse declarations (and statements) until hit the closing brace
-    bool wasExpression = false;
+    bool wasExpressionBlock = false;
     while( currentToken_.type != Token::RIGHT_BRACE && 
            currentToken_.type != Token::END ){
-        wasExpression = declaration_(isExpressionBlock);
+        wasExpressionBlock = declaration_(isExpressionBlock);
     }
     consume_(Token::RIGHT_BRACE, "Expected '}' after block.");
 
-    if( isExpressionBlock && !wasExpression ){
+    if( isExpressionBlock && !wasExpressionBlock ){
         errorAtPrevious_("Expression block must end in an expression.");
     }
 }

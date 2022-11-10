@@ -34,12 +34,10 @@ bool Value::equals(Value other) const {
         case BOOL:    return as.boolean == other.as.boolean;
         case NUMBER:  return as.number == other.as.number;
         case TYPEID:  return as.typeId == other.as.typeId;
-        case FUNCTION:  return false;  // TODO
-        case STRING:{
-            if( other.type != STRING ) return false;
+        case FUNCTION:
+        case STRING:
             // all strings are interned --> therefore can compare pointers
             return as.obj == other.as.obj;
-        }
         default: return false;   // Unreachable
     }
 }

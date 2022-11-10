@@ -103,17 +103,17 @@ private:
 
     // parsing different types of things:
     void expression_();
-    bool declaration_(bool isExpression);  // returns wasExpression
-    bool statement_(bool isExpression);    // returns wasExpression
+    bool declaration_(bool isExpressionBlock);  // returns wasExpressionBlock
+    bool statement_(bool isExpressionBlock);    // returns wasExpressionBlock
     void ifStatement_();
     void ifExpression_();
-    void if_(bool isExpression);
+    void if_(bool isExpressionBlock);
     void whileStatement_();
     void synchronise_();
     void beginScope_();
-    void block_(bool isExpression);
+    void block_(bool isExpressionBlock);
     void expressionBlock_() { block_(true); }
-    void nestedBlock_(bool isExpression);
+    void nestedBlock_(bool isExpressionBlock);
     void endScope_();
     void parse_(Precedence precedence);  // parse expressions with >= precendence
     void type_();
@@ -122,18 +122,22 @@ private:
     void or_();
     void number_();
     void string_();
-    void variable_(bool canAssign);
     void unary_();
     void binary_();
     void grouping_();  // parentheses in expressions
 
-    // declaring variables:
+    // parsing functions:
+    void funcDeclaration_();
+    void function_(Environment::Type type);
+
+    // parsing variables:
     void varDeclaration_(bool isConst);
-    uint8_t parseVariable_(const char * errorMsg, bool isConst);
-    void declareVariable_(bool isConst);
-    void defineVariable_(uint8_t global, bool isConst);
+    uint8_t parseVariable_(const char * errorMsg, bool isConst, bool isLocal);
+    void declareLocal_(bool isConst);
+    void defineVariable_(uint8_t global, bool isConst, bool isLocal);
 
     // references to variables:
+    void variable_(bool canAssign);
     void getSetVariable_(Token & token, bool canAssign);
 
     // bytecode helpers:
