@@ -128,7 +128,7 @@ private:
 
     // parsing functions:
     void funcDeclaration_();
-    void function_(Environment::Type type);
+    void function_(ObjString * name, Environment::Type type);
 
     // parsing variables:
     void varDeclaration_(bool isConst);

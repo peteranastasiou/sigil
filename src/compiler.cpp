@@ -245,33 +245,51 @@ void Compiler::funcDeclaration_() {
     bool isLocal = currentEnv_->scopeDepth > 0;
     bool isConst = true;  // Disallow redefining functions
 
-    // Load the variable name, getting the literals index (if global) or 0 (if local):
+    // Load the function variable name, getting the literals index (if global) or 0 (if local):
     uint8_t global = parseVariable_("Expected variable name.", isConst, isLocal);
+
+    // capture function name for the environment too:
+    ObjString * name = ObjString::newString(vm_, 
+        previousToken_.start, previousToken_.length);
 
     // If its a local, mark it as already defined (allowing for self-referential functions):
     // This is not an issue for globals
     if( isLocal ) currentEnv_->defineLocal();
 
-    function_(Environment::FUNCTION);
+    function_(name, Environment::FUNCTION);
 
+    // assign function literal to variable
     defineVariable_(global, isConst, isLocal);
 }
 
-void Compiler::function_(Environment::Type type) {
-    ObjString * name = ObjString::newString(vm_, 
-        previousToken_.start, previousToken_.length);
-    
+void Compiler::function_(ObjString * name, Environment::Type type) {
+    // new environment
     Environment env(vm_, name, type);
     initEnvironment_(env);
     beginScope_();
 
-    // TODO allow declaration as const/var func = fn() { }
     // (i.e. function as expression)
     consume_(Token::LEFT_PAREN, "Expect '(' after function name.");
+    // if has any parameters:
+    if( currentToken_.type != Token::RIGHT_PAREN ){
+        do {
+            // count parameters
+            if( ++currentEnv_->function->arity > 255 ){
+                errorAtCurrent_("Can't have over 255 parameters.");
+            }
+            // make a new local at the top of the function's value stack to use as the parameter:
+            bool isLocal = true;
+            bool isConst = false;
+            parseVariable_("Expected parameter name.", isConst, isLocal);
+            defineVariable_(0, isConst, isLocal);
+        } while( match_(Token::COMMA) );
+    }
     consume_(Token::RIGHT_PAREN, "Expect ')' after parameters.");
     consume_(Token::LEFT_BRACE, "Expect '{' before function body.");
 
     block_(false);
+
+    // Note: no need to endScope(), as we are done with the Environment now
 
     // New function literal:
     ObjFunction * fn = endEnvironment_();
