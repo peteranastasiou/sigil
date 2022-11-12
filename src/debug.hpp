@@ -19,6 +19,7 @@ public:
 private:
     int disassembleInstruction_(Chunk * chunk, int offset, int line);
     int literalInstruction_(char const * name, Chunk * chunk, int offset);
+    int byteInstruction_(char const * name, Chunk * chunk, int offset);
     int argInstruction_(char const * name, Chunk * chunk, int offset);
     int simpleInstruction_(char const * name);
     int jumpInstruction_(const char* name, int sign, Chunk* chunk, int offset);

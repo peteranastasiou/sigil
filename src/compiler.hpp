@@ -124,6 +124,7 @@ private:
     void string_();
     void unary_();
     void binary_();
+    void call_();
     void grouping_();  // parentheses in expressions
 
     // parsing functions:

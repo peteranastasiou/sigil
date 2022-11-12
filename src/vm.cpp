@@ -54,14 +54,12 @@ InterpretResult Vm::interpret(char const * source) {
     push(Value::function(fn));
 
     // Make a new call frame
-    CallFrame * frame = &frames_[frameCount_++];  // TODO is this okay for the repl!
-    frame->function = fn;
-    frame->ip = fn->chunk.getCode();
-    frame->slots = stack_;  // this root callframe starts at the bottom of the stack
+    call_(fn, 0);
 
     InterpretResult res = run_();
     if( res == InterpretResult::OK ){
-        assert(stackTop_ - stack_ == 1);   // only thing left on the stack is the root function
+        // assert nothing is left on the stack at the end of the script!
+        assert(stackTop_ - stack_ == 0);
     }
     return res;
 }
@@ -112,6 +110,33 @@ bool Vm::binaryOp_(uint8_t op) {
         case OpCode::MULTIPLY:      push(Value::number( a * b )); break;
         case OpCode::DIVIDE:        push(Value::number( a / b )); break;
     }
+    return true;
+}
+
+bool Vm::callValue_(Value fn, uint8_t argCount) {
+    if( fn.type != Value::Type::FUNCTION ){
+        runtimeError_("Can only call functions.");
+        return false;
+    }
+    return call_(fn.asObjFunction(), argCount);
+}
+
+bool Vm::call_(ObjFunction * fn, uint8_t argCount) {
+    if( argCount != fn->arity ){
+        runtimeError_("Expected %d arguments, but got %d.",
+            fn->arity, argCount);
+        return false;
+    }
+
+    if( frameCount_ >= FRAMES_MAX ){
+        runtimeError_("Stack overflow.");
+        return false;
+    }
+
+    CallFrame * frame = &frames_[frameCount_++];
+    frame->function = fn;
+    frame->ip = fn->chunk.getCode();
+    frame->slots = stackTop_ - argCount - 1;
     return true;
 }
 
@@ -326,8 +351,34 @@ InterpretResult Vm::run_() {
                 if( !isTruthy_(pop()) ) frame->ip += offset;
                 break;
             }
+            case OpCode::CALL: {
+                uint8_t argCount = frame->readByte();
+                if( !callValue_(peek(argCount), argCount) ){
+                    return InterpretResult::RUNTIME_ERR;
+                }
+                // now in a new frame:
+                frame = &frames_[frameCount_ - 1];
+                break;
+            }
             case OpCode::RETURN:{
-                return InterpretResult::OK;
+                // return value(s) of function:
+                Value result = pop();
+
+                // Check if we are returning from the top level script:
+                if( --frameCount_ == 0 ){
+                    pop();
+                    return InterpretResult::OK;
+                }
+
+                // pop function literal & input params:
+                stackTop_ = frame->slots;
+
+                // put the result(s) back on the stack:
+                push(result);
+
+                // update the frame pointer to the caller:
+                frame = &frames_[frameCount_ - 1];
+                break;
             }
             default:{
                 printf("Fatal error: unknown opcode %d\n", (int)instr);
@@ -338,18 +389,23 @@ InterpretResult Vm::run_() {
 }
 
 void Vm::runtimeError_(const char* format, ...) {
-    // lookup line number
-    CallFrame * frame = &frames_[frameCount_ - 1];  // top frame
-    int offset = frame->chunkOffsetOf(frame->ip - 1);  // prev instruction
-    uint16_t line = frame->function->chunk.getLineNumber(offset);
-
-    fprintf(stderr, "%d: ", line);
-
     va_list args;
     va_start(args, format);
     vfprintf(stderr, format, args);
     va_end(args);
     fputs("\n", stderr);
+
+    for( int i = frameCount_ - 1; i >= 0; i-- ){
+        CallFrame * frame = &frames_[i];
+        ObjFunction * fn = frame->function;
+        int offset = frame->chunkOffsetOf(frame->ip - 1);
+        fprintf(stderr, "[line %d] in ", fn->chunk.getLineNumber(offset));
+        if( fn->name == nullptr ){
+            fprintf(stderr, "script\n");
+        }else{
+            fprintf(stderr, "%s\n", fn->name->get());
+        }
+    }
 
     resetStack_();
 }

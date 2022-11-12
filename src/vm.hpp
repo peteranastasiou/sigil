@@ -58,6 +58,8 @@ public:
 private:
     void resetStack_();
     InterpretResult run_();
+    bool call_(ObjFunction * fn, uint8_t argCount);
+    bool callValue_(Value value, uint8_t argCount);
     bool binaryOp_(uint8_t op);
     bool isTruthy_(Value value);
     void concatenate_();

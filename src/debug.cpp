@@ -45,8 +45,8 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
         case OpCode::POP_N:         return argInstruction_("POP_N", chunk, offset);
         case OpCode::DEFINE_GLOBAL_VAR:   return literalInstruction_("DEFINE_GLOBAL_VAR", chunk, offset);
         case OpCode::DEFINE_GLOBAL_CONST: return literalInstruction_("DEFINE_GLOBAL_CONST", chunk, offset);
-        case OpCode::GET_GLOBAL:    return literalInstruction_("GET_GLOBAL", chunk, offset);
-        case OpCode::SET_GLOBAL:    return literalInstruction_("SET_GLOBAL", chunk, offset);
+        case OpCode::GET_GLOBAL:    return byteInstruction_("GET_GLOBAL", chunk, offset);
+        case OpCode::SET_GLOBAL:    return byteInstruction_("SET_GLOBAL", chunk, offset);
         case OpCode::GET_LOCAL:     return argInstruction_("GET_LOCAL", chunk, offset);
         case OpCode::SET_LOCAL:     return argInstruction_("SET_LOCAL", chunk, offset);
         case OpCode::EQUAL:         return simpleInstruction_("EQUAL"); 
@@ -68,6 +68,7 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
         case OpCode::JUMP_IF_FALSE: return jumpInstruction_("JUMP_IF_FALSE", 1, chunk, offset);
         case OpCode::JUMP_IF_TRUE_POP: return jumpInstruction_("JUMP_IF_TRUE_POP", 1, chunk, offset);
         case OpCode::JUMP_IF_FALSE_POP: return jumpInstruction_("JUMP_IF_FALSE_POP", 1, chunk, offset);
+        case OpCode::CALL:          return byteInstruction_("CALL", chunk, offset);
         case OpCode::RETURN:        return simpleInstruction_("RETURN");
         default:
             printf("Unknown opcode %i\n", instr);
@@ -81,6 +82,12 @@ int Disassembler::literalInstruction_(char const * name, Chunk * chunk, int offs
     chunk->literals[literalIdx].print();
     printf("'\n");
     return 2;
+}
+
+int Disassembler::byteInstruction_(const char* name, Chunk* chunk, int offset) {
+  uint8_t b = chunk->code[offset + 1];
+  printf("%-16s %4d\n", name, b);
+  return 2;
 }
 
 int Disassembler::argInstruction_(char const * name, Chunk * chunk, int offset){

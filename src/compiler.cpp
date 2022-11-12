@@ -169,6 +169,7 @@ void Compiler::emitByteAtLine_(uint8_t byte, uint16_t line) {
 }
 
 void Compiler::emitReturn_() {
+    emitByte_(OpCode::NIL); // implicit return value
     emitByte_(OpCode::RETURN);
 }
 
@@ -289,7 +290,9 @@ void Compiler::function_(ObjString * name, Environment::Type type) {
 
     block_(false);
 
-    // Note: no need to endScope(), as we are done with the Environment now
+    // Note: no actual need to endScope(), as we are done with the Environment now
+    // call it so that we can check the stack emptied correctly:
+    endScope_();
 
     // New function literal:
     ObjFunction * fn = endEnvironment_();
@@ -668,6 +671,23 @@ void Compiler::binary_() {
     }
 }
 
+void Compiler::call_() {
+    // parse arguments:
+    uint8_t argCount = 0;
+    if( currentToken_.type != Token::RIGHT_PAREN ) {
+        do {
+            expression_();
+            if( argCount == 255 ) {
+                errorAtPrevious_("Can't have more than 255 arguments.");
+            }
+            argCount ++;
+        } while( match_(Token::COMMA) );
+    }
+    consume_(Token::RIGHT_PAREN, "Expected ')' after arguments.");
+
+    emitBytes_(OpCode::CALL, argCount);
+}
+
 void Compiler::type_() {
     consume_(Token::LEFT_PAREN, "Expected '(' after 'type'.");
     // type built-in takes a single value:
@@ -743,7 +763,7 @@ void Compiler::getSetVariable_(Token & name, bool canAssign) {
 ParseRule const * Compiler::getRule_(Token::Type type) {
     static const ParseRule rules[] = {
         // token type             prefix func      infix func     infix precedence
-        [Token::LEFT_PAREN]    = {RULE(grouping_), NULL,          Precedence::NONE},
+        [Token::LEFT_PAREN]    = {RULE(grouping_), RULE(call_),   Precedence::CALL},
         [Token::RIGHT_PAREN]   = {NULL,            NULL,          Precedence::NONE},
         [Token::LEFT_BRACE]    = {RULE(expressionBlock_),  NULL,  Precedence::NONE}, 
         [Token::RIGHT_BRACE]   = {NULL,            NULL,          Precedence::NONE},
