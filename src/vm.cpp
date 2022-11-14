@@ -181,8 +181,8 @@ InterpretResult Vm::run_() {
     // globals_.debug();
     // printf("====\n");
 
-    // disasm.disassembleChunk(chunk, "Main");
-    // printf("====\n");
+    disasm.disassembleChunk(&frame->function->chunk, "Main");
+    printf("====\n");
 
 #endif
 
@@ -358,6 +358,11 @@ InterpretResult Vm::run_() {
                 }
                 // now in a new frame:
                 frame = &frames_[frameCount_ - 1];
+
+#ifdef DEBUG_TRACE_EXECUTION
+                disasm.disassembleChunk(&frame->function->chunk, frame->function->name->get());
+                printf("====\n");
+#endif
                 break;
             }
             case OpCode::RETURN:{

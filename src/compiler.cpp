@@ -133,9 +133,13 @@ void Compiler::advance_() {
     }
 }
 
+bool Compiler::check_(Token::Type type) {
+    return currentToken_.type == type;
+}
+
 void Compiler::consume_(Token::Type type, const char* fmt, ...) {
     // Asserts that the current token is the type specified
-    if( currentToken_.type == type ){
+    if( check_(type) ){
         // only advance if token is correct
         advance_();
         return;
@@ -148,7 +152,7 @@ void Compiler::consume_(Token::Type type, const char* fmt, ...) {
 
 bool Compiler::match_(Token::Type type) {
     // Like consume_ but return bool instead of throwing error
-    if( currentToken_.type == type ){
+    if( check_(type) ){
         // only advance if token is correct
         advance_();
         return true;
@@ -272,7 +276,7 @@ void Compiler::function_(ObjString * name, Environment::Type type) {
     // (i.e. function as expression)
     consume_(Token::LEFT_PAREN, "Expect '(' after function name.");
     // if has any parameters:
-    if( currentToken_.type != Token::RIGHT_PAREN ){
+    if( !check_(Token::RIGHT_PAREN) ){
         do {
             // count parameters
             if( ++currentEnv_->function->arity > 255 ){
@@ -396,12 +400,17 @@ bool Compiler::statement_(bool isExpressionBlock) {
         nestedBlock_(isExpressionBlock);
         return isExpressionBlock;  // if above line passed, must be true
 
-    } else if( match_(Token::PRINT) ){
-        print_();
-
-    // } else if( match_(Token::TYPE) ){
-    //     type_();
-
+    }else if( match_(Token::RETURN) ){
+        if( currentEnv_->type == Environment::SCRIPT ){
+            errorAtPrevious_("Can't return from top-level.");
+        }
+        if( check_(Token::SEMICOLON) ){
+            emitReturn_();
+        }else{
+            // the return value(s):
+            expression_();
+            emitByte_(OpCode::RETURN);
+        }
     }else{
         // expression-statement:
         expression_();
@@ -416,7 +425,7 @@ bool Compiler::statement_(bool isExpressionBlock) {
         // statement within an expression block:
         emitByte_(OpCode::POP); // discard the result
         return false;
-    }else if( currentToken_.type == Token::RIGHT_BRACE ){
+    }else if( check_(Token::RIGHT_BRACE) ){
         // The end of an expression block, leave the value on the stack:
         return true;
     }else{
@@ -537,8 +546,7 @@ void Compiler::endScope_() {
 void Compiler::block_(bool isExpressionBlock) {
     // parse declarations (and statements) until hit the closing brace
     bool wasExpressionBlock = false;
-    while( currentToken_.type != Token::RIGHT_BRACE && 
-           currentToken_.type != Token::END ){
+    while( !check_(Token::RIGHT_BRACE) && !check_(Token::END) ){
         wasExpressionBlock = declaration_(isExpressionBlock);
     }
     consume_(Token::RIGHT_BRACE, "Expected '}' after block.");
@@ -674,7 +682,7 @@ void Compiler::binary_() {
 void Compiler::call_() {
     // parse arguments:
     uint8_t argCount = 0;
-    if( currentToken_.type != Token::RIGHT_PAREN ) {
+    if( !check_(Token::RIGHT_PAREN) ) {
         do {
             expression_();
             if( argCount == 255 ) {
