@@ -4,6 +4,7 @@
 
 // Predeclare object types
 class ObjString;
+class ObjList;
 class ObjFunction;
 
 struct Value {
@@ -18,6 +19,7 @@ struct Value {
         TYPEID,
         // Garbage-Collected Object Types:
         STRING,
+        LIST,
         FUNCTION
     } type;
 
@@ -37,6 +39,7 @@ struct Value {
         return (Value){TYPEID, {.typeId = t}};
     }
     static inline Value string(Obj * o) { return (Value){STRING, {.obj = o}}; }
+    static inline Value list(Obj * o) { return (Value){LIST, {.obj = o}}; }
     static inline Value function(Obj * o) { return (Value){FUNCTION, {.obj = o}}; }
 
     // Helpers for value types
@@ -45,10 +48,12 @@ struct Value {
     inline bool isNumber() const { return type == NUMBER; }
     inline bool isTypeId() const { return type == TYPEID; }
     inline bool isString() const { return type == STRING; }
+    inline bool isList() const { return type == LIST; }
     inline bool isFunction() const { return type == FUNCTION; }
 
     // As object helpers:
     ObjString * asObjString() const;
+    ObjList * asObjList() const;
     ObjFunction * asObjFunction() const;
 
     // value methods

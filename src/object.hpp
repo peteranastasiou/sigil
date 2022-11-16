@@ -12,6 +12,7 @@ class ObjString;  // defined in str.hpp
 struct Obj {
     enum Type {
         STRING,
+        LIST,
         FUNCTION
     };
 
