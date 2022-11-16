@@ -4,7 +4,7 @@
 
 // Predeclare object types
 class ObjString;
-struct ObjFunction;
+class ObjFunction;
 
 struct Value {
     /**
