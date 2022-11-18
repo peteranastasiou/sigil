@@ -279,7 +279,7 @@ void Compiler::function_(ObjString * name, Environment::Type type) {
     if( !check_(Token::RIGHT_PAREN) ){
         do {
             // count parameters
-            if( ++currentEnv_->function->arity > 255 ){
+            if( ++currentEnv_->function->numInputs > 255 ){
                 errorAtCurrent_("Can't have over 255 parameters.");
             }
             // make a new local at the top of the function's value stack to use as the parameter:
@@ -696,6 +696,22 @@ void Compiler::call_() {
     emitBytes_(OpCode::CALL, argCount);
 }
 
+void Compiler::list_() {
+    uint8_t numEntries = 0;
+    if( !check_(Token::RIGHT_BRACKET) ) {
+        do {
+            expression_();
+            if( numEntries == 255 ){
+                errorAtPrevious_("Can't have more than 255 elements in list initialiser.");
+            }
+            numEntries ++;
+        } while( match_(Token::COMMA) );
+    }
+    consume_(Token::RIGHT_BRACKET, "Expected ']' after list elements.");
+
+    emitBytes_(OpCode::MAKE_LIST, numEntries);
+}
+
 void Compiler::type_() {
     consume_(Token::LEFT_PAREN, "Expected '(' after 'type'.");
     // type built-in takes a single value:
@@ -710,6 +726,10 @@ void Compiler::print_() {
     expression_();
     consume_(Token::RIGHT_PAREN, "Expected ')' after argument.");
     emitByte_(OpCode::PRINT);
+}
+
+void Compiler::index_() {
+    errorAtPrevious_("[] Indexing unimplemented.");
 }
 
 void Compiler::number_() {
@@ -768,53 +788,56 @@ void Compiler::getSetVariable_(Token & name, bool canAssign) {
 #define ASSIGNMENT_RULE(fn) [this](bool canAssign){ this->fn(canAssign); }
 #define RULE(fn) [this](bool canAssign){ (void) canAssign; this->fn(); }
 
+// TODO split into infix and prefix rule:
 ParseRule const * Compiler::getRule_(Token::Type type) {
     static const ParseRule rules[] = {
-        // token type             prefix func      infix func     infix precedence
-        [Token::LEFT_PAREN]    = {RULE(grouping_), RULE(call_),   Precedence::CALL},
-        [Token::RIGHT_PAREN]   = {NULL,            NULL,          Precedence::NONE},
-        [Token::LEFT_BRACE]    = {RULE(expressionBlock_),  NULL,  Precedence::NONE}, 
-        [Token::RIGHT_BRACE]   = {NULL,            NULL,          Precedence::NONE},
-        [Token::COMMA]         = {NULL,            NULL,          Precedence::NONE},
-        [Token::MINUS]         = {RULE(unary_),    RULE(binary_), Precedence::TERM},
-        [Token::PLUS]          = {NULL,            RULE(binary_), Precedence::TERM},
-        [Token::SEMICOLON]     = {NULL,            NULL,          Precedence::NONE},
-        [Token::SLASH]         = {NULL,            RULE(binary_), Precedence::FACTOR},
-        [Token::STAR]          = {NULL,            RULE(binary_), Precedence::FACTOR},
-        [Token::BANG]          = {RULE(unary_),    NULL,          Precedence::NONE},
-        [Token::BANG_EQUAL]    = {NULL,            RULE(binary_), Precedence::EQUALITY},
-        [Token::EQUAL]         = {NULL,            NULL,          Precedence::NONE},
-        [Token::EQUAL_EQUAL]   = {NULL,            RULE(binary_), Precedence::EQUALITY},
-        [Token::GREATER]       = {NULL,            RULE(binary_), Precedence::COMPARISON},
-        [Token::GREATER_EQUAL] = {NULL,            RULE(binary_), Precedence::COMPARISON},
-        [Token::LESS]          = {NULL,            RULE(binary_), Precedence::COMPARISON},
-        [Token::LESS_EQUAL]    = {NULL,            RULE(binary_), Precedence::COMPARISON},
-        [Token::IDENTIFIER]    = {ASSIGNMENT_RULE(variable_), NULL,  Precedence::NONE},
-        [Token::STRING]        = {RULE(string_),   NULL,          Precedence::NONE},
-        [Token::NUMBER]        = {RULE(number_),   NULL,          Precedence::NONE},
-        [Token::AND]           = {NULL,            RULE(and_),    Precedence::NONE},
-        [Token::BOOL]          = {RULE(emitBoolType_), NULL,        Precedence::NONE},
-        [Token::CONST]         = {NULL,            NULL,          Precedence::NONE},
-        [Token::ELIF]          = {NULL,            NULL,          Precedence::NONE},
-        [Token::ELSE]          = {NULL,            NULL,          Precedence::NONE},
-        [Token::FALSE]         = {RULE(emitFalse_),NULL,          Precedence::NONE},
-        [Token::FOR]           = {NULL,            NULL,          Precedence::NONE},
-        [Token::FN]            = {NULL,            NULL,          Precedence::NONE},
-        [Token::FLOAT]         = {RULE(emitFloatType_), NULL,     Precedence::NONE},
-        [Token::IF]            = {RULE(ifExpression_), NULL,      Precedence::NONE},
-        [Token::NIL]           = {RULE(emitNil_),  NULL,          Precedence::NONE},
-        [Token::OR]            = {NULL,            RULE(or_),     Precedence::NONE},
-        [Token::OBJECT]        = {RULE(emitObjectType_), NULL,    Precedence::NONE},
-        [Token::PRINT]         = {RULE(print_),    NULL,          Precedence::NONE},
-        [Token::RETURN]        = {NULL,            NULL,          Precedence::NONE},
-        [Token::STRING_TYPE]   = {RULE(emitStringType_), NULL,    Precedence::NONE},
-        [Token::TRUE]          = {RULE(emitTrue_), NULL,          Precedence::NONE},
-        [Token::TYPE]          = {RULE(type_),     NULL,          Precedence::NONE},
-        [Token::TYPEID]        = {RULE(emitTypeIdType_), NULL,          Precedence::NONE},
-        [Token::VAR]           = {NULL,            NULL,          Precedence::NONE},
-        [Token::WHILE]         = {NULL,            NULL,          Precedence::NONE},
-        [Token::ERROR]         = {NULL,            NULL,          Precedence::NONE},
-        [Token::END]           = {NULL,            NULL,          Precedence::NONE},
+        // token type             prefix func                 infix func     infix precedence
+        [Token::LEFT_PAREN]    = {RULE(grouping_),            RULE(call_),   Precedence::CALL},
+        [Token::RIGHT_PAREN]   = {NULL,                       NULL,          Precedence::NONE},
+        [Token::LEFT_BRACE]    = {RULE(expressionBlock_),     NULL,          Precedence::NONE},
+        [Token::RIGHT_BRACE]   = {NULL,                       NULL,          Precedence::NONE},
+        [Token::LEFT_BRACKET]  = {RULE(list_),                RULE(index_),  Precedence::NONE},
+        [Token::RIGHT_BRACKET] = {NULL,                       NULL,          Precedence::NONE},
+        [Token::COMMA]         = {NULL,                       NULL,          Precedence::NONE},
+        [Token::MINUS]         = {RULE(unary_),               RULE(binary_), Precedence::TERM},
+        [Token::PLUS]          = {NULL,                       RULE(binary_), Precedence::TERM},
+        [Token::SEMICOLON]     = {NULL,                       NULL,          Precedence::NONE},
+        [Token::SLASH]         = {NULL,                       RULE(binary_), Precedence::FACTOR},
+        [Token::STAR]          = {NULL,                       RULE(binary_), Precedence::FACTOR},
+        [Token::BANG]          = {RULE(unary_),               NULL,          Precedence::NONE},
+        [Token::BANG_EQUAL]    = {NULL,                       RULE(binary_), Precedence::EQUALITY},
+        [Token::EQUAL]         = {NULL,                       NULL,          Precedence::NONE},
+        [Token::EQUAL_EQUAL]   = {NULL,                       RULE(binary_), Precedence::EQUALITY},
+        [Token::GREATER]       = {NULL,                       RULE(binary_), Precedence::COMPARISON},
+        [Token::GREATER_EQUAL] = {NULL,                       RULE(binary_), Precedence::COMPARISON},
+        [Token::LESS]          = {NULL,                       RULE(binary_), Precedence::COMPARISON},
+        [Token::LESS_EQUAL]    = {NULL,                       RULE(binary_), Precedence::COMPARISON},
+        [Token::IDENTIFIER]    = {ASSIGNMENT_RULE(variable_), NULL,          Precedence::NONE},
+        [Token::STRING]        = {RULE(string_),              NULL,          Precedence::NONE},
+        [Token::NUMBER]        = {RULE(number_),              NULL,          Precedence::NONE},
+        [Token::AND]           = {NULL,                       RULE(and_),    Precedence::NONE},
+        [Token::BOOL]          = {RULE(emitBoolType_),        NULL,          Precedence::NONE},
+        [Token::CONST]         = {NULL,                       NULL,          Precedence::NONE},
+        [Token::ELIF]          = {NULL,                       NULL,          Precedence::NONE},
+        [Token::ELSE]          = {NULL,                       NULL,          Precedence::NONE},
+        [Token::FALSE]         = {RULE(emitFalse_),           NULL,          Precedence::NONE},
+        [Token::FOR]           = {NULL,                       NULL,          Precedence::NONE},
+        [Token::FN]            = {NULL,                       NULL,          Precedence::NONE},
+        [Token::FLOAT]         = {RULE(emitFloatType_),       NULL,          Precedence::NONE},
+        [Token::IF]            = {RULE(ifExpression_),        NULL,          Precedence::NONE},
+        [Token::NIL]           = {RULE(emitNil_),             NULL,          Precedence::NONE},
+        [Token::OR]            = {NULL,                       RULE(or_),     Precedence::NONE},
+        [Token::OBJECT]        = {RULE(emitObjectType_),      NULL,          Precedence::NONE},
+        [Token::PRINT]         = {RULE(print_),               NULL,          Precedence::NONE},
+        [Token::RETURN]        = {NULL,                       NULL,          Precedence::NONE},
+        [Token::STRING_TYPE]   = {RULE(emitStringType_),      NULL,          Precedence::NONE},
+        [Token::TRUE]          = {RULE(emitTrue_),            NULL,          Precedence::NONE},
+        [Token::TYPE]          = {RULE(type_),                NULL,          Precedence::NONE},
+        [Token::TYPEID]        = {RULE(emitTypeIdType_),      NULL,          Precedence::NONE},
+        [Token::VAR]           = {NULL,                       NULL,          Precedence::NONE},
+        [Token::WHILE]         = {NULL,                       NULL,          Precedence::NONE},
+        [Token::ERROR]         = {NULL,                       NULL,          Precedence::NONE},
+        [Token::END]           = {NULL,                       NULL,          Precedence::NONE},
     };
     return &rules[type];
 }

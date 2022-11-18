@@ -63,7 +63,7 @@ private:
     bool binaryOp_(uint8_t op);
     bool isTruthy_(Value value);
     void concatenate_();
-    void runtimeError_(const char* format, ...);
+    InterpretResult runtimeError_(const char* format, ...);
     void freeObjects_();
 
     static int const FRAMES_MAX = 64;

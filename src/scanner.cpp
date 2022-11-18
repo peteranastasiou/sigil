@@ -227,6 +227,8 @@ Token Scanner::scanToken() {
         case ')': return makeToken_(Token::RIGHT_PAREN);
         case '{': return makeToken_(Token::LEFT_BRACE);
         case '}': return makeToken_(Token::RIGHT_BRACE);
+        case '[': return makeToken_(Token::LEFT_BRACKET);
+        case ']': return makeToken_(Token::RIGHT_BRACKET);
         case ';': return makeToken_(Token::SEMICOLON);
         case ',': return makeToken_(Token::COMMA);
         case '-': return makeToken_(Token::MINUS);

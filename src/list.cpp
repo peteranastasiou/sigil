@@ -14,11 +14,22 @@ ObjString * ObjList::toString(Vm * vm) {
 }
 
 void ObjList::print() {
-    printf("<list>");
+    if( len() == 0 ){
+        printf("[]");
+        return;
+    }
+
+    printf("[");
+    for( int i = 0; i < len()-1; ++i ){
+        values_[i].print();
+        printf(", ");
+    }
+    values_[len()-1].print();
+    printf("]");
 }
 
 void ObjList::append(Value v) {
-    values.push_back(v);
+    values_.push_back(v);
 }
 
 bool ObjList::get(int i, Value & v) {
@@ -29,7 +40,7 @@ bool ObjList::get(int i, Value & v) {
     if( i < 0 || i >= len() ){
         return false;
     }
-    v = values.at(i);
+    v = values_[i];
     return true;
 }
 
@@ -45,13 +56,16 @@ bool ObjList::set(int i, Value v) {
         int newLen = i + 1;
         int firstNewIdx = len();
         int numValues = newLen - len();
-        values.reserve(newLen);
-        memset(&values[firstNewIdx], 0, numValues*sizeof(Value));
+
+        values_.resize(newLen);
+
+        // filling with zeroes is equivalent to filling with Nil values
+        //memset(&values_[firstNewIdx], 0, numValues*sizeof(Value));
     }
-    v = values.at(i);
+    values_[i] = v;
     return true;
 }
 
 int ObjList::len() {
-    return (int)values.size();
+    return (int)values_.size();
 }

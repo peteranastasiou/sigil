@@ -117,15 +117,17 @@ private:
     void nestedBlock_(bool isExpressionBlock);
     void endScope_();
     void parse_(Precedence precedence);  // parse expressions with >= precendence
+    void call_();
+    void list_();
     void type_();
     void print_();
+    void index_();
     void and_();
     void or_();
     void number_();
     void string_();
     void unary_();
     void binary_();
-    void call_();
     void grouping_();  // parentheses in expressions
 
     // parsing functions:

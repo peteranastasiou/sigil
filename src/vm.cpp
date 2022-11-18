@@ -2,6 +2,7 @@
 #include "vm.hpp"
 #include "debug.hpp"
 #include "compiler.hpp"
+#include "list.hpp"
 #include "function.hpp"
 
 #include <assert.h>
@@ -122,9 +123,9 @@ bool Vm::callValue_(Value fn, uint8_t argCount) {
 }
 
 bool Vm::call_(ObjFunction * fn, uint8_t argCount) {
-    if( argCount != fn->arity ){
+    if( argCount != fn->numInputs ){
         runtimeError_("Expected %d arguments, but got %d.",
-            fn->arity, argCount);
+            fn->numInputs, argCount);
         return false;
     }
 
@@ -222,8 +223,7 @@ InterpretResult Vm::run_() {
                 ObjString * name = frame->readString();
                 bool isConst = instr==OpCode::DEFINE_GLOBAL_CONST;
                 if( !globals_.add(name, {peek(0), isConst}) ){
-                    runtimeError_("Redeclaration of variable '%s'.", name->get());
-                    return InterpretResult::RUNTIME_ERR;
+                    return runtimeError_("Redeclaration of variable '%s'.", name->get());
                 }
                 pop(); // Note: lox has this late pop as `set` might trigger garbage collection
                 break;
@@ -232,8 +232,7 @@ InterpretResult Vm::run_() {
                 ObjString * name = frame->readString();
                 Global global;
                 if( !globals_.get(name, global) ){
-                    runtimeError_("Undefined variable '%s'.", name->get());
-                    return InterpretResult::RUNTIME_ERR;
+                    return runtimeError_("Undefined variable '%s'.", name->get());
                 }
                 push(global.value);
                 break;
@@ -242,12 +241,10 @@ InterpretResult Vm::run_() {
                 ObjString * name = frame->readString();
                 Global global;
                 if( !globals_.get(name, global) ){
-                    runtimeError_("Undefined variable '%s'.", name->get());
-                    return InterpretResult::RUNTIME_ERR;
+                    return runtimeError_("Undefined variable '%s'.", name->get());
                 }
                 if( global.isConst ){
-                    runtimeError_("Cannot redefine const variable '%s'.", name->get());
-                    return InterpretResult::RUNTIME_ERR;
+                    return runtimeError_("Cannot redefine const variable '%s'.", name->get());
                 }
                 globals_.set(name, {peek(0), false});
                 // don't pop: the assignment can be used in an expression
@@ -292,16 +289,14 @@ InterpretResult Vm::run_() {
                     double a = pop().as.number;
                     push(Value::number( a + b ));
                 }else{
-                    runtimeError_("Invalid operands for +");
-                    return InterpretResult::RUNTIME_ERR;
+                    return runtimeError_("Invalid operands for +");
                 }
                 break;
             }
             case OpCode::NEGATE:{
                 // ensure is numeric:
                 if( !peek(0).isNumber() ){
-                    runtimeError_("Operand must be a number");
-                    return InterpretResult::RUNTIME_ERR;
+                    return runtimeError_("Operand must be a number");
                 }
 
                 push( Value::number(-pop().as.number) );
@@ -319,6 +314,18 @@ InterpretResult Vm::run_() {
             }
             case OpCode::TYPE:{
                 push(Value::typeId(pop().type));
+                break;
+            }
+            case OpCode::MAKE_LIST:{
+                ObjList * list = new ObjList(this);
+                uint8_t numEl = frame->readByte();
+                // populate list in reverse order from the value stack:
+                for( int i = numEl-1; i >= 0; --i ){
+                    if( !list->set(i, pop()) ){
+                        return runtimeError_("Failed to initialise list.");
+                    }
+                }
+                push(Value::list(list));
                 break;
             }
             case OpCode::JUMP:{
@@ -393,7 +400,7 @@ InterpretResult Vm::run_() {
     }
 }
 
-void Vm::runtimeError_(const char* format, ...) {
+InterpretResult Vm::runtimeError_(const char* format, ...) {
     va_list args;
     va_start(args, format);
     vfprintf(stderr, format, args);
@@ -413,6 +420,8 @@ void Vm::runtimeError_(const char* format, ...) {
     }
 
     resetStack_();
+
+    return InterpretResult::RUNTIME_ERR;
 }
 
 void Vm::freeObjects_() {

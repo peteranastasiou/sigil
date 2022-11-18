@@ -15,7 +15,7 @@ public:
     virtual void print() override;
 
 public:
-    int arity;  // number of expected parameters
+    int numInputs;  // number of expected parameters
     Chunk chunk;
     ObjString * name;  // function name
 };

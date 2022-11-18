@@ -13,7 +13,7 @@ struct Value {
      */
     enum Type {
         // Primitive types:
-        NIL,
+        NIL = 0,  // Must be 0 so we can clear memory to NIL
         BOOL,
         NUMBER,  // TODO rename to FLOAT, add INT type
         TYPEID,

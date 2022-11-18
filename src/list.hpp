@@ -19,6 +19,6 @@ public:
     int len();
 
 private:
-    std::vector<Value> values;
+    std::vector<Value> values_;
 };
 

@@ -3,7 +3,7 @@
 
 
 ObjFunction::ObjFunction(Vm * vm, ObjString * funcName) : Obj(vm, Obj::Type::FUNCTION) {
-    arity = 0;
+    numInputs = 0;
     name = funcName;
 }
 
