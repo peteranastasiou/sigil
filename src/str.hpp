@@ -63,6 +63,11 @@ public:
      */
     static ObjString * concatenate(Vm * vm, ObjString * a, ObjString * b);
 
+    /**
+     * Indexing into string:
+     */
+    bool get(int index, char & value);
+
     virtual ~ObjString();
 
     // implment Obj interface (trivial for strings)

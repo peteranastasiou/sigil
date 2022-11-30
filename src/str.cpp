@@ -92,6 +92,18 @@ ObjString::~ObjString() {
     delete[] chars_;
 }
 
+
+bool ObjString::get(int i, char & c) {
+    // python-style count from the back
+    if( i < 0 ) i = length_ + i;
+
+    // check out of bounds:
+    if( i < 0 || i >= length_ ) return false;
+
+    c = chars_[i];
+    return true;
+}
+
 static uint32_t calcHash_(char const * str, int length) {
     uint32_t hash = 2166136261u;
     for (int i = 0; i < length; i++) {

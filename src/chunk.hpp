@@ -45,6 +45,8 @@ enum {
     PRINT,              // Pop 1 value, print it, Push nil
     TYPE,               // Pop 1 value, Push 1 typeid
     MAKE_LIST,          // Pop n values into a list, Push list
+    INDEX_GET,          // Pop 2 values as a,i, Push a[i]
+    INDEX_SET,          // Pop 3 values as a,i,b; set a[i] = b; Push ???
     // Control flow:
     JUMP,               // Unconditionally jump forward by bytecode offset 
     LOOP,               // Unconditionally jump backwards by bytecode offset 

@@ -115,7 +115,7 @@ bool Vm::binaryOp_(uint8_t op) {
 }
 
 bool Vm::callValue_(Value fn, uint8_t argCount) {
-    if( fn.type != Value::Type::FUNCTION ){
+    if( fn.type != Value::FUNCTION ){
         runtimeError_("Can only call functions.");
         return false;
     }
@@ -154,6 +154,41 @@ void Vm::concatenate_() {
     ObjString * b = bValue.toString(this);
     ObjString * a = pop().asObjString();
     push( Value::string(ObjString::concatenate(this, a, b)) );
+}
+
+bool Vm::indexGet_() {
+    Value index = pop();
+    Value value = pop();
+
+    if( !index.isNumber() ){
+        runtimeError_("Index must be a number");
+        return false;
+    }
+    int i = (int) index.as.number;
+
+    switch( value.type ){
+    case Value::STRING:{
+        char c;
+        if( !value.asObjString()->get(i, c) ){
+            runtimeError_("Index out of bounds: %i", i);
+            return false;
+        }
+        push( Value::string(ObjString::newString(this, &c, 1)) );
+        return true;
+    }
+    case Value::LIST:{
+        Value v;
+        if( !value.asObjList()->get(i, v) ){
+            runtimeError_("Index out of bounds: %i", i);
+            return false;
+        }
+        push(v);
+        return true;
+    }
+    default:
+        runtimeError_("Cannot index %s", Value::typeToString(value.type));
+        return false;
+    }
 }
 
 void Vm::resetStack_() {
@@ -326,6 +361,16 @@ InterpretResult Vm::run_() {
                     }
                 }
                 push(Value::list(list));
+                break;
+            }
+            case OpCode::INDEX_GET:{
+                if( !indexGet_() ){
+                    return InterpretResult::RUNTIME_ERR;
+                }
+                break;
+            }
+            case OpCode::INDEX_SET:{
+                // TODO
                 break;
             }
             case OpCode::JUMP:{

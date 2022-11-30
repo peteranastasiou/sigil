@@ -19,16 +19,16 @@ ObjFunction * Value::asObjFunction() const {
     return (ObjFunction *) as.obj;
 }
 
-static char const* typeIdToString(Value::Type t) {
+char const* Value::typeToString(Type t) {
     switch( t ){
-        case Value::NIL:      return "nil";
-        case Value::BOOL:     return "bool";
-        case Value::NUMBER:   return "float";
-        case Value::TYPEID:   return "typeid";
-        case Value::FUNCTION: return "function";
-        case Value::LIST:     return "list";
-        case Value::STRING:   return "string";
-        default: return "???";   // Unreachable
+        case NIL:      return "nil";
+        case BOOL:     return "bool";
+        case NUMBER:   return "float";
+        case TYPEID:   return "typeid";
+        case FUNCTION: return "function";
+        case LIST:     return "list";
+        case STRING:   return "string";
+        default:       return "???";   // Unreachable
     }
 }
 
@@ -53,7 +53,7 @@ ObjString * Value::toString(Vm * vm) {
         case NIL:     return ObjString::newString(vm, "nil");
         case BOOL:    return ObjString::newString(vm, as.boolean ? "true" : "false");
         case NUMBER:  return ObjString::newStringFmt(vm, "%g", as.number);
-        case TYPEID:  return ObjString::newString(vm, typeIdToString(as.typeId));
+        case TYPEID:  return ObjString::newString(vm, typeToString(as.typeId));
         case FUNCTION:
         case LIST:
         case STRING:
@@ -68,7 +68,7 @@ void Value::print() const {
         case NIL:     printf("nil"); return;
         case BOOL:    printf(as.boolean ? "true" : "false"); return;
         case NUMBER:  printf("%g", as.number); return;
-        case TYPEID:  printf("%s", typeIdToString(as.typeId)); return;
+        case TYPEID:  printf("%s", typeToString(as.typeId)); return;
         case FUNCTION:
         case LIST:
         case STRING:

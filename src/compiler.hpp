@@ -17,7 +17,7 @@ enum class Precedence {
   TERM,        // + -
   FACTOR,      // * /
   UNARY,       // ! -
-  CALL,        // . ()
+  CALL,        // . () []
   PRIMARY
 };
 

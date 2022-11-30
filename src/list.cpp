@@ -37,9 +37,8 @@ bool ObjList::get(int i, Value & v) {
     if( i < 0 ) i = len() + i;
 
     // check out of bounds:
-    if( i < 0 || i >= len() ){
-        return false;
-    }
+    if( i < 0 || i >= len() ) return false;
+
     v = values_[i];
     return true;
 }
@@ -47,7 +46,7 @@ bool ObjList::get(int i, Value & v) {
 bool ObjList::set(int i, Value v) {
     // python-style count from the back
     if( i < 0 ) i = len() + i;
-    
+
     // check out of bounds:
     if( i < 0 ) return false;
 
@@ -60,7 +59,7 @@ bool ObjList::set(int i, Value v) {
         values_.resize(newLen);
 
         // filling with zeroes is equivalent to filling with Nil values
-        //memset(&values_[firstNewIdx], 0, numValues*sizeof(Value));
+        memset(&values_[firstNewIdx], 0, numValues*sizeof(Value));
     }
     values_[i] = v;
     return true;

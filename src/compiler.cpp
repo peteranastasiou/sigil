@@ -729,7 +729,9 @@ void Compiler::print_() {
 }
 
 void Compiler::index_() {
-    errorAtPrevious_("[] Indexing unimplemented.");
+    expression_();
+    consume_(Token::RIGHT_BRACKET, "Expected ']' after index.");
+    emitByte_(OpCode::INDEX_GET);
 }
 
 void Compiler::number_() {
@@ -796,7 +798,7 @@ ParseRule const * Compiler::getRule_(Token::Type type) {
         [Token::RIGHT_PAREN]   = {NULL,                       NULL,          Precedence::NONE},
         [Token::LEFT_BRACE]    = {RULE(expressionBlock_),     NULL,          Precedence::NONE},
         [Token::RIGHT_BRACE]   = {NULL,                       NULL,          Precedence::NONE},
-        [Token::LEFT_BRACKET]  = {RULE(list_),                RULE(index_),  Precedence::NONE},
+        [Token::LEFT_BRACKET]  = {RULE(list_),                RULE(index_),  Precedence::CALL},
         [Token::RIGHT_BRACKET] = {NULL,                       NULL,          Precedence::NONE},
         [Token::COMMA]         = {NULL,                       NULL,          Precedence::NONE},
         [Token::MINUS]         = {RULE(unary_),               RULE(binary_), Precedence::TERM},

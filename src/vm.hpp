@@ -63,6 +63,7 @@ private:
     bool binaryOp_(uint8_t op);
     bool isTruthy_(Value value);
     void concatenate_();
+    bool indexGet_();
     InterpretResult runtimeError_(const char* format, ...);
     void freeObjects_();
 

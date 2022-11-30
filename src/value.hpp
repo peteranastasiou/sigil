@@ -42,6 +42,9 @@ struct Value {
     static inline Value list(Obj * o) { return (Value){LIST, {.obj = o}}; }
     static inline Value function(Obj * o) { return (Value){FUNCTION, {.obj = o}}; }
 
+    // Type to string
+    static char const * typeToString(Type t);
+
     // Helpers for value types
     inline bool isNil() const { return type == NIL; }
     inline bool isBoolean() const { return type == BOOL; }
