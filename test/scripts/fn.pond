@@ -20,3 +20,23 @@ print(b(1, 3/2));
 print(c(-1));
 print(c(0.5));
 print(c(1.5));
+
+# --------------------------------
+# Alternate function syntax:
+# --------------------------------
+
+var d1 = fn(i) { return i*2; };
+var d2 = fn(i) { i*2 };
+fn d3(i) { i*2 }
+
+print(d1(2));
+print(d2(2));
+print(d3(2));
+
+var e1 = fn(i) { var g = i; return g*2; };
+var e2 = fn(i) { var g = i; g*2 };
+fn e3(i) { var g = i; g*2 }
+
+print(e1(2));
+print(e2(2));
+print(e3(2));

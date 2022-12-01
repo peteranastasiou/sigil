@@ -226,8 +226,8 @@ void Compiler::expression_() {
     parse_(Precedence::ASSIGNMENT);
 }
 
-bool Compiler::declaration_(bool isExpressionBlock) {
-    bool wasExpression = false;
+bool Compiler::declaration_(bool canBeExpression) {
+    bool isExpression = false;
     if( match_(Token::VAR) ){
         varDeclaration_(false);
 
@@ -236,14 +236,15 @@ bool Compiler::declaration_(bool isExpressionBlock) {
 
     }else if( match_(Token::FN) ){
         funcDeclaration_();
+
     }else{
-        wasExpression = statement_(isExpressionBlock);
+        isExpression = statement_(canBeExpression);
     }
 
     // End of a statement is a good place to re-sync the parser if it is panicking
-    if( panicMode_ && !wasExpression ) synchronise_();
+    if( panicMode_ && !isExpression ) synchronise_();
 
-    return wasExpression;
+    return isExpression;
 }
 
 void Compiler::funcDeclaration_() {
@@ -261,10 +262,16 @@ void Compiler::funcDeclaration_() {
     // This is not an issue for globals
     if( isLocal ) currentEnv_->defineLocal();
 
+    // TODO allow declaration as const/var func = fn() { } AND fn func() {}
     function_(name, Environment::FUNCTION);
 
     // assign function literal to variable
     defineVariable_(global, isConst, isLocal);
+}
+
+void Compiler::funcAnonymous_() {
+    // Parse a function used in an expression: fn(args) { statements }
+    function_(ObjString::newString(vm_, "(anon)"), Environment::FUNCTION);
 }
 
 void Compiler::function_(ObjString * name, Environment::Type type) {
@@ -274,7 +281,7 @@ void Compiler::function_(ObjString * name, Environment::Type type) {
     beginScope_();
 
     // (i.e. function as expression)
-    consume_(Token::LEFT_PAREN, "Expect '(' after function name.");
+    consume_(Token::LEFT_PAREN, "Expected '(' for function.");
     // if has any parameters:
     if( !check_(Token::RIGHT_PAREN) ){
         do {
@@ -289,10 +296,15 @@ void Compiler::function_(ObjString * name, Environment::Type type) {
             defineVariable_(0, isConst, isLocal);
         } while( match_(Token::COMMA) );
     }
-    consume_(Token::RIGHT_PAREN, "Expect ')' after parameters.");
-    consume_(Token::LEFT_BRACE, "Expect '{' before function body.");
+    consume_(Token::RIGHT_PAREN, "Expected ')' after parameters.");
+    consume_(Token::LEFT_BRACE, "Expected '{' before function body.");
 
-    block_(false);
+    bool isExpression = block_(true);
+    if( isExpression ){
+        // function ends with an expression (omitted semi-colon)
+        // to produce an implicit return:
+        emitByte_(OpCode::RETURN);
+    }
 
     // Note: no actual need to endScope(), as we are done with the Environment now
     // call it so that we can check the stack emptied correctly:
@@ -386,10 +398,9 @@ void Compiler::or_() {
     setJumpDestination_(jumpOverRhs);
 }
 
-bool Compiler::statement_(bool isExpressionBlock) {
+bool Compiler::statement_(bool canBeExpression) {
     if( match_(Token::IF) ){
-        if_(isExpressionBlock);
-        return isExpressionBlock;  // if above line passed, must be true
+        return if_(canBeExpression);
 
     }else if( match_(Token::WHILE) ){
         whileStatement_();
@@ -397,8 +408,7 @@ bool Compiler::statement_(bool isExpressionBlock) {
 
     }else if( match_(Token::LEFT_BRACE) ){
         // recurse into a nested scope:
-        nestedBlock_(isExpressionBlock);
-        return isExpressionBlock;  // if above line passed, must be true
+        return nestedBlock_(canBeExpression);
 
     }else if( match_(Token::RETURN) ){
         if( currentEnv_->type == Environment::SCRIPT ){
@@ -416,7 +426,7 @@ bool Compiler::statement_(bool isExpressionBlock) {
         expression_();
     }
     // what we expect next depends on the context of the expression-statement:
-    if( !isExpressionBlock ){
+    if( !canBeExpression ){
         // ordinary statement:
         consume_(Token::SEMICOLON, "Expected ';' after statement.");
         emitByte_(OpCode::POP); // discard the result
@@ -435,21 +445,27 @@ bool Compiler::statement_(bool isExpressionBlock) {
 }
 
 void Compiler::ifExpression_() {
-    if_(true);
+    bool isExpression = if_(true);
+    if( !isExpression ){
+        errorAtPrevious_("Expected if-expression, not if-statement.");
+    }
 }
 
 void Compiler::ifStatement_() {
-    if_(false);
+    bool isExpression = if_(false);
+    if( isExpression ){
+        errorAtPrevious_("Expected if-statement, not if-expression.");
+    }
 }
 
-void Compiler::if_(bool isExpressionBlock) {
+bool Compiler::if_(bool canBeExpression) {
     // the condition part:
     expression_();
     // jump over the block to the next part:
     int jumpOver = emitJump_(OpCode::JUMP_IF_FALSE_POP);
     // the block
     consume_(Token::LEFT_BRACE, "Expected '{' after condition.");
-    nestedBlock_(isExpressionBlock);
+    bool isExpression = nestedBlock_(canBeExpression);
 
     // track all the jumps which go straight to the end
     std::vector<int> jumpsToEnd;
@@ -466,7 +482,9 @@ void Compiler::if_(bool isExpressionBlock) {
         jumpOver = emitJump_(OpCode::JUMP_IF_FALSE_POP);
         // the block
         consume_(Token::LEFT_BRACE, "Expected '{' after 'elif'.");
-        nestedBlock_(isExpressionBlock);
+        if( nestedBlock_(canBeExpression) != isExpression ){
+            errorAtPrevious_("Inconsistent if-statement/if-expression.");
+        }
     }
 
     // optional `else` block:
@@ -477,12 +495,14 @@ void Compiler::if_(bool isExpressionBlock) {
         setJumpDestination_(jumpOver);
         // the block
         consume_(Token::LEFT_BRACE, "Expected '{' after 'else'.");
-        nestedBlock_(isExpressionBlock);
+        if( nestedBlock_(canBeExpression) != isExpression ){
+            errorAtPrevious_("Inconsistent if-statement/if-expression.");
+        }
     }else{
         // no else block, so the last "jumpOver" goes to here:
         setJumpDestination_(jumpOver);
 
-        if( isExpressionBlock ){
+        if( isExpression ){
             errorAtPrevious_("Expected 'else' on if expression.");
         }
     }
@@ -490,6 +510,8 @@ void Compiler::if_(bool isExpressionBlock) {
     for( int jump : jumpsToEnd ){
         setJumpDestination_(jump);
     }
+
+    return isExpression;
 }
 
 void Compiler::whileStatement_() {
@@ -543,23 +565,32 @@ void Compiler::endScope_() {
     if( n > 0 ) emitBytes_(OpCode::POP_N, n);
 }
 
-void Compiler::block_(bool isExpressionBlock) {
-    // parse declarations (and statements) until hit the closing brace
-    bool wasExpressionBlock = false;
-    while( !check_(Token::RIGHT_BRACE) && !check_(Token::END) ){
-        wasExpressionBlock = declaration_(isExpressionBlock);
-    }
-    consume_(Token::RIGHT_BRACE, "Expected '}' after block.");
-
-    if( isExpressionBlock && !wasExpressionBlock ){
+void Compiler::expressionBlock_() {
+    bool isExpression = block_(true);
+    if( !isExpression ){
         errorAtPrevious_("Expression block must end in an expression.");
     }
 }
 
-void Compiler::nestedBlock_(bool isExpressionBlock) {
+bool Compiler::block_(bool canBeExpression) {
+    // parse declarations (and statements) until hit the closing brace
+    bool isExpression = false;
+    while( !check_(Token::RIGHT_BRACE) && !check_(Token::END) ){
+        if( isExpression ){
+            errorAtPrevious_("Expression only allowed at end of block.");
+        }
+        isExpression = declaration_(canBeExpression);
+    }
+    consume_(Token::RIGHT_BRACE, "Expected '}' after block.");
+
+    return isExpression;
+}
+
+bool Compiler::nestedBlock_(bool canBeExpression) {
     beginScope_();
-    block_(isExpressionBlock);
+    bool isExpression = block_(canBeExpression);
     endScope_();
+    return isExpression;
 }
 
 void Compiler::parse_(Precedence precedence) {
@@ -824,7 +855,7 @@ ParseRule const * Compiler::getRule_(Token::Type type) {
         [Token::ELSE]          = {NULL,                       NULL,          Precedence::NONE},
         [Token::FALSE]         = {RULE(emitFalse_),           NULL,          Precedence::NONE},
         [Token::FOR]           = {NULL,                       NULL,          Precedence::NONE},
-        [Token::FN]            = {NULL,                       NULL,          Precedence::NONE},
+        [Token::FN]            = {RULE(funcAnonymous_),       NULL,          Precedence::NONE},
         [Token::FLOAT]         = {RULE(emitFloatType_),       NULL,          Precedence::NONE},
         [Token::IF]            = {RULE(ifExpression_),        NULL,          Precedence::NONE},
         [Token::NIL]           = {RULE(emitNil_),             NULL,          Precedence::NONE},

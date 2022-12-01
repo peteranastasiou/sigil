@@ -104,17 +104,17 @@ private:
 
     // parsing different types of things:
     void expression_();
-    bool declaration_(bool isExpressionBlock);  // returns wasExpressionBlock
-    bool statement_(bool isExpressionBlock);    // returns wasExpressionBlock
+    bool declaration_(bool canBeExpression);  // returns isExpression
+    bool statement_(bool canBeExpression);    // returns isExpression
     void ifStatement_();
     void ifExpression_();
-    void if_(bool isExpressionBlock);
+    bool if_(bool canBeExpression);           // returns isExpression
     void whileStatement_();
     void synchronise_();
     void beginScope_();
-    void block_(bool isExpressionBlock);
-    void expressionBlock_() { block_(true); }
-    void nestedBlock_(bool isExpressionBlock);
+    bool block_(bool canBeExpression);        // returns isExpression
+    void expressionBlock_();
+    bool nestedBlock_(bool canBeExpression);  // returns isExpression
     void endScope_();
     void parse_(Precedence precedence);  // parse expressions with >= precendence
     void call_();
@@ -132,6 +132,7 @@ private:
 
     // parsing functions:
     void funcDeclaration_();
+    void funcAnonymous_();
     void function_(ObjString * name, Environment::Type type);
 
     // parsing variables:
