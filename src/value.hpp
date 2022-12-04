@@ -6,6 +6,7 @@
 class ObjString;
 class ObjList;
 class ObjFunction;
+class ObjClosure;
 
 struct Value {
     /**
@@ -20,7 +21,8 @@ struct Value {
         // Garbage-Collected Object Types:
         STRING,
         LIST,
-        FUNCTION
+        FUNCTION,
+        CLOSURE
     } type;
 
     union {
@@ -41,6 +43,7 @@ struct Value {
     static inline Value string(Obj * o) { return (Value){STRING, {.obj = o}}; }
     static inline Value list(Obj * o) { return (Value){LIST, {.obj = o}}; }
     static inline Value function(Obj * o) { return (Value){FUNCTION, {.obj = o}}; }
+    static inline Value closure(Obj * o) { return (Value){CLOSURE, {.obj = o}}; }
 
     // Type to string
     static char const * typeToString(Type t);
@@ -53,11 +56,13 @@ struct Value {
     inline bool isString() const { return type == STRING; }
     inline bool isList() const { return type == LIST; }
     inline bool isFunction() const { return type == FUNCTION; }
+    inline bool isClosure() const { return type == CLOSURE; }
 
     // As object helpers:
     ObjString * asObjString() const;
     ObjList * asObjList() const;
     ObjFunction * asObjFunction() const;
+    ObjClosure * asObjClosure() const;
 
     // value methods
     bool equals(Value other) const;

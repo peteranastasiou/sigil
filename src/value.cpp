@@ -19,6 +19,10 @@ ObjFunction * Value::asObjFunction() const {
     return (ObjFunction *) as.obj;
 }
 
+ObjClosure * Value::asObjClosure() const {
+    return (ObjClosure *) as.obj;
+}
+
 char const* Value::typeToString(Type t) {
     switch( t ){
         case NIL:      return "nil";
@@ -26,6 +30,7 @@ char const* Value::typeToString(Type t) {
         case NUMBER:   return "float";
         case TYPEID:   return "typeid";
         case FUNCTION: return "function";
+        case CLOSURE:  return "closure";
         case LIST:     return "list";
         case STRING:   return "string";
         default:       return "???";   // Unreachable
@@ -41,6 +46,7 @@ bool Value::equals(Value other) const {
         case NUMBER:  return as.number == other.as.number;
         case TYPEID:  return as.typeId == other.as.typeId;
         case FUNCTION:  // function is only equal if its the exact same identity:
+        case CLOSURE:   // TODO check if correct
         case LIST:      // same for list, might be self referential so no safe way to deep inspect
         case STRING:    // all strings are interned --> therefore can compare pointers
             return as.obj == other.as.obj;
@@ -55,6 +61,7 @@ ObjString * Value::toString(Vm * vm) {
         case NUMBER:  return ObjString::newStringFmt(vm, "%g", as.number);
         case TYPEID:  return ObjString::newString(vm, typeToString(as.typeId));
         case FUNCTION:
+        case CLOSURE:
         case LIST:
         case STRING:
             // Object types:

@@ -20,3 +20,15 @@ public:
     ObjString * name;  // function name
 };
 
+class ObjClosure : public Obj {
+public:
+    ObjClosure(Vm * vm, ObjFunction * function);
+    ~ObjClosure();
+
+    // implment Obj interface
+    virtual ObjString * toString(Vm * vm) override;
+    virtual void print() override;
+
+public:
+    ObjFunction * function;
+};

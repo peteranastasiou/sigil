@@ -13,7 +13,8 @@ struct Obj {
     enum Type {
         STRING,
         LIST,
-        FUNCTION
+        FUNCTION,
+        CLOSURE
     };
 
     Obj(Vm * vm, Type t);

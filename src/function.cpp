@@ -24,3 +24,21 @@ void ObjFunction::print() {
         printf("<fn %s>", name->get());
     }
 }
+
+// -----------------------------------------------------
+
+
+ObjClosure::ObjClosure(Vm * vm, ObjFunction * func) : Obj(vm, Obj::Type::CLOSURE) {
+    function = func;
+}
+
+ObjClosure::~ObjClosure() {
+}
+
+ObjString * ObjClosure::toString(Vm * vm) {
+    return function->toString(vm);
+}
+
+void ObjClosure::print() {
+    function->print();
+}
