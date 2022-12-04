@@ -313,7 +313,7 @@ void Compiler::function_(ObjString * name, Environment::Type type) {
     // New function literal:
     ObjFunction * fn = endEnvironment_();
     uint8_t literal = makeLiteral_(Value::function(fn));
-    emitBytes_(OpCode::LITERAL, literal);
+    emitBytes_(OpCode::CLOSURE, literal);
 }
 
 void Compiler::varDeclaration_(bool isConst) {

@@ -10,6 +10,7 @@ namespace OpCode {
 enum {
     // Literals:
     LITERAL,        // Push a literal value from the chunk
+    CLOSURE,        // Instantiate a function literal, making a closure
     NIL,            // Push nil to the stack
     TRUE,           // Push true to the stack
     FALSE,          // Push false to the stack

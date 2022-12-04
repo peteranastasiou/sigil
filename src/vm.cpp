@@ -243,6 +243,12 @@ InterpretResult Vm::run_() {
                 push(frame->readLiteral());
                 break;
             }
+            case OpCode::CLOSURE:{
+                ObjFunction * function = frame->readLiteral().asObjFunction();
+                ObjClosure * closure = new ObjClosure(this, function);
+                push(Value::closure(closure));
+                break;
+            }
             case OpCode::NIL: push(Value::nil()); break;
             case OpCode::TRUE: push(Value::boolean(true)); break;
             case OpCode::FALSE: push(Value::boolean(false)); break;

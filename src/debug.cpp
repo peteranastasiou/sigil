@@ -33,6 +33,7 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
     uint8_t instr = chunk->code[(size_t)offset];
     switch(instr){
         case OpCode::LITERAL:       return literalInstruction_("LITERAL", chunk, offset);
+        case OpCode::CLOSURE:       return closureInstruction_("CLOSURE", chunk, offset);
         case OpCode::NIL:           return simpleInstruction_("NIL");
         case OpCode::TRUE:          return simpleInstruction_("TRUE");
         case OpCode::FALSE:         return simpleInstruction_("FALSE");
@@ -82,6 +83,16 @@ int Disassembler::literalInstruction_(char const * name, Chunk * chunk, int offs
     chunk->literals[literalIdx].print();
     printf("'\n");
     return 2;
+}
+
+int Disassembler::closureInstruction_(char const * name, Chunk * chunk, int offset){
+    int initialOffset = offset;
+    offset ++;
+    uint8_t literalIdx = chunk->code[offset++];
+    printf("%-16s %4d '", name, literalIdx);
+    chunk->literals[literalIdx].print();
+    printf("'\n");
+    return offset - initialOffset;
 }
 
 int Disassembler::byteInstruction_(const char* name, Chunk* chunk, int offset) {
