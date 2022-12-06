@@ -7,6 +7,12 @@
 class ObjList : public Obj {
 public:
     ObjList(Vm * vm);
+    
+    /**
+     * Concatenation constructor:
+     */
+    ObjList(Vm * vm, ObjList * a, ObjList * b);
+
     ~ObjList();
 
     // implment Obj interface

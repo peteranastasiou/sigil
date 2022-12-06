@@ -6,6 +6,15 @@
 ObjList::ObjList(Vm * vm) : Obj(vm, Obj::LIST) {
 }
 
+ObjList::ObjList(Vm * vm, ObjList * a, ObjList * b) : Obj(vm, Obj::LIST) {
+    // Reserve enough space for both lists combined:
+    values_.reserve(a->len() + b->len());
+
+    // Copy both vectors into this one:
+    values_.insert(values_.end(), a->values_.begin(), a->values_.end());
+    values_.insert(values_.end(), b->values_.begin(), b->values_.end());
+}
+
 ObjList::~ObjList() {
 }
 

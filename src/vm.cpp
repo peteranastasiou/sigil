@@ -150,10 +150,6 @@ bool Vm::isTruthy_(Value value) {
 }
 
 void Vm::concatenate_() {
-    Value bValue = pop();
-    ObjString * b = bValue.toString(this);
-    ObjString * a = pop().asObjString();
-    push( Value::string(ObjString::concatenate(this, a, b)) );
 }
 
 bool Vm::indexGet_() {
@@ -321,9 +317,17 @@ InterpretResult Vm::run_() {
                 break;
             }
             case OpCode::ADD:{
-                if( peek(1).isString() ){ 
+                if( peek(1).isString() ){  // the first argument is second on stack
                     // implicitly convert second operand to string
-                    concatenate_();
+                    Value bValue = pop();
+                    ObjString * b = bValue.toString(this);
+                    ObjString * a = pop().asObjString();
+                    push( Value::string(ObjString::concatenate(this, a, b)) );
+
+                }else if( peek(0).isList() && peek(1).isList() ){
+                    ObjList * b = pop().asObjList();
+                    ObjList * a = pop().asObjList();
+                    push( Value::list(new ObjList(this, a, b)) );
 
                 }else if( peek(0).isNumber() && peek(1).isNumber() ){
                     double b = pop().as.number;
