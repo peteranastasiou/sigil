@@ -18,7 +18,7 @@ uint16_t CallFrame::readUint16() {
 
 Value CallFrame::readLiteral() {
     // look up literal from bytecode reference
-    return function->chunk.getLiteral(readByte());
+    return closure->function->chunk.getLiteral(readByte());
 }
 
 ObjString * CallFrame::readString() {
@@ -30,7 +30,7 @@ ObjString * CallFrame::readString() {
 
 int CallFrame::chunkOffsetOf(uint8_t * addr) {
     // get distance of instruction address from the start of the chunk's code array:
-    return (int)(addr - function->chunk.getCode());
+    return (int)(addr - closure->function->chunk.getCode());
 }
 
 Vm::Vm() {
@@ -51,11 +51,15 @@ InterpretResult Vm::interpret(char const * source) {
     // NOTE: not in lox!
     resetStack_();
 
-    // put the function on the value stack
+    // put the function on the value stack temporarily so that GC doesn't eat it
     push(Value::function(fn));
 
+    ObjClosure * closure = new ObjClosure(this, fn);
+    pop(); // remove function from stack
+    push(Value::closure(closure));
+
     // Make a new call frame
-    call_(fn, 0);
+    call_(closure, 0);
 
     InterpretResult res = run_();
     if( res == InterpretResult::OK ){
@@ -115,17 +119,17 @@ bool Vm::binaryOp_(uint8_t op) {
 }
 
 bool Vm::callValue_(Value fn, uint8_t argCount) {
-    if( fn.type != Value::FUNCTION ){
+    if( fn.type != Value::CLOSURE ){
         runtimeError_("Can only call functions.");
         return false;
     }
-    return call_(fn.asObjFunction(), argCount);
+    return call_(fn.asObjClosure(), argCount);
 }
 
-bool Vm::call_(ObjFunction * fn, uint8_t argCount) {
-    if( argCount != fn->numInputs ){
+bool Vm::call_(ObjClosure * closure, uint8_t argCount) {
+    if( argCount != closure->function->numInputs ){
         runtimeError_("Expected %d arguments, but got %d.",
-            fn->numInputs, argCount);
+            closure->function->numInputs, argCount);
         return false;
     }
 
@@ -135,8 +139,8 @@ bool Vm::call_(ObjFunction * fn, uint8_t argCount) {
     }
 
     CallFrame * frame = &frames_[frameCount_++];
-    frame->function = fn;
-    frame->ip = fn->chunk.getCode();
+    frame->closure = closure;
+    frame->ip = closure->function->chunk.getCode();
     frame->slots = stackTop_ - argCount - 1;
     return true;
 }
@@ -213,7 +217,7 @@ InterpretResult Vm::run_() {
     // globals_.debug();
     // printf("====\n");
 
-    disasm.disassembleChunk(&frame->function->chunk, "Main");
+    disasm.disassembleChunk(&frame->closure->function->chunk, "Main");
     printf("====\n");
 
 #endif
@@ -229,7 +233,7 @@ InterpretResult Vm::run_() {
         }
         printf("\n");
 
-        disasm.disassembleInstruction(&frame->function->chunk,
+        disasm.disassembleInstruction(&frame->closure->function->chunk,
             frame->chunkOffsetOf(frame->ip));
 #endif
 
@@ -422,7 +426,9 @@ InterpretResult Vm::run_() {
                 frame = &frames_[frameCount_ - 1];
 
 #ifdef DEBUG_TRACE_EXECUTION
-                disasm.disassembleChunk(&frame->function->chunk, frame->function->name->get());
+                disasm.disassembleChunk(
+                    &frame->closure->function->chunk, 
+                    frame->closure->function->name->get());
                 printf("====\n");
 #endif
                 break;
@@ -464,7 +470,7 @@ InterpretResult Vm::runtimeError_(const char* format, ...) {
 
     for( int i = frameCount_ - 1; i >= 0; i-- ){
         CallFrame * frame = &frames_[i];
-        ObjFunction * fn = frame->function;
+        ObjFunction * fn = frame->closure->function;
         int offset = frame->chunkOffsetOf(frame->ip - 1);
         fprintf(stderr, "[line %d] in ", fn->chunk.getLineNumber(offset));
         if( fn->name == nullptr ){

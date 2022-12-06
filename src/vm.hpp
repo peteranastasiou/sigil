@@ -20,7 +20,7 @@ struct CallFrame {
     ObjString * readString();
     int chunkOffsetOf(uint8_t * addr);  // instruction address to chunk offset
 
-    ObjFunction * function;
+    ObjClosure * closure;
     uint8_t * ip;   // instruction pointer
     Value * slots;  // first value in stack which can be used by function
 };
@@ -58,7 +58,7 @@ public:
 private:
     void resetStack_();
     InterpretResult run_();
-    bool call_(ObjFunction * fn, uint8_t argCount);
+    bool call_(ObjClosure * fn, uint8_t argCount);
     bool callValue_(Value value, uint8_t argCount);
     bool binaryOp_(uint8_t op);
     bool isTruthy_(Value value);
