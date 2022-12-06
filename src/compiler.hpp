@@ -5,6 +5,7 @@
 #include <functional>
 
 class Vm;
+class Compiler;
 
 // Precedence order from lowest to highest:
 enum class Precedence {
@@ -39,10 +40,23 @@ struct Local {
     static int const NOT_FOUND = -2;
 };
 
-// Note: lox calls this a Compiler:
+/**
+ * An "upvalue" is a local which is captured by a function as it becomes a closure
+ */
+struct Upvalue {
+    uint8_t index;  // referenced local's position on the stack
+    bool isConst;   // constant or variable
+    bool isLocal;   // true: is a local variable, false: is another upvalue
+};
+
+/**
+ * Environment tracks the local variables and upvalues associated 
+ * with each function as it is compiled
+ */
 struct Environment {
     static int const MAX_LOCALS = 255;
-    
+    static int const MAX_UPVALUES = 255;
+
     enum Type {
         FUNCTION,  // within a function
         SCRIPT     // top-level code
@@ -50,6 +64,7 @@ struct Environment {
 
     Environment * enclosing;  // the parent environment
     ObjFunction * function = nullptr;
+    Upvalue upvalues[MAX_UPVALUES];
     Local locals[MAX_LOCALS];
     uint8_t localCount;
     uint16_t scopeDepth;
@@ -64,15 +79,29 @@ struct Environment {
 
     /**
      * lookup a local variables position in the stack
+     * Searches innermost to outermost scope within the environment 
+     * for a matching name (to support shadowing)
      * @return positional index or NOT_FOUND or NOT_INITIALISED
      */
     int resolveLocal(Token & name, bool & isConst);
-    
+
+    /**
+     * lookup a local in surrounding environments
+     * The local is by definition an "upvalue" for this environment
+     * @return positional index or NOT_FOUND
+     */
+    int resolveUpvalue(Compiler * c, Token & name, bool & isConst);
+
+    /**
+     * Add an upvalue to the current environment's function
+     */
+    int addUpvalue(Compiler * c, uint8_t index, bool isConst, bool isLocal);
+
     /**
      * mark latest local as initialised
      */
     void defineLocal();
-    
+
     /**
      * release all locals which are no longer in scope
      * @return number of locals freed
@@ -182,4 +211,6 @@ private:
     Token previousToken_;
     bool hadError_;
     bool panicMode_;
+
+    friend class Environment; // environment needs to call error functions!
 };

@@ -28,6 +28,8 @@ enum {
     SET_GLOBAL,     // Set the value of a variable
     GET_LOCAL,
     SET_LOCAL,
+    GET_UPVALUE,
+    SET_UPVALUE,
     // Binary operators: take two values from the stack and push one:
     EQUAL,
     NOT_EQUAL,

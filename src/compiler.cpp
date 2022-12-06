@@ -63,6 +63,43 @@ int Environment::resolveLocal(Token & name, bool & isConst) {
     return Local::NOT_FOUND;
 }
 
+int Environment::resolveUpvalue(Compiler * c, Token & name, bool & isConst) {
+    // check if enclosing env is top-level
+    if( enclosing == nullptr ) return Local::NOT_FOUND;
+
+    int local = enclosing->resolveLocal(name, isConst);
+    if( local == Local::NOT_INITIALISED ){
+        // unexpected
+        c->errorAtPrevious_("Non initialised variable referenced in function.");
+        return Local::NOT_FOUND;
+    }
+    if( local == Local::NOT_FOUND ){
+        return Local::NOT_FOUND;
+    }
+
+    // TODO recursive upvalues!
+    return addUpvalue(c, (uint8_t)local, isConst, true);
+}
+
+int Environment::addUpvalue(Compiler * c, uint8_t index, bool isConst, bool isLocal){
+    int n = function->numUpvalues;
+
+    for( int i = 0; i < n; i++ ){
+        Upvalue * upvalue = &upvalues[i];
+        if( upvalue->index == index && upvalue->isLocal == isLocal ){
+            return i; // already got it!
+        }
+    }
+
+    if( n == MAX_UPVALUES ){
+        c->errorAtPrevious_("Too many closure variables in function.");
+        return 0;
+    }
+
+    upvalues[n] = {.index=index, .isConst=isConst, .isLocal=isLocal};
+    return function->numUpvalues++;
+}
+
 uint8_t Environment::freeLocals() {
     uint8_t nFreed = 0;
     // remove all locals which have fallen out of scope:
@@ -789,18 +826,24 @@ void Compiler::getSetVariable_(Token & name, bool canAssign) {
     if( res == Local::NOT_INITIALISED ){
         errorAtPrevious_("Local variable referenced before definition.");
 
-    } else if( res == Local::NOT_FOUND ){
+    }else if( res != Local::NOT_FOUND ){
+        // its a local variable
+        getOp = OpCode::GET_LOCAL;
+        setOp = OpCode::SET_LOCAL;
+        arg = (uint8_t)res;  // arg is the stack position of the local var
+
+    }else if((res = currentEnv_->resolveUpvalue(this, name, isConst)) != Local::NOT_FOUND) {
+        // its an upvalue
+        getOp = OpCode::GET_UPVALUE;
+        setOp = OpCode::SET_UPVALUE;
+        arg = (uint8_t)res;  // stack position of upvalue
+
+    }else{
         // its a global variable
         isConst = false; // assume not constant - checked at runtime
         getOp = OpCode::GET_GLOBAL;
         setOp = OpCode::SET_GLOBAL;
         arg = makeIdentifierLiteral_(name);  // arg is the literal index of the globals name
-
-    }else{
-        // its a local variable
-        getOp = OpCode::GET_LOCAL;
-        setOp = OpCode::SET_LOCAL;
-        arg = (uint8_t)res;  // arg is the stack position of the local var
     }
 
     // identify whether we are setting or getting a variable:
@@ -810,10 +853,10 @@ void Compiler::getSetVariable_(Token & name, bool canAssign) {
         }
         // setting the variable:
         expression_();  // the value to set
-        emitBytes_(setOp, (uint8_t)arg);
+        emitBytes_(setOp, arg);
     }else{
         // getting the variable:
-        emitBytes_(getOp, (uint8_t)arg);
+        emitBytes_(getOp, arg);
     }
 }
 

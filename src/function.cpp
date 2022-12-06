@@ -4,6 +4,7 @@
 
 ObjFunction::ObjFunction(Vm * vm, ObjString * funcName) : Obj(vm, Obj::Type::FUNCTION) {
     numInputs = 0;
+    numUpvalues = 0;
     name = funcName;
 }
 

@@ -16,6 +16,7 @@ public:
 
 public:
     int numInputs;  // number of expected parameters
+    int numUpvalues;
     Chunk chunk;
     ObjString * name;  // function name
 };
