@@ -131,6 +131,8 @@ ObjFunction * Compiler::compile(char const * source) {
     // compile declarations until we hit the end
     while( !match_(Token::END) ){
         declaration_(false);
+
+        if( hadFatalError_ ) break;
     }
 
     ObjFunction * function = endEnvironment_();
@@ -156,8 +158,10 @@ void Compiler::advance_() {
     for(;;) {
         currentToken_ = scanner_.scanToken();
         if( currentToken_.line == Scanner::MAX_LINES ){
-            fprintf(stderr, "Too many lines");
-            exit(1); // TODO proper error handling
+            fatalError_("Too many lines in script");
+            // pretend this is the end of the script
+            currentToken_.type = Token::END;
+            return;
         }
 
         if( currentToken_.type == Token::ERROR ){
@@ -206,7 +210,13 @@ void Compiler::emitByte_(uint8_t byte) {
 }
 
 void Compiler::emitByteAtLine_(uint8_t byte, uint16_t line) {
-    getCurrentChunk_()->write(byte, line);
+    if( !getCurrentChunk_()->write(byte, line) ){
+        if( currentEnv_->type == Environment::FUNCTION ){
+            fatalError_("Too much code in function.");
+        }else{
+            fatalError_("Too much code in top level of script.");
+        }
+    }
 }
 
 void Compiler::emitReturn_() {
@@ -566,6 +576,9 @@ void Compiler::whileStatement_() {
 }
 
 void Compiler::synchronise_() {
+    // don't stop panicking if we have had a fatal error: 
+    if( hadFatalError_ ) return;
+
     // try and find a boundary which seems like a good sync point
     panicMode_ = false;
     while( currentToken_.type != Token::END ){
@@ -918,6 +931,15 @@ ParseRule const * Compiler::getRule_(Token::Type type) {
     return &rules[type];
 }
 #undef RULE
+
+void Compiler::fatalError_(const char* fmt, ...) {
+    hadFatalError_ = true;
+
+    va_list args;
+    va_start(args, fmt);
+    errorAtVargs_(&currentToken_, fmt, args);
+    va_end(args);
+}
 
 void Compiler::errorAtCurrent_(const char* fmt, ...) {
     va_list args;

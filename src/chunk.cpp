@@ -1,7 +1,6 @@
 
 #include "chunk.hpp"
 
-#include <stdlib.h>  // exit
 #include <assert.h>
 
 
@@ -13,13 +12,13 @@ Chunk::Chunk() {
 Chunk::~Chunk() {
 }
 
-void Chunk::write(uint8_t byte, uint16_t line) {
+bool Chunk::write(uint8_t byte, uint16_t line) {
     if( code.size() >= MAX_COUNT_ ){
-        // TODO fatal error
-        exit(1);
+        return false;
     }
     code.push_back(byte);
     lines.push_back(line);
+    return true;
 }
 
 uint16_t Chunk::getLineNumber(int offset) {

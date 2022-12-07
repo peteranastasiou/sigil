@@ -74,7 +74,7 @@ public:
     ~Chunk();
 
     // append to bytecode array
-    void write(uint8_t byte, uint16_t line);
+    bool write(uint8_t byte, uint16_t line);
     
     // Get a line number corresponding to position in bytecode array
     uint16_t getLineNumber(int offset);

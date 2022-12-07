@@ -199,6 +199,7 @@ private:
     ObjFunction * endEnvironment_();
 
     // error production:
+    void fatalError_(const char* fmt, ...);
     void errorAtCurrent_(const char* fmt, ...);
     void errorAtPrevious_(const char* fmt, ...);
     void errorAt_(Token* token, const char* fmt, ...);
@@ -210,6 +211,7 @@ private:
     Token currentToken_;
     Token previousToken_;
     bool hadError_;
+    bool hadFatalError_;
     bool panicMode_;
 
     friend class Environment; // environment needs to call error functions!

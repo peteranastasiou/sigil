@@ -453,10 +453,8 @@ InterpretResult Vm::run_() {
                 frame = &frames_[frameCount_ - 1];
                 break;
             }
-            default:{
-                printf("Fatal error: unknown opcode %d\n", (int)instr);
-                exit(1);
-            }
+            default:
+                return runtimeError_("Fatal: unknown opcode %d\n", (int)instr);
         }
     }
 }
