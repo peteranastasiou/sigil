@@ -42,7 +42,7 @@ void Environment::defineLocal() {
     locals[localCount-1].isDefined = true;
 }
 
-int Environment::resolveLocal(Token & name, bool & isConst) {
+int Environment::resolveLocal(Compiler * c, Token & name, bool & isConst) {
     // search for a local by name in the environment
     // NOTE: searching from higher depth to lower, to support shadowing correctly
     for( int i = localCount-1; i >= 0; i-- ){
@@ -51,7 +51,7 @@ int Environment::resolveLocal(Token & name, bool & isConst) {
             // Handle special case where it hasn't been initialised before reference
             // e.g. var a = a;
             if( !local->isDefined ){
-                return Local::NOT_INITIALISED;
+                c->errorAtPrevious_("Local variable referenced before definition.");
             }
 
             // Found it:
@@ -64,24 +64,25 @@ int Environment::resolveLocal(Token & name, bool & isConst) {
 }
 
 int Environment::resolveUpvalue(Compiler * c, Token & name, bool & isConst) {
-    // check if enclosing env is top-level
+    // can't check enclosing env if already top-level:
     if( enclosing == nullptr ) return Local::NOT_FOUND;
 
-    int local = enclosing->resolveLocal(name, isConst);
-    if( local == Local::NOT_INITIALISED ){
-        // unexpected
-        c->errorAtPrevious_("Non initialised variable referenced in function.");
-        return Local::NOT_FOUND;
-    }
-    if( local == Local::NOT_FOUND ){
-        return Local::NOT_FOUND;
+    // search for local in enclosing environment/function:
+    int local = enclosing->resolveLocal(c, name, isConst);
+    if( local != Local::NOT_FOUND ){
+        return addUpvalue(c, (uint8_t)local, isConst, true);
     }
 
-    // TODO recursive upvalues!
-    return addUpvalue(c, (uint8_t)local, isConst, true);
+    // search for upvalue in enclosing environment/function:
+    int upvalue = enclosing->resolveUpvalue(c, name, isConst);
+    if( upvalue != Local::NOT_FOUND ){
+        return addUpvalue(c, (uint8_t)upvalue, isConst, false);
+    }
+
+    return Local::NOT_FOUND;
 }
 
-int Environment::addUpvalue(Compiler * c, uint8_t index, bool isConst, bool isLocal){
+int Environment::addUpvalue(Compiler * c, uint8_t index, bool isConst, bool isLocal) {
     int n = function->numUpvalues;
 
     for( int i = 0; i < n; i++ ){
@@ -309,7 +310,7 @@ void Compiler::funcDeclaration_() {
     // This is not an issue for globals
     if( isLocal ) currentEnv_->defineLocal();
 
-    // TODO allow declaration as const/var func = fn() { } AND fn func() {}
+    // parse arguments and function content
     function_(name, Environment::FUNCTION);
 
     // assign function literal to variable
@@ -333,7 +334,7 @@ void Compiler::function_(ObjString * name, Environment::Type type) {
     if( !check_(Token::RIGHT_PAREN) ){
         do {
             // count parameters
-            if( ++currentEnv_->function->numInputs > 255 ){
+            if( ++env.function->numInputs > 255 ){
                 errorAtCurrent_("Can't have over 255 parameters.");
             }
             // make a new local at the top of the function's value stack to use as the parameter:
@@ -360,7 +361,16 @@ void Compiler::function_(ObjString * name, Environment::Type type) {
     // New function literal:
     ObjFunction * fn = endEnvironment_();
     uint8_t literal = makeLiteral_(Value::function(fn));
+    // Note: CLOSURE instruction takes a function literal and wraps it to make a Closure
     emitBytes_(OpCode::CLOSURE, literal);
+
+    // List all the upvalues (variables enclosed by function):
+    for( int i = 0; i < fn->numUpvalues; i++ ){
+        // track whether it is a local or already an upvalue which is being uplifted:
+        emitByte_(env.upvalues[i].isLocal ? 1 : 0);
+        // stack position of value to lift:
+        emitByte_(env.upvalues[i].index);
+    }
 }
 
 void Compiler::varDeclaration_(bool isConst) {
@@ -835,11 +845,8 @@ void Compiler::getSetVariable_(Token & name, bool canAssign) {
 
     // first, try to look up
     bool isConst;
-    int res = currentEnv_->resolveLocal(name, isConst);
-    if( res == Local::NOT_INITIALISED ){
-        errorAtPrevious_("Local variable referenced before definition.");
-
-    }else if( res != Local::NOT_FOUND ){
+    int res = currentEnv_->resolveLocal(this, name, isConst);
+    if( res != Local::NOT_FOUND ){
         // its a local variable
         getOp = OpCode::GET_LOCAL;
         setOp = OpCode::SET_LOCAL;

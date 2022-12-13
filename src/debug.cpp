@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "function.hpp"
+
 
 Disassembler::Disassembler(){
 }
@@ -50,6 +52,8 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
         case OpCode::SET_GLOBAL:    return byteInstruction_("SET_GLOBAL", chunk, offset);
         case OpCode::GET_LOCAL:     return argInstruction_("GET_LOCAL", chunk, offset);
         case OpCode::SET_LOCAL:     return argInstruction_("SET_LOCAL", chunk, offset);
+        case OpCode::GET_UPVALUE:   return argInstruction_("GET_UPVALUE", chunk, offset);
+        case OpCode::SET_UPVALUE:   return argInstruction_("SET_UPVALUE", chunk, offset);
         case OpCode::EQUAL:         return simpleInstruction_("EQUAL"); 
         case OpCode::NOT_EQUAL:     return simpleInstruction_("NOT_EQUAL");     
         case OpCode::GREATER:       return simpleInstruction_("GREATER");   
@@ -92,6 +96,15 @@ int Disassembler::closureInstruction_(char const * name, Chunk * chunk, int offs
     printf("%-16s %4d '", name, literalIdx);
     chunk->literals[literalIdx].print();
     printf("'\n");
+
+    ObjFunction* fn = chunk->literals[literalIdx].asObjFunction();
+    for (int j = 0; j < fn->numUpvalues; j++) {
+        int isLocal = chunk->code[offset++];
+        int index = chunk->code[offset++];
+        printf("%04d      |                     %s %d\n",
+                offset - 2, isLocal ? "local" : "upvalue", index);
+    }
+
     return offset - initialOffset;
 }
 

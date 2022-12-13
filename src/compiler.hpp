@@ -35,9 +35,8 @@ struct Local {
     uint8_t isDefined;
     uint8_t isConst;
 
-    // Values used by Environment::resolveLocal()
-    static int const NOT_INITIALISED = -1;
-    static int const NOT_FOUND = -2;
+    // Used by Environment when searching for locals:
+    static int const NOT_FOUND = -1;
 };
 
 /**
@@ -83,7 +82,7 @@ struct Environment {
      * for a matching name (to support shadowing)
      * @return positional index or NOT_FOUND or NOT_INITIALISED
      */
-    int resolveLocal(Token & name, bool & isConst);
+    int resolveLocal(Compiler * c, Token & name, bool & isConst);
 
     /**
      * lookup a local in surrounding environments
