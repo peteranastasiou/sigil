@@ -23,6 +23,10 @@ ObjClosure * Value::asObjClosure() const {
     return (ObjClosure *) as.obj;
 }
 
+ObjUpvalue * Value::asObjUpvalue() const {
+    return (ObjUpvalue *) as.obj;
+}
+
 char const* Value::typeToString(Type t) {
     switch( t ){
         case NIL:      return "nil";
@@ -31,6 +35,7 @@ char const* Value::typeToString(Type t) {
         case TYPEID:   return "typeid";
         case FUNCTION: return "function";
         case CLOSURE:  return "closure";
+        case UPVALUE:  return "upvalue";
         case LIST:     return "list";
         case STRING:   return "string";
         default:       return "???";   // Unreachable
@@ -47,6 +52,7 @@ bool Value::equals(Value other) const {
         case TYPEID:  return as.typeId == other.as.typeId;
         case FUNCTION:  // function is only equal if its the exact same identity:
         case CLOSURE:   // TODO check if correct
+        case UPVALUE:   // TODO check if correct
         case LIST:      // same for list, might be self referential so no safe way to deep inspect
         case STRING:    // all strings are interned --> therefore can compare pointers
             return as.obj == other.as.obj;
@@ -62,6 +68,7 @@ ObjString * Value::toString(Vm * vm) {
         case TYPEID:  return ObjString::newString(vm, typeToString(as.typeId));
         case FUNCTION:
         case CLOSURE:
+        case UPVALUE:
         case LIST:
         case STRING:
             // Object types:
@@ -77,6 +84,8 @@ void Value::print() const {
         case NUMBER:  printf("%g", as.number); return;
         case TYPEID:  printf("%s", typeToString(as.typeId)); return;
         case FUNCTION:
+        case CLOSURE:
+        case UPVALUE:
         case LIST:
         case STRING:
             // Object types:

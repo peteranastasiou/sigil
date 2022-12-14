@@ -12,18 +12,11 @@ ObjFunction::~ObjFunction() {
 }
 
 ObjString * ObjFunction::toString(Vm * vm) {
-    if( name == nullptr ){
-        return ObjString::newString(vm, "<script>");
-    }
     return name;
 }
 
 void ObjFunction::print() {
-    if( name == nullptr ){
-        printf("<script>");
-    }else{
-        printf("<fn %s>", name->get());
-    }
+    printf("fn:%s", name->get());
 }
 
 // -----------------------------------------------------
@@ -37,9 +30,26 @@ ObjClosure::~ObjClosure() {
 }
 
 ObjString * ObjClosure::toString(Vm * vm) {
-    return function->toString(vm);
+    return ObjString::newString(vm, function->name->get());
 }
 
 void ObjClosure::print() {
-    function->print();
+    printf("cl:%s", function->name->get());
+}
+
+// -----------------------------------------------------
+
+ObjUpvalue::ObjUpvalue(Vm * vm, Value * val) : Obj(vm, Obj::Type::UPVALUE) {
+    value = val;
+}
+
+ObjUpvalue::~ObjUpvalue() {
+}
+
+ObjString * ObjUpvalue::toString(Vm * vm) {
+    return ObjString::newString(vm, "<upvalue>");
+}
+
+void ObjUpvalue::print() {
+    printf("<upvalue>");
 }

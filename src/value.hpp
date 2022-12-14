@@ -7,6 +7,7 @@ class ObjString;
 class ObjList;
 class ObjFunction;
 class ObjClosure;
+class ObjUpvalue;
 
 struct Value {
     /**
@@ -22,7 +23,8 @@ struct Value {
         STRING,
         LIST,
         FUNCTION,
-        CLOSURE
+        CLOSURE,
+        UPVALUE
     } type;
 
     union {
@@ -44,6 +46,7 @@ struct Value {
     static inline Value list(Obj * o) { return (Value){LIST, {.obj = o}}; }
     static inline Value function(Obj * o) { return (Value){FUNCTION, {.obj = o}}; }
     static inline Value closure(Obj * o) { return (Value){CLOSURE, {.obj = o}}; }
+    static inline Value upvalue(Obj * o) { return (Value){UPVALUE, {.obj = o}}; }
 
     // Type to string
     static char const * typeToString(Type t);
@@ -57,12 +60,14 @@ struct Value {
     inline bool isList() const { return type == LIST; }
     inline bool isFunction() const { return type == FUNCTION; }
     inline bool isClosure() const { return type == CLOSURE; }
+    inline bool isUpvalue() const { return type == UPVALUE; }
 
     // As object helpers:
     ObjString * asObjString() const;
     ObjList * asObjList() const;
     ObjFunction * asObjFunction() const;
     ObjClosure * asObjClosure() const;
+    ObjUpvalue * asObjUpvalue() const;
 
     // value methods
     bool equals(Value other) const;

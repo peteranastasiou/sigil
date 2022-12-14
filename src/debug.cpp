@@ -83,9 +83,9 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
 
 int Disassembler::literalInstruction_(char const * name, Chunk * chunk, int offset){
     uint8_t literalIdx = chunk->code[offset + 1];
-    printf("%-16s %4d '", name, literalIdx);
+    printf("%-16s %4d ", name, literalIdx);
     chunk->literals[literalIdx].print();
-    printf("'\n");
+    printf("\n");
     return 2;
 }
 
@@ -93,9 +93,9 @@ int Disassembler::closureInstruction_(char const * name, Chunk * chunk, int offs
     int initialOffset = offset;
     offset ++;
     uint8_t literalIdx = chunk->code[offset++];
-    printf("%-16s %4d '", name, literalIdx);
+    printf("%-16s %4d ", name, literalIdx);
     chunk->literals[literalIdx].print();
-    printf("'\n");
+    printf("\n");
 
     ObjFunction* fn = chunk->literals[literalIdx].asObjFunction();
     for (int j = 0; j < fn->numUpvalues; j++) {

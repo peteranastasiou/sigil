@@ -121,10 +121,11 @@ ObjFunction * Compiler::compile(char const * source) {
     scanner_.init(source);
 
     currentEnv_ = nullptr;
-    Environment env(vm_, nullptr, Environment::SCRIPT);
+    Environment env(vm_, ObjString::newString(vm_, "<script>"), Environment::SCRIPT);
     initEnvironment_(env);
 
     hadError_ = false;
+    hadFatalError_ = false;
     panicMode_ = false;
 
     advance_();  // get the first token

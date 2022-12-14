@@ -64,6 +64,7 @@ private:
     bool isTruthy_(Value value);
     void concatenate_();
     bool indexGet_();
+    ObjUpvalue * captureUpvalue_(Value * local);
     InterpretResult runtimeError_(const char* format, ...);
     void freeObjects_();
 

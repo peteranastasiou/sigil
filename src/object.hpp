@@ -14,7 +14,8 @@ struct Obj {
         STRING,
         LIST,
         FUNCTION,
-        CLOSURE
+        CLOSURE,
+        UPVALUE
     };
 
     Obj(Vm * vm, Type t);

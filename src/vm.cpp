@@ -191,6 +191,12 @@ bool Vm::indexGet_() {
     }
 }
 
+ObjUpvalue * Vm::captureUpvalue_(Value * local) {
+    ObjUpvalue * upvalue = new ObjUpvalue(this, local);
+    // More to come...
+    return upvalue;
+}
+
 void Vm::resetStack_() {
     stackTop_ = stack_;
     frameCount_ = 0;
@@ -244,9 +250,24 @@ InterpretResult Vm::run_() {
                 break;
             }
             case OpCode::CLOSURE:{
+                // Wrap the function literal into a closure:
                 ObjFunction * function = frame->readLiteral().asObjFunction();
                 ObjClosure * closure = new ObjClosure(this, function);
                 push(Value::closure(closure));
+
+                // Close over referenced Values (upvalues):
+                for( int i = 0; i < function->numUpvalues; i++ ){
+                    uint8_t isLocal = frame->readByte();
+                    uint8_t index = frame->readByte();
+
+                    closure->upvalues.push_back(
+                        isLocal ? 
+                        // capture local value to upvalue:
+                        captureUpvalue_( &frame->slots[index] ) :
+                        // else, reference existing upvalue
+                        frame->closure->upvalues[index]
+                    );
+                }
                 break;
             }
             case OpCode::NIL: push(Value::nil()); break;
@@ -300,6 +321,16 @@ InterpretResult Vm::run_() {
             case OpCode::SET_LOCAL: {
                 uint8_t slot = frame->readByte();  // stack position of the local
                 frame->slots[slot] = peek(0);      // note: no pop: assignment can be an expression
+                break;
+            }
+            case OpCode::GET_UPVALUE: {
+                uint8_t upvalueIdx = frame->readByte();
+                push( frame->closure->upvalues[upvalueIdx]->get() );
+                break;
+            }
+            case OpCode::SET_UPVALUE: {
+                uint8_t upvalueIdx = frame->readByte();
+                frame->closure->upvalues[upvalueIdx]->set( peek(0) );
                 break;
             }
             case OpCode::EQUAL: {
@@ -470,12 +501,9 @@ InterpretResult Vm::runtimeError_(const char* format, ...) {
         CallFrame * frame = &frames_[i];
         ObjFunction * fn = frame->closure->function;
         int offset = frame->chunkOffsetOf(frame->ip - 1);
-        fprintf(stderr, "[line %d] in ", fn->chunk.getLineNumber(offset));
-        if( fn->name == nullptr ){
-            fprintf(stderr, "script\n");
-        }else{
-            fprintf(stderr, "%s\n", fn->name->get());
-        }
+        fprintf(stderr, "[line %d] in %s\n", 
+                fn->chunk.getLineNumber(offset),
+                fn->name->get());
     }
 
     resetStack_();
