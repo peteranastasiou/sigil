@@ -92,6 +92,14 @@ ObjString::~ObjString() {
     delete[] chars_;
 }
 
+void ObjString::print(bool verbose) {
+    if( verbose ){
+        // todo replace internal " with \":
+        printf("\"%s\"", chars_);
+    }else{
+        printf("%s", chars_);
+    }
+}
 
 bool ObjString::get(int i, char & c) {
     // python-style count from the back

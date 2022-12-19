@@ -17,7 +17,7 @@ public:
 
     // implment Obj interface
     virtual ObjString * toString(Vm * vm) override;
-    virtual void print() override;
+    virtual void print(bool verbose) override;
 
     void append(Value v);
     bool get(int i, Value & v);

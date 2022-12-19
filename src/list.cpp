@@ -22,7 +22,8 @@ ObjString * ObjList::toString(Vm * vm) {
     return ObjString::newString(vm, "<list>");
 }
 
-void ObjList::print() {
+void ObjList::print(bool verbose) {
+    (void) verbose;
     if( len() == 0 ){
         printf("[]");
         return;
@@ -30,10 +31,10 @@ void ObjList::print() {
 
     printf("[");
     for( int i = 0; i < len()-1; ++i ){
-        values_[i].print();
+        values_[i].print(true);
         printf(", ");
     }
-    values_[len()-1].print();
+    values_[len()-1].print(true);
     printf("]");
 }
 

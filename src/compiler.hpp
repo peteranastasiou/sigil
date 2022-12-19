@@ -149,6 +149,7 @@ private:
     void list_();
     void type_();
     void print_();
+    void echo_();
     void index_();
     void and_();
     void or_();

@@ -72,7 +72,7 @@ public:
 
     // implment Obj interface (trivial for strings)
     virtual ObjString * toString(Vm * vm) override { return this; }
-    virtual void print() override { printf("%s", chars_); }
+    virtual void print(bool verbose) override;
 
     // implement String interface:
     virtual char const * get() const override { return chars_; }

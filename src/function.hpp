@@ -16,7 +16,7 @@ public:
 
     // implment Obj interface
     virtual ObjString * toString(Vm * vm) override;
-    virtual void print() override;
+    virtual void print(bool verbose) override;
 
 public:
     int numInputs;  // number of expected parameters
@@ -38,7 +38,7 @@ public:
 
     // implment Obj interface
     virtual ObjString * toString(Vm * vm) override;
-    virtual void print() override;
+    virtual void print(bool verbose) override;
 
 private:
     Value * value;
@@ -55,10 +55,9 @@ public:
 
     // implment Obj interface
     virtual ObjString * toString(Vm * vm) override;
-    virtual void print() override;
+    virtual void print(bool verbose) override;
 
 public:
     ObjFunction * function;
     std::vector<ObjUpvalue *> upvalues;
-    // TODO need to store the numUpvalues separately?
 };

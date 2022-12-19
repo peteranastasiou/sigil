@@ -121,7 +121,7 @@ ObjFunction * Compiler::compile(char const * source) {
     scanner_.init(source);
 
     currentEnv_ = nullptr;
-    Environment env(vm_, ObjString::newString(vm_, "<script>"), Environment::SCRIPT);
+    Environment env(vm_, ObjString::newString(vm_, "(script)"), Environment::SCRIPT);
     initEnvironment_(env);
 
     hadError_ = false;
@@ -605,6 +605,7 @@ void Compiler::synchronise_() {
             case Token::IF:
             case Token::WHILE:
             case Token::PRINT:
+            case Token::ECHO:
             case Token::RETURN:
                 return;
 
@@ -820,6 +821,12 @@ void Compiler::print_() {
     emitByte_(OpCode::PRINT);
 }
 
+void Compiler::echo_() {
+    // print built-in takes a single value:
+    expression_();
+    emitByte_(OpCode::ECHO);
+}
+
 void Compiler::index_() {
     expression_();
     consume_(Token::RIGHT_BRACKET, "Expected ']' after index.");
@@ -926,6 +933,7 @@ ParseRule const * Compiler::getRule_(Token::Type type) {
         [Token::OR]            = {NULL,                       RULE(or_),     Precedence::NONE},
         [Token::OBJECT]        = {RULE(emitObjectType_),      NULL,          Precedence::NONE},
         [Token::PRINT]         = {RULE(print_),               NULL,          Precedence::NONE},
+        [Token::ECHO]          = {RULE(echo_),                NULL,          Precedence::NONE},
         [Token::RETURN]        = {NULL,                       NULL,          Precedence::NONE},
         [Token::STRING_TYPE]   = {RULE(emitStringType_),      NULL,          Precedence::NONE},
         [Token::TRUE]          = {RULE(emitTrue_),            NULL,          Precedence::NONE},

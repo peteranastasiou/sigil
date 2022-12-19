@@ -77,7 +77,7 @@ ObjString * Value::toString(Vm * vm) {
     }
 }
 
-void Value::print() const {
+void Value::print(bool verbose) const {
     switch( type ){
         case NIL:     printf("nil"); return;
         case BOOL:    printf(as.boolean ? "true" : "false"); return;
@@ -89,7 +89,7 @@ void Value::print() const {
         case LIST:
         case STRING:
             // Object types:
-            as.obj->print(); return;
+            as.obj->print(verbose); return;
         default:      printf("???");
     }
 }

@@ -23,7 +23,7 @@ struct Obj {
     virtual ~Obj();
 
     virtual ObjString * toString(Vm * vm) = 0;
-    virtual void print() = 0;
+    virtual void print(bool verbose) = 0;
 
     Type type;
     Obj * next;  // linked list of all objects

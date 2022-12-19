@@ -28,10 +28,6 @@ struct CallFrame {
 struct Global {
     Value value;
     bool isConst;
-
-    void print() const {  // required for hashmap value
-        value.print();
-    }
 };
 
 class Vm {

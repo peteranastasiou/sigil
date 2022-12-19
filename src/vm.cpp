@@ -231,11 +231,10 @@ InterpretResult Vm::run_() {
     for(;;) {
 
 #ifdef DEBUG_TRACE_EXECUTION
-        printf("          stack: ");
+        printf("stack: ");
         for( Value * slot = stack_; slot < stackTop_; slot++ ){
-            printf("[ ");
-            slot->print();
-            printf(" ]");
+            slot->print(true);
+            printf(" | ");
         }
         printf("\n");
 
@@ -386,8 +385,14 @@ InterpretResult Vm::run_() {
                 push(Value::boolean(!isTruthy_(pop())));
                 break;
             }
+            case OpCode::ECHO:{
+                pop().print(true);
+                printf("\n");
+                push(Value::nil());  // echo returns nil
+                break;
+            }
             case OpCode::PRINT:{
-                pop().print();
+                pop().print(false);
                 printf("\n");
                 push(Value::nil());  // print returns nil
                 break;

@@ -24,7 +24,7 @@ struct Token {
         // Keywords:
         AND, BOOL, CONST, ELIF, ELSE, FALSE,
         FOR, FN, FLOAT, IF, NIL, OR, OBJECT,
-        PRINT, RETURN, STRING_TYPE,
+        PRINT, ECHO, RETURN, STRING_TYPE,
         TRUE, TYPE, TYPEID, VAR, WHILE,
         // Special tokens:
         ERROR, END

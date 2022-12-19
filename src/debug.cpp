@@ -84,7 +84,7 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
 int Disassembler::literalInstruction_(char const * name, Chunk * chunk, int offset){
     uint8_t literalIdx = chunk->code[offset + 1];
     printf("%-16s %4d ", name, literalIdx);
-    chunk->literals[literalIdx].print();
+    chunk->literals[literalIdx].print(true);
     printf("\n");
     return 2;
 }
@@ -94,7 +94,7 @@ int Disassembler::closureInstruction_(char const * name, Chunk * chunk, int offs
     offset ++;
     uint8_t literalIdx = chunk->code[offset++];
     printf("%-16s %4d ", name, literalIdx);
-    chunk->literals[literalIdx].print();
+    chunk->literals[literalIdx].print(true);
     printf("\n");
 
     ObjFunction* fn = chunk->literals[literalIdx].asObjFunction();
@@ -204,9 +204,9 @@ char const * tokenTypeToStr(Token::Type t) {
 void debugObjectLinkedList(Obj * obj) {
     printf("Objects:\n");
     while( obj != nullptr ){
-        printf("  %p: [", obj);
-        obj->print();
-        printf("]\n");
+        printf("  %p: ", obj);
+        obj->print(true);
+        printf("\n");
         obj = obj->next;
     }
 }

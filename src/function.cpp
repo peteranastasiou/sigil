@@ -15,8 +15,12 @@ ObjString * ObjFunction::toString(Vm * vm) {
     return name;
 }
 
-void ObjFunction::print() {
-    printf("fn:%s", name->get());
+void ObjFunction::print(bool verbose) {
+    if( verbose ){
+        printf("<fn:%s>", name->get());
+    }else{
+        puts(name->get());
+    }
 }
 
 // -----------------------------------------------------
@@ -30,11 +34,15 @@ ObjClosure::~ObjClosure() {
 }
 
 ObjString * ObjClosure::toString(Vm * vm) {
-    return ObjString::newString(vm, function->name->get());
+    return function->name;
 }
 
-void ObjClosure::print() {
-    printf("cl:%s", function->name->get());
+void ObjClosure::print(bool verbose) {
+    if( verbose ){
+        printf("<cl:%s>", function->name->get());
+    }else{
+        puts(function->name->get());
+    }
 }
 
 // -----------------------------------------------------
@@ -50,6 +58,6 @@ ObjString * ObjUpvalue::toString(Vm * vm) {
     return ObjString::newString(vm, "<upvalue>");
 }
 
-void ObjUpvalue::print() {
-    printf("<upvalue>");
+void ObjUpvalue::print(bool verbose) {
+    puts("<upvalue>");
 }

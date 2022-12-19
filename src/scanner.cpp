@@ -110,11 +110,15 @@ Token::Type Scanner::identifierType_() {
         case 'b': return checkKeyword_(1, 3, "ool", Token::BOOL);
         case 'c': return checkKeyword_(1, 4, "onst", Token::CONST);
         case 'e': {
-            // "e..." might be "else" or "elif":
+            // "e..." might be "echo", "else" or "elif":
             // check correct number of chars, and that next char is l:
-            if( current_ - start_ == 4 && start_[1] == 'l' ){
-                if( start_[2] == 's' && start_[3] == 'e' ) return Token::ELSE;
-                if( start_[2] == 'i' && start_[3] == 'f' ) return Token::ELIF;
+            if( current_ - start_ == 4 ){
+                if( start_[1] == 'c' ){
+                    return checkKeyword_(2, 2, "ho", Token::ECHO);
+                } else if( start_[1] == 'l' ){
+                    if( start_[2] == 's' && start_[3] == 'e' ) return Token::ELSE;
+                    if( start_[2] == 'i' && start_[3] == 'f' ) return Token::ELIF;
+                }
             }
             break;
         }
