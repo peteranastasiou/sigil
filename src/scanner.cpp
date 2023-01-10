@@ -5,6 +5,9 @@
 #include <stdio.h>
 
 
+// TODO change so it makes dynamic strings and we can stream in a file rather than loading the whole thing
+// Rewind would let us check for anonymous functions better!
+
 bool Token::equals(Token & other) {
     if( length != other.length ) return false;
     return memcmp(start, other.start, length) == 0;

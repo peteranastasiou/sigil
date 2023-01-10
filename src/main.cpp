@@ -14,9 +14,6 @@
 static void repl() {
     Vm vm;
 
-    // TODO tab completion!
-    // rl_completion_matches = autocomplete;  // ref https://eli.thegreenplace.net/2016/basics-of-using-the-readline-library/
-
     for( ;; ){
         char * line = readline("> ");
         if( line == nullptr ) return;  // Ctrl C or D
@@ -25,6 +22,8 @@ static void repl() {
             add_history(line);
         }
         
+        // TODO try to compile with "echo " on the front, then try to compile without.
+        // This requires better error handling instead of printf everywhere! 
         vm.interpret(line);
 
         free(line);

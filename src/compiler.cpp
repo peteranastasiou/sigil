@@ -284,6 +284,12 @@ bool Compiler::declaration_(bool canBeExpression) {
         varDeclaration_(true);
 
     }else if( match_(Token::FN) ){
+        // check if its anonymous:
+        //if( check_(Token::LEFT_PAREN) ){
+        //    // this doesn't work because it might be the start of an expression, but we can't put into
+        //    // statement_ because FN is already gobbled. Rewind token!?! indicates grammar is bad
+        //    funcAnonymous_();
+        //}
         funcDeclaration_();
 
     }else{
@@ -295,6 +301,8 @@ bool Compiler::declaration_(bool canBeExpression) {
 
     return isExpression;
 }
+
+// todo continue from 25.4.2
 
 void Compiler::funcDeclaration_() {
     bool isLocal = currentEnv_->scopeDepth > 0;
@@ -334,6 +342,8 @@ void Compiler::function_(ObjString * name, Environment::Type type) {
     // if has any parameters:
     if( !check_(Token::RIGHT_PAREN) ){
         do {
+            // TODO named params
+
             // count parameters
             if( ++env.function->numInputs > 255 ){
                 errorAtCurrent_("Can't have over 255 parameters.");
