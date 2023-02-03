@@ -2,6 +2,8 @@
 #include "vm.hpp"
 #include "chunk.hpp"
 #include "debug.hpp"
+#include "inputstream/fileinputstream.hpp"
+#include "inputstream/stringinputstream.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,29 +32,33 @@ static void repl() {
     }
 }
 
-static char* readFile(const char* path) {
-    // todo read in file as scanned instead of loading the whole thing into memory!
-    FILE* file = fopen(path, "rb");
-    if( file == NULL ){
-        fprintf(stderr, "Could not open file \"%s\".\n", path);
-        exit(74);
+void readFile(const char* path) {
+    FileInputStream stream;
+    if( !stream.open(path) ){
+        fprintf(stderr, "Could not open file '%s'\n", path);
+        return;
     }
-
-    fseek(file, 0L, SEEK_END);
-    size_t fileSize = ftell(file);
-    rewind(file);
-
-    char* buffer = (char*)malloc(fileSize + 1);
-    size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
-    buffer[bytesRead] = '\0';
-
-    fclose(file);
-    return buffer;
+    bool rewind = true;
+    for( ;; ) {
+        char c = stream.next();
+        if( c == '\0' ){
+            return; // end of file
+        }
+        printf("%c", c);
+        if( c == '{' && rewind ){
+            stream.rewind(5);
+            printf("|");
+            rewind = false;
+        }
+    }
 }
 
 static void runFile(const char* path) {
     Vm vm;
-    char* source = readFile(path);
+    char* source;
+    readFile(path);
+    return;
+
     InterpretResult result = vm.interpret(source);
     free(source);
 

@@ -132,25 +132,25 @@ int Disassembler::jumpInstruction_(const char* name, int sign, Chunk* chunk, int
     return 3;
 }
 
-void debugScanner(char const * source) {
-    Scanner scanner;
-    scanner.init(source);
-    int line = -1;
-    for(;;){
-        Token token = scanner.scanToken();
-        if( token.line != line ){
-            printf("%4d ", token.line);
-            line = token.line;
-        }else{
-            printf("   | ");
-        }
-        printToken(token);
-        printf("\n");
-        if( token.type == Token::END ){
-            break;
-        }
-    }
-}
+// void debugScanner(char const * source) {
+//     Scanner scanner;
+//     scanner.init(source);
+//     int line = -1;
+//     for(;;){
+//         Token token = scanner.scanToken();
+//         if( token.line != line ){
+//             printf("%4d ", token.line);
+//             line = token.line;
+//         }else{
+//             printf("   | ");
+//         }
+//         printToken(token);
+//         printf("\n");
+//         if( token.type == Token::END ){
+//             break;
+//         }
+//     }
+// }
 
 void printToken(Token token) {
     printf("%s '%.*s'", tokenTypeToStr(token.type), token.length, token.start); 

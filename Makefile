@@ -28,6 +28,7 @@ endif
 TARGET = bin/pond
 
 OBJECTS = $(patsubst src/%.cpp, build/%.o, $(wildcard src/*.cpp))
+OBJECTS += $(patsubst src/inputstream/%.cpp, build/inputstream__%.o, $(wildcard src/inputstream/*.cpp))
 DEPS = $(OBJECTS:.o=.d)
 
 ifeq ($(OS), Windows_NT)
@@ -64,6 +65,10 @@ $(TARGET): $(OBJECTS)
 
 # Compile sources
 build/%.o: src/%.cpp
+	@$(MKDIR_BUILD)
+	$(CC) $(CFLAGS) $(DEFINES) -c $< -o $@
+
+build/inputstream__%.o: src/inputstream/%.cpp
 	@$(MKDIR_BUILD)
 	$(CC) $(CFLAGS) $(DEFINES) -c $< -o $@
 
