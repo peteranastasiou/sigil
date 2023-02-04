@@ -6,17 +6,17 @@
 
 class ObjList : public Obj {
 public:
-    ObjList(Vm * vm);
+    ObjList(Mem * mem);
     
     /**
      * Concatenation constructor:
      */
-    ObjList(Vm * vm, ObjList * a, ObjList * b);
+    ObjList(Mem * mem, ObjList * a, ObjList * b);
 
     ~ObjList();
 
     // implment Obj interface
-    virtual ObjString * toString(Vm * vm) override;
+    virtual ObjString * toString() override;
     virtual void print(bool verbose) override;
 
     void append(Value v);

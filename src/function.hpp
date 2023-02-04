@@ -11,11 +11,11 @@
  */
 class ObjFunction : public Obj {
 public:
-    ObjFunction(Vm * vm, ObjString * funcName);
+    ObjFunction(Mem * mem, ObjString * funcName);
     ~ObjFunction();
 
     // implment Obj interface
-    virtual ObjString * toString(Vm * vm) override;
+    virtual ObjString * toString() override;
     virtual void print(bool verbose) override;
 
 public:
@@ -30,14 +30,14 @@ public:
  */
 class ObjUpvalue : public Obj {
 public:
-    ObjUpvalue(Vm * vm, Value * val);
+    ObjUpvalue(Mem * mem, Value * val);
     ~ObjUpvalue();
 
     inline void set(Value v) { *value = v; }
     inline Value get() { return *value; }
 
     // implment Obj interface
-    virtual ObjString * toString(Vm * vm) override;
+    virtual ObjString * toString() override;
     virtual void print(bool verbose) override;
 
 private:
@@ -50,11 +50,11 @@ private:
  */
 class ObjClosure : public Obj {
 public:
-    ObjClosure(Vm * vm, ObjFunction * function);
+    ObjClosure(Mem * mem, ObjFunction * function);
     ~ObjClosure();
 
     // implment Obj interface
-    virtual ObjString * toString(Vm * vm) override;
+    virtual ObjString * toString() override;
     virtual void print(bool verbose) override;
 
 public:

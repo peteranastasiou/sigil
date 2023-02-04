@@ -1,7 +1,7 @@
 
 #include "compiler.hpp"
 #include "debug.hpp"
-#include "vm.hpp"
+#include "mem.hpp"
 #include "function.hpp"
 
 #include <stdio.h>
@@ -10,11 +10,11 @@
 #include <vector>
 
 
-Environment::Environment(Vm * vm, ObjString * name, Type t) {
+Environment::Environment(Mem * mem, ObjString * name, Type t) {
     type = t;
     localCount = 0;
     scopeDepth = 0;
-    function = new ObjFunction(vm, name);
+    function = new ObjFunction(mem, name);
 
     // Claim first local for the "stack pointer"??
     Local * local = &locals[localCount++];
@@ -111,7 +111,7 @@ uint8_t Environment::freeLocals() {
     return nFreed;
 }
 
-Compiler::Compiler(Vm * vm) : vm_(vm) {
+Compiler::Compiler(Mem * mem) : mem_(mem) {
 }
 
 Compiler::~Compiler() {
@@ -121,7 +121,7 @@ ObjFunction * Compiler::compile(char const * source) {
     scanner_.init(source);
 
     currentEnv_ = nullptr;
-    Environment env(vm_, ObjString::newString(vm_, "(script)"), Environment::SCRIPT);
+    Environment env(mem_, ObjString::newString(mem_, "(script)"), Environment::SCRIPT);
     initEnvironment_(env);
 
     hadError_ = false;
@@ -312,7 +312,7 @@ void Compiler::funcDeclaration_() {
     uint8_t global = parseVariable_("Expected variable name.", isConst, isLocal);
 
     // capture function name for the environment too:
-    ObjString * name = ObjString::newString(vm_, 
+    ObjString * name = ObjString::newString(mem_, 
         previousToken_.start, previousToken_.length);
 
     // If its a local, mark it as already defined (allowing for self-referential functions):
@@ -328,12 +328,12 @@ void Compiler::funcDeclaration_() {
 
 void Compiler::funcAnonymous_() {
     // Parse a function used in an expression: fn(args) { statements }
-    function_(ObjString::newString(vm_, "(anon)"), Environment::FUNCTION);
+    function_(ObjString::newString(mem_, "(anon)"), Environment::FUNCTION);
 }
 
 void Compiler::function_(ObjString * name, Environment::Type type) {
     // new environment
-    Environment env(vm_, name, type);
+    Environment env(mem_, name, type);
     initEnvironment_(env);
     beginScope_();
 
@@ -698,7 +698,7 @@ void Compiler::parse_(Precedence precedence) {
 
 uint8_t Compiler::makeIdentifierLiteral_(Token & name) {
     return makeLiteral_(Value::string(
-        ObjString::newString(vm_, name.start, name.length)
+        ObjString::newString(mem_, name.start, name.length)
     ));
 }
 
@@ -850,7 +850,7 @@ void Compiler::number_() {
 }
 
 void Compiler::string_() {
-    ObjString * str = ObjString::newString(vm_, previousToken_.start+1, previousToken_.length-2);
+    ObjString * str = ObjString::newString(mem_, previousToken_.start+1, previousToken_.length-2);
     emitLiteral_(Value::string(str));
 }
 

@@ -2,9 +2,11 @@
 
 #include "chunk.hpp"
 #include "scanner.hpp"
+#include "inputstream/inputstream.hpp"
+
 #include <functional>
 
-class Vm;
+class Mem;
 class Compiler;
 
 // Precedence order from lowest to highest:
@@ -68,7 +70,7 @@ struct Environment {
     uint8_t localCount;
     uint16_t scopeDepth;
 
-    Environment(Vm * vm, ObjString * name, Type t);
+    Environment(Mem * mem, ObjString * name, Type t);
 
     /**
      * track a local variables position in the stack
@@ -111,15 +113,15 @@ struct Environment {
 // Note: lox calls this a Parser:
 class Compiler {
 public:
-    Compiler(Vm * vm);
+    Compiler(Mem * mem);
 
     ~Compiler();
 
     /**
-     * @param source [input]
+     * @param stream [input]
      * @param chunk [output]
     */
-    ObjFunction * compile(char const * source);
+    ObjFunction * compile(InputStream * stream);
 
 private:
     // parser helpers:
@@ -205,7 +207,7 @@ private:
     void errorAt_(Token* token, const char* fmt, ...);
     void errorAtVargs_(Token* token, const char* message, va_list args);
 
-    Vm * vm_;
+    Mem * mem_;
     Scanner scanner_;
     Environment * currentEnv_;
     Token currentToken_;

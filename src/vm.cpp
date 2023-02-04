@@ -34,12 +34,10 @@ int CallFrame::chunkOffsetOf(uint8_t * addr) {
 }
 
 Vm::Vm() {
-    objects_ = nullptr;
     resetStack_();
 }
 
 Vm::~Vm() {
-    freeObjects_();
 }
 
 InterpretResult Vm::interpret(char const * source) {
@@ -54,7 +52,7 @@ InterpretResult Vm::interpret(char const * source) {
     // put the function on the value stack temporarily so that GC doesn't eat it
     push(Value::function(fn));
 
-    ObjClosure * closure = new ObjClosure(this, fn);
+    ObjClosure * closure = new ObjClosure(&mem_, fn);
     pop(); // remove function from stack
     push(Value::closure(closure));
 
@@ -67,15 +65,6 @@ InterpretResult Vm::interpret(char const * source) {
         assert(stackTop_ - stack_ == 0);
     }
     return res;
-}
-
-void Vm::registerObj(Obj * obj){
-    obj->next = objects_;  // previous head
-    objects_ = obj;        // new head
-}
-
-void Vm::deregisterObj(Obj * obj){
-    // TODO
 }
 
 void Vm::push(Value value) {
@@ -173,7 +162,7 @@ bool Vm::indexGet_() {
             runtimeError_("Index out of bounds: %i", i);
             return false;
         }
-        push( Value::string(ObjString::newString(this, &c, 1)) );
+        push( Value::string(ObjString::newString(&mem_, &c, 1)) );
         return true;
     }
     case Value::LIST:{
@@ -192,7 +181,7 @@ bool Vm::indexGet_() {
 }
 
 ObjUpvalue * Vm::captureUpvalue_(Value * local) {
-    ObjUpvalue * upvalue = new ObjUpvalue(this, local);
+    ObjUpvalue * upvalue = new ObjUpvalue(&mem_, local);
     // More to come...
     return upvalue;
 }
@@ -209,8 +198,8 @@ InterpretResult Vm::run_() {
 #ifdef DEBUG_TRACE_EXECUTION
     Disassembler disasm;
 
-    internedStrings_.debug();
-    debugObjectLinkedList(objects_);
+    // internedStrings_.debug();
+    // debugObjectLinkedList(objects_);
 
     // printf("Literals:\n");
     // for( uint8_t i =0; i < chunk->numLiterals(); ++i ){
@@ -251,7 +240,7 @@ InterpretResult Vm::run_() {
             case OpCode::CLOSURE:{
                 // Wrap the function literal into a closure:
                 ObjFunction * function = frame->readLiteral().asObjFunction();
-                ObjClosure * closure = new ObjClosure(this, function);
+                ObjClosure * closure = new ObjClosure(&mem_, function);
                 push(Value::closure(closure));
 
                 // Close over referenced Values (upvalues):
@@ -356,12 +345,12 @@ InterpretResult Vm::run_() {
                     Value bValue = pop();
                     ObjString * b = bValue.toString(this);
                     ObjString * a = pop().asObjString();
-                    push( Value::string(ObjString::concatenate(this, a, b)) );
+                    push( Value::string(ObjString::concatenate(&mem_, a, b)) );
 
                 }else if( peek(0).isList() && peek(1).isList() ){
                     ObjList * b = pop().asObjList();
                     ObjList * a = pop().asObjList();
-                    push( Value::list(new ObjList(this, a, b)) );
+                    push( Value::list(new ObjList(&mem_, a, b)) );
 
                 }else if( peek(0).isNumber() && peek(1).isNumber() ){
                     double b = pop().as.number;
@@ -402,7 +391,7 @@ InterpretResult Vm::run_() {
                 break;
             }
             case OpCode::MAKE_LIST:{
-                ObjList * list = new ObjList(this);
+                ObjList * list = new ObjList(&mem_);
                 uint8_t numEl = frame->readByte();
                 // populate list in reverse order from the value stack:
                 for( int i = numEl-1; i >= 0; --i ){
@@ -514,14 +503,4 @@ InterpretResult Vm::runtimeError_(const char* format, ...) {
     resetStack_();
 
     return InterpretResult::RUNTIME_ERR;
-}
-
-void Vm::freeObjects_() {
-    // iterate linked list of objects, deleting them
-    Obj * obj = objects_;
-    while( obj != nullptr ){
-        Obj * next  = obj->next;
-        delete obj;
-        obj = next;
-    }
 }

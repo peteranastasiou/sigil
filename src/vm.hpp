@@ -1,11 +1,13 @@
 #pragma once
 
+#include "mem.hpp"
 #include "chunk.hpp"
 #include "value.hpp"
 #include "object.hpp"
 #include "table.hpp"
 
 #include <unordered_map>
+
 
 enum class InterpretResult {
     OK,
@@ -33,7 +35,6 @@ struct Global {
 class Vm {
 public:
     Vm();
-    
     ~Vm();
 
     InterpretResult interpret(char const * source);
@@ -43,13 +44,6 @@ public:
     Value pop();
     void pop(int n);
     Value peek(int index);  // index counts from top (end) of stack
-
-    // adding/removing objects, called from Obj(), ~Obj()
-    void registerObj(Obj * obj);
-    void deregisterObj(Obj * obj);
-
-    // intern string helper
-    StringSet * getInternedStrings(){ return &internedStrings_; }
 
 private:
     void resetStack_();
@@ -62,16 +56,14 @@ private:
     bool indexGet_();
     ObjUpvalue * captureUpvalue_(Value * local);
     InterpretResult runtimeError_(const char* format, ...);
-    void freeObjects_();
 
     static int const FRAMES_MAX = 64;
     static int const STACK_MAX = FRAMES_MAX * 256;
 
+    Mem mem_;
     CallFrame frames_[FRAMES_MAX];  // TODO to allow continuations/generators, this can't be a stack, GC instead
     int frameCount_;
     Value stack_[STACK_MAX];
     Value * stackTop_;  // points past the last value in the stack
-    Obj * objects_;     // linked list of objects
-    StringSet internedStrings_;
     HashMap<Global> globals_; 
 };

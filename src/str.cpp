@@ -1,6 +1,6 @@
 
 #include "str.hpp"
-#include "vm.hpp"
+#include "mem.hpp"
 #include <string.h>
 #include <stdarg.h>
 
@@ -21,13 +21,13 @@ StringView::StringView(char const * c, int len) {
 /**
  * ObjString
 */
-ObjString * ObjString::newString(Vm * vm, char const * str) {
-    return newString(vm, str, (int)strlen(str));
+ObjString * ObjString::newString(Mem * mem, char const * str) {
+    return newString(mem, str, (int)strlen(str));
 }
 
-ObjString * ObjString::newString(Vm * vm, char const * str, int length) {
+ObjString * ObjString::newString(Mem * mem, char const * str, int length) {
     // is string already interned?
-    ObjString * ostr = vm->getInternedStrings()->find(str, length);
+    ObjString * ostr = mem->getInternedStrings()->find(str, length);
     if( ostr != nullptr ) return ostr;  // already have that one!
 
     // Allocate space for new string
@@ -36,10 +36,10 @@ ObjString * ObjString::newString(Vm * vm, char const * str, int length) {
     chars[length] = '\0';  // ensure null terminated
 
     // make a new string
-    return new ObjString(vm, chars, length);
+    return new ObjString(mem, chars, length);
 }
 
-ObjString * ObjString::newStringFmt(Vm * vm, const char* fmt, ...) {
+ObjString * ObjString::newStringFmt(Mem * mem, const char* fmt, ...) {
     va_list args;
 
     // Work out buffer size by doing a dry run: 
@@ -54,14 +54,14 @@ ObjString * ObjString::newStringFmt(Vm * vm, const char* fmt, ...) {
     va_end(args);
 
     // is string already interned?
-    ObjString * ostr = vm->getInternedStrings()->find(chars, len);
+    ObjString * ostr = mem->getInternedStrings()->find(chars, len);
     if( ostr != nullptr ) return ostr;  // already have that one!
 
     // make a new string
-    return new ObjString(vm, chars, len);
+    return new ObjString(mem, chars, len);
 }
 
-ObjString * ObjString::concatenate(Vm * vm, ObjString * a, ObjString * b) {
+ObjString * ObjString::concatenate(Mem * mem, ObjString * a, ObjString * b) {
     // Make a new character array combining the strings
     int aLen = a->getLength();
     int bLen = b->getLength();
@@ -72,20 +72,20 @@ ObjString * ObjString::concatenate(Vm * vm, ObjString * a, ObjString * b) {
     chars[len] = '\0';
 
     // is string already interned?
-    ObjString * ostr = vm->getInternedStrings()->find(chars, len);
+    ObjString * ostr = mem->getInternedStrings()->find(chars, len);
     if( ostr != nullptr ) return ostr;  // already have that one!
 
     // make a new string
-    return new ObjString(vm, chars, len);
+    return new ObjString(mem, chars, len);
 }
 
-ObjString::ObjString(Vm * vm, char const * chars, int length): Obj(vm, Obj::Type::STRING)  {
+ObjString::ObjString(Mem * mem, char const * chars, int length): Obj(mem, Obj::Type::STRING)  {
     chars_ = chars;
     length_ = length;
     hash_ = calcHash_(chars_, length_);
 
     // Add to interned set
-    vm->getInternedStrings()->add(this);
+    mem->getInternedStrings()->add(this);
 }
 
 ObjString::~ObjString() {

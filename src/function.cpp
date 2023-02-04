@@ -2,7 +2,7 @@
 #include "function.hpp"
 
 
-ObjFunction::ObjFunction(Vm * vm, ObjString * funcName) : Obj(vm, Obj::Type::FUNCTION) {
+ObjFunction::ObjFunction(Mem * mem, ObjString * funcName) : Obj(mem, Obj::Type::FUNCTION) {
     numInputs = 0;
     numUpvalues = 0;
     name = funcName;
@@ -11,7 +11,7 @@ ObjFunction::ObjFunction(Vm * vm, ObjString * funcName) : Obj(vm, Obj::Type::FUN
 ObjFunction::~ObjFunction() {
 }
 
-ObjString * ObjFunction::toString(Vm * vm) {
+ObjString * ObjFunction::toString() {
     return name;
 }
 
@@ -26,14 +26,14 @@ void ObjFunction::print(bool verbose) {
 // -----------------------------------------------------
 
 
-ObjClosure::ObjClosure(Vm * vm, ObjFunction * func) : Obj(vm, Obj::Type::CLOSURE) {
+ObjClosure::ObjClosure(Mem * mem, ObjFunction * func) : Obj(mem, Obj::Type::CLOSURE) {
     function = func;
 }
 
 ObjClosure::~ObjClosure() {
 }
 
-ObjString * ObjClosure::toString(Vm * vm) {
+ObjString * ObjClosure::toString() {
     return function->name;
 }
 
@@ -47,15 +47,15 @@ void ObjClosure::print(bool verbose) {
 
 // -----------------------------------------------------
 
-ObjUpvalue::ObjUpvalue(Vm * vm, Value * val) : Obj(vm, Obj::Type::UPVALUE) {
+ObjUpvalue::ObjUpvalue(Mem * mem, Value * val) : Obj(mem, Obj::Type::UPVALUE) {
     value = val;
 }
 
 ObjUpvalue::~ObjUpvalue() {
 }
 
-ObjString * ObjUpvalue::toString(Vm * vm) {
-    return ObjString::newString(vm, "<upvalue>");
+ObjString * ObjUpvalue::toString() {
+    return ObjString::newString(mem_, "<upvalue>");
 }
 
 void ObjUpvalue::print(bool verbose) {

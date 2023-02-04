@@ -1,7 +1,7 @@
 #pragma once
 
 // Predeclare references
-class Vm;
+class Mem;
 class ObjString;  // defined in str.hpp
 
 /**
@@ -18,16 +18,16 @@ struct Obj {
         UPVALUE
     };
 
-    Obj(Vm * vm, Type t);
+    Obj(Mem * mem, Type t);
 
     virtual ~Obj();
 
-    virtual ObjString * toString(Vm * vm) = 0;
+    virtual ObjString * toString() = 0;
     virtual void print(bool verbose) = 0;
 
     Type type;
     Obj * next;  // linked list of all objects
 
-private:
-    Vm * vm_;
+protected:
+    Mem * const mem_;
 };
