@@ -1,14 +1,12 @@
 
 #include "fileinputstream.hpp"
 
-#include <stdio.h>
 #include <string.h>
 
 
 FileInputStream::FileInputStream() {
   file_ = nullptr;
-  bufIndex_ = 0;
-  bufLen_ = 0;
+  current_ = ' ';
 }
 
 FileInputStream::~FileInputStream() {
@@ -17,7 +15,13 @@ FileInputStream::~FileInputStream() {
 
 bool FileInputStream::open(char const * path) {
   file_ = fopen(path, "rb");
-  return file_ != nullptr;
+  path_ = path;
+  if( file_ == nullptr ){
+    return false;
+  }
+  // prime the pump:
+  next_();
+  return true;
 }
 
 void FileInputStream::close() {
@@ -27,17 +31,35 @@ void FileInputStream::close() {
   }
 }
 
+char FileInputStream::peek() {
+  return current_;
+}
+
 char FileInputStream::next() {
+  char c = current_;
+  if( c != '\0' ){
+    next_();
+  }
+  return c;
+}
+
+void FileInputStream::rewind(int i) {
+  fseek(file_, -i, SEEK_CUR);
+}
+
+bool FileInputStream::next_() {
   // pop one character
   int c = fgetc(file_);
   if( c == EOF ){  // Error or End of file
     close();
     file_ = nullptr;
-    return '\0';
+    current_ = '\0';
+  }else{
+    current_ = (char)c;
   }
-  return (char)c;
+  return current_;
 }
 
-void FileInputStream::rewind(int i) {
-  fseek(file_, -i, SEEK_CUR);
+char const * FileInputStream::name() {
+  return path_;
 }

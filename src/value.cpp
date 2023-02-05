@@ -60,20 +60,20 @@ bool Value::equals(Value other) const {
     }
 }
 
-ObjString * Value::toString(Vm * vm) {
+ObjString * Value::toString(Mem * mem) {
     switch( type ){
-        case NIL:     return ObjString::newString(vm, "nil");
-        case BOOL:    return ObjString::newString(vm, as.boolean ? "true" : "false");
-        case NUMBER:  return ObjString::newStringFmt(vm, "%g", as.number);
-        case TYPEID:  return ObjString::newString(vm, typeToString(as.typeId));
+        case NIL:     return ObjString::newString(mem, "nil");
+        case BOOL:    return ObjString::newString(mem, as.boolean ? "true" : "false");
+        case NUMBER:  return ObjString::newStringFmt(mem, "%g", as.number);
+        case TYPEID:  return ObjString::newString(mem, typeToString(as.typeId));
         case FUNCTION:
         case CLOSURE:
         case UPVALUE:
         case LIST:
         case STRING:
             // Object types:
-            return as.obj->toString(vm);
-        default:      return ObjString::newString(vm, "???");
+            return as.obj->toString();
+        default:      return ObjString::newString(mem, "???");
     }
 }
 

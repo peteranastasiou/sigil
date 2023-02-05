@@ -68,6 +68,8 @@ public:
      */
     bool get(int index, char & value);
 
+    char const * getCString() { return chars_; }
+
     virtual ~ObjString();
 
     // implment Obj interface (trivial for strings)

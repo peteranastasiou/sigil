@@ -5,6 +5,7 @@
 #include "value.hpp"
 #include "object.hpp"
 #include "table.hpp"
+#include "inputstream/inputstream.hpp"
 
 #include <unordered_map>
 
@@ -37,7 +38,7 @@ public:
     Vm();
     ~Vm();
 
-    InterpretResult interpret(char const * source);
+    InterpretResult interpret(InputStream * stream);
 
     // stack operations:
     void push(Value value);

@@ -24,43 +24,25 @@ static void repl() {
             add_history(line);
         }
         
+        StringInputStream stream(line);
+
         // TODO try to compile with "echo " on the front, then try to compile without.
         // This requires better error handling instead of printf everywhere! 
-        vm.interpret(line);
+        vm.interpret(&stream);
 
         free(line);
     }
 }
 
-void readFile(const char* path) {
+static void runFile(const char* path) {
     FileInputStream stream;
     if( !stream.open(path) ){
         fprintf(stderr, "Could not open file '%s'\n", path);
-        return;
+        exit(74);
     }
-    bool rewind = true;
-    for( ;; ) {
-        char c = stream.next();
-        if( c == '\0' ){
-            return; // end of file
-        }
-        printf("%c", c);
-        if( c == '{' && rewind ){
-            stream.rewind(5);
-            printf("|");
-            rewind = false;
-        }
-    }
-}
 
-static void runFile(const char* path) {
     Vm vm;
-    char* source;
-    readFile(path);
-    return;
-
-    InterpretResult result = vm.interpret(source);
-    free(source);
+    InterpretResult result = vm.interpret(&stream);
 
     if (result == InterpretResult::COMPILE_ERR) exit(65);
     if (result == InterpretResult::RUNTIME_ERR) exit(70);

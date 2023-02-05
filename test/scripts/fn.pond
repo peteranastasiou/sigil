@@ -40,3 +40,15 @@ fn e3(i) { var g = i; g*2 }
 print(e1(2));
 print(e2(2));
 print(e3(2));
+
+fn function_runner(f) {
+    if f() {
+        echo "true";
+    }else{
+        echo "false";
+    }
+}
+
+function_runner( fn() { return true; } );
+
+fn(i) { print("hello"); print(i); };

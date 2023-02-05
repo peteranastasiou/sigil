@@ -40,10 +40,10 @@ Vm::Vm() {
 Vm::~Vm() {
 }
 
-InterpretResult Vm::interpret(char const * source) {
+InterpretResult Vm::interpret(InputStream * stream) {
     // Compile the source string to a function
-    Compiler compiler(this);
-    ObjFunction * fn = compiler.compile(source);
+    Compiler compiler(&mem_);
+    ObjFunction * fn = compiler.compile(stream);
     if( fn == nullptr )  return InterpretResult::COMPILE_ERR;
 
     // NOTE: not in lox!
@@ -343,7 +343,7 @@ InterpretResult Vm::run_() {
                 if( peek(1).isString() ){  // the first argument is second on stack
                     // implicitly convert second operand to string
                     Value bValue = pop();
-                    ObjString * b = bValue.toString(this);
+                    ObjString * b = bValue.toString(&mem_);
                     ObjString * a = pop().asObjString();
                     push( Value::string(ObjString::concatenate(&mem_, a, b)) );
 

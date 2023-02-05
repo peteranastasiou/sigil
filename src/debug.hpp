@@ -26,9 +26,9 @@ private:
     int jumpInstruction_(const char* name, int sign, Chunk* chunk, int offset);
 };
 
-void debugScanner(char const * source);
+// void debugScanner(char const * source);
 
-void printToken(Token token);
+// void printToken(Token token);
 char const * tokenTypeToStr(Token::Type t);
 
 void debugObjectLinkedList(Obj * obj);

@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <assert.h>
 #include <vector>
 
 
@@ -16,15 +17,14 @@ Environment::Environment(Mem * mem, ObjString * name, Type t) {
     scopeDepth = 0;
     function = new ObjFunction(mem, name);
 
-    // Claim first local for the "stack pointer"??
+    // Claim first local, reserving space for the "stack pointer"
     Local * local = &locals[localCount++];
     local->depth = 0;
-    local->name.start = "";
-    local->name.length = 0;
+    local->name = ObjString::newString(mem, "");
 }
 
 
-bool Environment::addLocal(Token & name, bool isConst) {
+bool Environment::addLocal(ObjString * name, bool isConst) {
     if( localCount == MAX_LOCALS ){
         return false;
     }
@@ -42,12 +42,12 @@ void Environment::defineLocal() {
     locals[localCount-1].isDefined = true;
 }
 
-int Environment::resolveLocal(Compiler * c, Token & name, bool & isConst) {
+int Environment::resolveLocal(Compiler * c, ObjString * name, bool & isConst) {
     // search for a local by name in the environment
     // NOTE: searching from higher depth to lower, to support shadowing correctly
     for( int i = localCount-1; i >= 0; i-- ){
         Local * local = &locals[i];
-        if( name.equals(local->name) ){
+        if( name == local->name ){
             // Handle special case where it hasn't been initialised before reference
             // e.g. var a = a;
             if( !local->isDefined ){
@@ -63,7 +63,7 @@ int Environment::resolveLocal(Compiler * c, Token & name, bool & isConst) {
     return Local::NOT_FOUND;
 }
 
-int Environment::resolveUpvalue(Compiler * c, Token & name, bool & isConst) {
+int Environment::resolveUpvalue(Compiler * c, ObjString * name, bool & isConst) {
     // can't check enclosing env if already top-level:
     if( enclosing == nullptr ) return Local::NOT_FOUND;
 
@@ -117,8 +117,8 @@ Compiler::Compiler(Mem * mem) : mem_(mem) {
 Compiler::~Compiler() {
 }
 
-ObjFunction * Compiler::compile(char const * source) {
-    scanner_.init(source);
+ObjFunction * Compiler::compile(InputStream * stream) {
+    scanner_.init(mem_, stream);
 
     currentEnv_ = nullptr;
     Environment env(mem_, ObjString::newString(mem_, "(script)"), Environment::SCRIPT);
@@ -168,13 +168,19 @@ void Compiler::advance_() {
 
         if( currentToken_.type == Token::ERROR ){
             // report error then ignore and continue
-            errorAtCurrent_(currentToken_.start);
+            errorAtCurrent_(currentToken_.string->getCString());
         }else{
             // valid token
             return;
         }
     }
 }
+
+// void Compiler::rewind_() {
+//     // instead of current and prev token, have circular buffer of three tokens?
+//     // That way rewind and buffering the strings makes more sense
+//     // tokens[prevTokenIdx], tokens[currTokenIdx] perhaps
+// }
 
 bool Compiler::check_(Token::Type type) {
     return currentToken_.type == type;
@@ -284,12 +290,6 @@ bool Compiler::declaration_(bool canBeExpression) {
         varDeclaration_(true);
 
     }else if( match_(Token::FN) ){
-        // check if its anonymous:
-        //if( check_(Token::LEFT_PAREN) ){
-        //    // this doesn't work because it might be the start of an expression, but we can't put into
-        //    // statement_ because FN is already gobbled. Rewind token!?! indicates grammar is bad
-        //    funcAnonymous_();
-        //}
         funcDeclaration_();
 
     }else{
@@ -312,8 +312,7 @@ void Compiler::funcDeclaration_() {
     uint8_t global = parseVariable_("Expected variable name.", isConst, isLocal);
 
     // capture function name for the environment too:
-    ObjString * name = ObjString::newString(mem_, 
-        previousToken_.start, previousToken_.length);
+    ObjString * name = previousToken_.string;
 
     // If its a local, mark it as already defined (allowing for self-referential functions):
     // This is not an issue for globals
@@ -412,13 +411,13 @@ uint8_t Compiler::parseVariable_(const char * errorMsg, bool isConst, bool isLoc
         return 0; // not a global
     } else {
         // globals variables have their names stored as a literal:
-        return makeIdentifierLiteral_(previousToken_);
+        return makeIdentifierLiteral_(previousToken_.string);
     }
 }
 
 void Compiler::declareLocal_(bool isConst) {
     // the name of the new local variable:
-    Token * name = &previousToken_;
+    ObjString * name = previousToken_.string;
 
     // ensure the variable is not already declared in this scope!
     for( int i = currentEnv_->localCount-1; i>=0; i-- ){
@@ -426,14 +425,14 @@ void Compiler::declareLocal_(bool isConst) {
         if( local->depth < currentEnv_->scopeDepth ){
             break;  // left the scope - stop searching
         }
-        if( name->equals(local->name) ){
-            errorAtPrevious_("Already a variable called '%.*s' in this scope.", 
-                             name->length, name->start);
+        if( name == local->name ){
+            errorAtPrevious_("Already a variable called '%s' in this scope.", 
+                             name->getCString());
         }
     }
 
     // New local variable to track:
-    if( !currentEnv_->addLocal(*name, isConst) ){
+    if( !currentEnv_->addLocal(name, isConst) ){
         errorAtPrevious_("Too many local variables in function.");
     }
 }
@@ -696,10 +695,8 @@ void Compiler::parse_(Precedence precedence) {
     }
 }
 
-uint8_t Compiler::makeIdentifierLiteral_(Token & name) {
-    return makeLiteral_(Value::string(
-        ObjString::newString(mem_, name.start, name.length)
-    ));
+uint8_t Compiler::makeIdentifierLiteral_(ObjString * name) {
+    return makeLiteral_(Value::string(name));
 }
 
 int Compiler::emitJump_(uint8_t instr) {
@@ -845,20 +842,19 @@ void Compiler::index_() {
 
 void Compiler::number_() {
     // shouldn't fail as we already validated the token as a number:
-    double n = strtod(previousToken_.start, nullptr);
+    double n = strtod(previousToken_.string->getCString(), nullptr);
     emitLiteral_(Value::number(n));
 }
 
 void Compiler::string_() {
-    ObjString * str = ObjString::newString(mem_, previousToken_.start+1, previousToken_.length-2);
-    emitLiteral_(Value::string(str));
+    emitLiteral_(Value::string(previousToken_.string));
 }
 
 void Compiler::variable_(bool canAssign) {
-    getSetVariable_(previousToken_, canAssign);
+    getSetVariable_(previousToken_.string, canAssign);
 }
 
-void Compiler::getSetVariable_(Token & name, bool canAssign) {
+void Compiler::getSetVariable_(ObjString * name, bool canAssign) {
     uint8_t getOp, setOp, arg; // opcodes for getting and setting the variable, and their argument
 
     // first, try to look up
@@ -992,19 +988,19 @@ void Compiler::errorAtVargs_(Token* token, const char* fmt, va_list args) {
     if( panicMode_ ) return;  // suppress errors after the first
     panicMode_ = true;
 
-    fprintf(stderr, "%d: Error", token->line);
-
-    if (token->type == Token::END) {
-        fprintf(stderr, " at end");
-    } else if (token->type == Token::ERROR) {
-        // Nothing.
-    } else {
-        fprintf(stderr, " at '%.*s'", token->length, token->start);
+    if( scanner_.sourceName() ){
+        fprintf(stderr, "%s:%d:%d:", scanner_.sourceName(), token->line, token->col);
+    }else{
+        for( int i = 0; i < token->col; ++i ){
+            fprintf(stderr, " ");
+        }
+        fprintf(stderr, " ^\n");
     }
 
-    fprintf(stderr, ": ");
+    fprintf(stderr, " error: ");
     vfprintf(stderr, fmt, args);
     fprintf(stderr, "\n");
+
     hadError_ = true;
 }
 

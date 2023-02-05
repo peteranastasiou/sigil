@@ -71,6 +71,6 @@ struct Value {
 
     // value methods
     bool equals(Value other) const;
-    ObjString * toString(Vm * vm);
+    ObjString * toString(Mem * mem);
     void print(bool verbose) const;
 };

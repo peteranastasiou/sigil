@@ -16,15 +16,20 @@ public:
 
   void close();
 
+  virtual char peek() override;
+
   virtual char next() override;
 
   virtual void rewind(int i) override;
 
+  virtual char const * name() override;
+
 private:
+  bool next_();
+
   static uint16_t const BUF_SIZE = 256;
 
   FILE * file_;
-  char buffer_[BUF_SIZE];
-  uint16_t bufIndex_;
-  uint16_t bufLen_;
+  char const * path_;
+  char current_;
 };

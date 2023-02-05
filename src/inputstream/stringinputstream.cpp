@@ -14,14 +14,24 @@ StringInputStream::StringInputStream(char const * line) {
 StringInputStream::~StringInputStream() {
 }
 
-char StringInputStream::next() {
+char StringInputStream::peek() {
   if( index_ >= len_ ){
     return '\0';
   } else {
-    return line_[index_++];
+    return line_[index_];
   }
+}
+
+char StringInputStream::next() {
+  char c = peek();
+  index_++;
+  return c;
 }
 
 void StringInputStream::rewind(int i) {
   index_ = std::max(0, index_ - i);
+}
+
+char const * StringInputStream::name() {
+  return nullptr;
 }

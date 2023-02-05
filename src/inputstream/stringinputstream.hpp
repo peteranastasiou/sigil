@@ -10,9 +10,13 @@ public:
 
   ~StringInputStream();
 
+  virtual char peek() override;
+
   virtual char next() override;
 
   virtual void rewind(int i) override;
+
+  virtual char const * name() override;
 
 private:
   char const * line_;

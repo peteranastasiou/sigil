@@ -32,7 +32,7 @@ struct ParseRule {
 };
 
 struct Local {
-    Token name;
+    ObjString * name;
     int16_t depth;
     uint8_t isDefined;
     uint8_t isConst;
@@ -76,7 +76,7 @@ struct Environment {
      * track a local variables position in the stack
      * @return false if too many locals
      */
-    bool addLocal(Token & name, bool isConst);
+    bool addLocal(ObjString * name, bool isConst);
 
     /**
      * lookup a local variables position in the stack
@@ -84,14 +84,14 @@ struct Environment {
      * for a matching name (to support shadowing)
      * @return positional index or NOT_FOUND or NOT_INITIALISED
      */
-    int resolveLocal(Compiler * c, Token & name, bool & isConst);
+    int resolveLocal(Compiler * c, ObjString * name, bool & isConst);
 
     /**
      * lookup a local in surrounding environments
      * The local is by definition an "upvalue" for this environment
      * @return positional index or NOT_FOUND
      */
-    int resolveUpvalue(Compiler * c, Token & name, bool & isConst);
+    int resolveUpvalue(Compiler * c, ObjString * name, bool & isConst);
 
     /**
      * Add an upvalue to the current environment's function
@@ -174,7 +174,7 @@ private:
 
     // references to variables:
     void variable_(bool canAssign);
-    void getSetVariable_(Token & token, bool canAssign);
+    void getSetVariable_(ObjString * name, bool canAssign);
 
     // bytecode helpers:
     void emitByte_(uint8_t byte);
@@ -191,7 +191,7 @@ private:
     void emitTypeIdType_();
     void emitLiteral_(Value value);
     uint8_t makeLiteral_(Value value);
-    uint8_t makeIdentifierLiteral_(Token & name);
+    uint8_t makeIdentifierLiteral_(ObjString * name);
     int emitJump_(uint8_t instr);
     void setJumpDestination_(int offset);
     void emitLoop_(int loopStart);

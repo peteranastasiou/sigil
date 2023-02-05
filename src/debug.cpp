@@ -152,9 +152,9 @@ int Disassembler::jumpInstruction_(const char* name, int sign, Chunk* chunk, int
 //     }
 // }
 
-void printToken(Token token) {
-    printf("%s '%.*s'", tokenTypeToStr(token.type), token.length, token.start); 
-}
+// void printToken(Token token) {
+//     printf("%s '%.*s'", tokenTypeToStr(token.type), token.length, token.start); 
+// }
 
 char const * tokenTypeToStr(Token::Type t) {
     switch(t) {           

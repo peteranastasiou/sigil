@@ -1,5 +1,7 @@
 #pragma once
 
+#include "inputstream/inputstream.hpp"
+#include "mem.hpp"
 #include <stdint.h>
 
 struct Token {
@@ -27,11 +29,13 @@ struct Token {
     };
 
     Type type;
-    char const * start;
-    uint16_t length;
     uint16_t line;
+    uint16_t col;
+    ObjString * string;
 
-    bool equals(Token & tok);
+    Token() {}
+    Token(Type t, uint16_t l, uint16_t c): type(t), line(l), col(c), string(nullptr) {}
+    Token(Type t, uint16_t l, uint16_t c, ObjString * s): type(t), line(l), col(c), string(s) {}
 };
 
 class Scanner {
@@ -40,23 +44,46 @@ public:
     
     ~Scanner();
 
-    void init(char const * source);
+    void init(Mem * mem, InputStream * stream);
     
     Token scanToken();
+
+    char const * sourceName();
+
+    // /**
+    //  * Move the scanner forwards one token:
+    //  */
+    // void advance();
+
+    // /**
+    //  * Rewind the scanner by one token
+    //  * NOTE can only be done ONCE before needing to advance again
+    //  */
+    // void rewind();
+
+    // /**
+    //  * Access the current token
+    //  */
+    // Token * getCurrentToken();
+
+    // /**
+    //  * Access the previous token
+    //  */
+    // Token * getPreviousToken();
 
     static uint16_t const MAX_LINES = 0xFFFF;
 
 private:
-    inline bool isAtEnd_(){ return *current_ == '\0'; }
-    inline char peek_(){ return *current_; }
-    inline char advance_(){ return *current_++; }
-    inline bool isDigit_(char c){ return c >= '0' && c <= '9'; }
-    inline bool isAlpha_(char c){ 
+    static inline bool isDigit_(char c){ return c >= '0' && c <= '9'; }
+    static inline bool isAlpha_(char c){
         return (c >= 'a' && c <= 'z') ||
                (c >= 'A' && c <= 'Z') ||
                 c == '_';
     }
 
+    bool isAtEnd_();
+    char peek_();
+    char advance_();
     void incrementLine_();
     void skipWhitespace_();
     bool matchNext_(char expected);
@@ -68,9 +95,15 @@ private:
     Token makeIdentifierToken_();
     Token::Type identifierType_();
     Token::Type checkKeyword_(int offset, int len, char const * rest, Token::Type type);
-    
 
-    char const * start_;
-    char const * current_;
-    uint16_t line_;
+    //  TODO circular token buffer of 3. Don't pass token by value
+
+    // Token string buffer:
+    static const char MAX_TOKEN_LEN = 64;
+    char tokenStr_[MAX_TOKEN_LEN];
+    uint16_t tokenLen_;
+
+    Mem * mem_;
+    InputStream * stream_;
+    uint16_t line_, col_;
 };
