@@ -3,6 +3,7 @@
 #include "debug.hpp"
 #include "mem.hpp"
 #include "function.hpp"
+#include "inputstream/fileinputstream.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -988,18 +989,43 @@ void Compiler::errorAtVargs_(Token* token, const char* fmt, va_list args) {
     if( panicMode_ ) return;  // suppress errors after the first
     panicMode_ = true;
 
-    if( scanner_.sourceName() ){
-        fprintf(stderr, "%s:%d:%d:", scanner_.sourceName(), token->line, token->col);
+    if( scanner_.getPath() ){
+        fprintf(stderr, "%s:%d:%d:", scanner_.getPath(), token->line, token->col);
     }else{
-        for( int i = 0; i < token->col; ++i ){
+        for( int i = 0; i < token->col + 1; ++i ){
             fprintf(stderr, " ");
         }
-        fprintf(stderr, " ^\n");
+        fprintf(stderr, "^\n");
     }
 
     fprintf(stderr, " error: ");
     vfprintf(stderr, fmt, args);
     fprintf(stderr, "\n");
+
+    if( scanner_.getPath() ){
+        // Reopen the file to print the offending line:
+        FileInputStream fstream;
+        fstream.open(scanner_.getPath());
+        // fast forward to the line
+        for( int line = 0; line < token->line-1; ){
+            char c = fstream.next();
+            if( c == '\n' ) line++;
+            if( c == '\0' ) break;
+        }
+        // print the line
+        char c = fstream.next();
+        while( c != '\n' && c != '\0' ){
+            fprintf(stderr, "%c", c);
+            c = fstream.next();
+        }
+        fprintf(stderr, "\n");
+        fstream.close();
+
+        for( int i = 0; i < token->col - 2; ++i ){
+            fprintf(stderr, " ");
+        }
+        fprintf(stderr, "^\n\n");
+    }
 
     hadError_ = true;
 }

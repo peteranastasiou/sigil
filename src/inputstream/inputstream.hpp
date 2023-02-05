@@ -25,7 +25,7 @@ public:
   virtual void rewind(int i) = 0;
 
   /**
-   * name of stream or nullptr if no-name
+   * file path or nullptr if not applicable
    */
-  virtual char const * name() = 0;
+  virtual char const * getPath() = 0;
 };

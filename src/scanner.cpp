@@ -22,8 +22,8 @@ void Scanner::init(Mem * mem, InputStream * stream) {
     tokenLen_ = 0;
 }
 
-char const * Scanner::sourceName() {
-    return stream_->name();
+char const * Scanner::getPath() {
+    return stream_->getPath();
 }
 
 Token Scanner::scanToken() {

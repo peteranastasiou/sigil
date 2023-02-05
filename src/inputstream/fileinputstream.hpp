@@ -22,7 +22,7 @@ public:
 
   virtual void rewind(int i) override;
 
-  virtual char const * name() override;
+  virtual char const * getPath() override;
 
 private:
   bool next_();

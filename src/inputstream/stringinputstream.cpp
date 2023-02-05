@@ -32,6 +32,6 @@ void StringInputStream::rewind(int i) {
   index_ = std::max(0, index_ - i);
 }
 
-char const * StringInputStream::name() {
+char const * StringInputStream::getPath() {
   return nullptr;
 }

@@ -48,7 +48,7 @@ public:
     
     Token scanToken();
 
-    char const * sourceName();
+    char const * getPath();
 
     // /**
     //  * Move the scanner forwards one token:

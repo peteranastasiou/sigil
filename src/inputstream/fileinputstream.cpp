@@ -60,6 +60,6 @@ bool FileInputStream::next_() {
   return current_;
 }
 
-char const * FileInputStream::name() {
+char const * FileInputStream::getPath() {
   return path_;
 }
