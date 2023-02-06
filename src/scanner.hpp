@@ -101,7 +101,7 @@ private:
     // Token string buffer:
     static const char MAX_TOKEN_LEN = 64;
     char tokenStr_[MAX_TOKEN_LEN];
-    uint16_t tokenLen_;
+    uint16_t tokenStrLen_;
 
     Mem * mem_;
     InputStream * stream_;

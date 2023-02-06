@@ -5,9 +5,6 @@
 #include <stdio.h>
 
 
-// TODO change so it makes dynamic strings and we can stream in a file rather than loading the whole thing
-// Rewind would let us check for anonymous functions better!
-
 Scanner::Scanner() {
 }
 
@@ -19,7 +16,7 @@ void Scanner::init(Mem * mem, InputStream * stream) {
     stream_ = stream;
     line_ = 1;
     col_ = 0;
-    tokenLen_ = 0;
+    tokenStrLen_ = 0;
 }
 
 char const * Scanner::getPath() {
@@ -31,7 +28,7 @@ Token Scanner::scanToken() {
     skipWhitespace_();
 
     // reset token buffer:
-    tokenLen_ = 0;
+    tokenStrLen_ = 0;
 
     // check for EOF:
     if( isAtEnd_() ) return makeToken_(Token::END);
@@ -113,8 +110,8 @@ char Scanner::peek_() {
 char Scanner::advance_() {
     char c = stream_->next();
     col_++;
-    if( tokenLen_ < MAX_TOKEN_LEN ){
-        tokenStr_[tokenLen_++] = c;
+    if( tokenStrLen_ < MAX_TOKEN_LEN ){
+        tokenStr_[tokenStrLen_++] = c;
     }
     return c;
 }
@@ -150,7 +147,7 @@ Token Scanner::makeStringToken_() {
     advance_();
 
     // Don't include the quotes when capturing the string value:
-    ObjString * str = ObjString::newString(mem_, tokenStr_+1, tokenLen_-2);
+    ObjString * str = ObjString::newString(mem_, tokenStr_+1, tokenStrLen_-2);
     return Token(Token::STRING, line_, col_, str);
 }
 
@@ -173,7 +170,8 @@ Token Scanner::makeNumberToken_() {
             advance_();
         }
     }
-    ObjString * str = ObjString::newString(mem_, tokenStr_, tokenLen_);
+    // For now, simply capture the string and convert to number later:
+    ObjString * str = ObjString::newString(mem_, tokenStr_, tokenStrLen_);
     return Token(Token::NUMBER, line_, col_, str);
 }
 
@@ -182,8 +180,9 @@ Token Scanner::makeIdentifierToken_() {
         advance_();
     }
     Token::Type type = identifierType_();
+    // Only capture the source string if its an identifier:
     if( type == Token::IDENTIFIER ){
-        ObjString * str = ObjString::newString(mem_, tokenStr_, tokenLen_);
+        ObjString * str = ObjString::newString(mem_, tokenStr_, tokenStrLen_);
         return Token(type, line_, col_, str);
     }
     return Token(type, line_, col_);
@@ -198,7 +197,7 @@ Token::Type Scanner::identifierType_() {
         case 'e': {
             // "e..." might be "echo", "else" or "elif":
             // check correct number of chars, and that next char is l:
-            if( tokenLen_ == 4 ){
+            if( tokenStrLen_ == 4 ){
                 if( tokenStr_[1] == 'c' ){
                     return checkKeyword_(2, 2, "ho", Token::ECHO);
                 } else if( tokenStr_[1] == 'l' ){
@@ -211,7 +210,7 @@ Token::Type Scanner::identifierType_() {
         case 'f': {
             // "f..." might be "false", "for" or "fn":
             // first check if identifier is longer than 1 char:
-            if( tokenLen_ > 1 ){
+            if( tokenStrLen_ > 1 ){
                 switch( tokenStr_[1] ){
                     case 'a': return checkKeyword_(2, 3, "lse", Token::FALSE);
                     case 'o': return checkKeyword_(2, 1, "r", Token::FALSE);
@@ -224,7 +223,7 @@ Token::Type Scanner::identifierType_() {
         case 'i': return checkKeyword_(1, 1, "f", Token::IF);
         case 'n': return checkKeyword_(1, 2, "il", Token::NIL);
         case 'o': {
-            if( tokenLen_ > 1 ){
+            if( tokenStrLen_ > 1 ){
                 switch( tokenStr_[1] ){
                     case 'b': return checkKeyword_(2, 4, "ject", Token::OBJECT);
                     case 'r': return Token::OR;
@@ -237,11 +236,11 @@ Token::Type Scanner::identifierType_() {
         case 's': return checkKeyword_(1, 5, "tring", Token::STRING_TYPE);
         case 't': {
             // could be "true", "type" or "typeid"
-            if( tokenLen_ > 1 ){
+            if( tokenStrLen_ > 1 ){
                 switch( tokenStr_[1] ){
                     case 'r': return checkKeyword_(2, 2, "ue", Token::TRUE);
                     case 'y': {
-                        if( tokenLen_ == 4 ){
+                        if( tokenStrLen_ == 4 ){
                             return checkKeyword_(2, 2, "pe", Token::TYPE);
                         }else{
                             return checkKeyword_(2, 4, "peid", Token::TYPEID);
@@ -260,7 +259,7 @@ Token::Type Scanner::identifierType_() {
 
 Token::Type Scanner::checkKeyword_(int offset, int len, char const * rest, Token::Type type) {
     // check length is correct:
-    if( tokenLen_ == offset + len ){
+    if( tokenStrLen_ == offset + len ){
         // check string matches:
         if( memcmp(tokenStr_ + offset, rest, len) == 0 ){
             return type;
