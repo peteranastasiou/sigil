@@ -23,6 +23,22 @@ char const * Scanner::getPath() {
     return stream_->getPath();
 }
 
+Token Scanner::peekToken() {
+    // save state:
+    auto pos = stream_->getPosition();
+    auto line = line_;
+    auto col = col_;
+
+    Token t = scanToken();
+
+    // restore state:
+    stream_->setPosition(pos);
+    line_ = line;
+    col_ = col;
+
+    return t;
+}
+
 Token Scanner::scanToken() {
     // first, gobble up whitespace and comments:
     skipWhitespace_();
@@ -33,7 +49,7 @@ Token Scanner::scanToken() {
     // check for EOF:
     if( isAtEnd_() ) return makeToken_(Token::END);
 
-    char c = advance_();
+    char c = nextChar_();
 
     // check for indentifier/keyword:
     if( isAlpha_(c) ) return makeIdentifierToken_();
@@ -83,13 +99,13 @@ void Scanner::skipWhitespace_() {
             case ' ':
             case '\r':
             case '\t':
-                advance_();
+                nextChar_();
                 break;
 
             case '#':
                 // comment out the rest of the line:
                 while( peek_()!='\n' && !isAtEnd_() ){
-                    advance_();
+                    nextChar_();
                 }
                 break;
 
@@ -107,7 +123,7 @@ char Scanner::peek_() {
     return stream_->peek();
 }
 
-char Scanner::advance_() {
+char Scanner::nextChar_() {
     char c = stream_->next();
     col_++;
     if( tokenStrLen_ < MAX_TOKEN_LEN ){
@@ -138,13 +154,13 @@ Token Scanner::makeStringToken_() {
     // TODO string escape characters
     while( peek_() != '"' && !isAtEnd_() ){
         if( peek_() == '\n' ) incrementLine_();
-        advance_();
+        nextChar_();
     }
 
     if( isAtEnd_() ) return makeErrorToken_("Unterminated string");
 
     // consume the closing quote:
-    advance_();
+    nextChar_();
 
     // Don't include the quotes when capturing the string value:
     ObjString * str = ObjString::newString(mem_, tokenStr_+1, tokenStrLen_-2);
@@ -153,13 +169,13 @@ Token Scanner::makeStringToken_() {
 
 Token Scanner::makeNumberToken_() {
     while( isDigit_(peek_()) ){
-        advance_();
+        nextChar_();
     }
 
     // Look for a fractional part.
     if( peek_() == '.' ) {
         // Consume the ".".
-        advance_();
+        nextChar_();
 
         // Must have a digit following '.':
         if( !isDigit_(peek_()) ){
@@ -167,7 +183,7 @@ Token Scanner::makeNumberToken_() {
         }
 
         while( isDigit_(peek_()) ){
-            advance_();
+            nextChar_();
         }
     }
     // For now, simply capture the string and convert to number later:
@@ -177,7 +193,7 @@ Token Scanner::makeNumberToken_() {
 
 Token Scanner::makeIdentifierToken_() {
     while( isAlpha_(peek_()) || isDigit_(peek_()) ){
-        advance_();
+        nextChar_();
     }
     Token::Type type = identifierType_();
     // Only capture the source string if its an identifier:

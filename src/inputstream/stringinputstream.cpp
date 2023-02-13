@@ -28,9 +28,14 @@ char StringInputStream::next() {
   return c;
 }
 
-void StringInputStream::rewind(int i) {
-  index_ = std::max(0, index_ - i);
+long StringInputStream::getPosition() {
+  return index_;
 }
+
+void StringInputStream::setPosition(long pos) {
+  index_ = (int)pos;
+}
+
 
 char const * StringInputStream::getPath() {
   return nullptr;

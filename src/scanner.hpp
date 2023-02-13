@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 struct Token {
-    enum Type {
+    enum Type : uint8_t {
         // Single-character tokens:
         LEFT_PAREN, RIGHT_PAREN,      // ()
         LEFT_BRACE, RIGHT_BRACE,      // {}
@@ -45,31 +45,12 @@ public:
     ~Scanner();
 
     void init(Mem * mem, InputStream * stream);
-    
+
     Token scanToken();
 
+    Token peekToken();
+
     char const * getPath();
-
-    // /**
-    //  * Move the scanner forwards one token:
-    //  */
-    // void advance();
-
-    // /**
-    //  * Rewind the scanner by one token
-    //  * NOTE can only be done ONCE before needing to advance again
-    //  */
-    // void rewind();
-
-    // /**
-    //  * Access the current token
-    //  */
-    // Token * getCurrentToken();
-
-    // /**
-    //  * Access the previous token
-    //  */
-    // Token * getPreviousToken();
 
     static uint16_t const MAX_LINES = 0xFFFF;
 
@@ -81,9 +62,10 @@ private:
                 c == '_';
     }
 
+    Token scan_();
     bool isAtEnd_();
     char peek_();
-    char advance_();
+    char nextChar_();
     void incrementLine_();
     void skipWhitespace_();
     bool matchNext_(char expected);
@@ -95,8 +77,6 @@ private:
     Token makeIdentifierToken_();
     Token::Type identifierType_();
     Token::Type checkKeyword_(int offset, int len, char const * rest, Token::Type type);
-
-    //  TODO circular token buffer of 3. Don't pass token by value
 
     // Token string buffer:
     static const char MAX_TOKEN_LEN = 64;

@@ -43,11 +43,18 @@ char FileInputStream::next() {
   return c;
 }
 
-void FileInputStream::rewind(int i) {
-  fseek(file_, -i, SEEK_CUR);
+long FileInputStream::getPosition() {
+  return ftell(file_);
+}
+
+void FileInputStream::setPosition(long pos) {
+  // rewind and reread
+  fseek(file_, pos-1, SEEK_SET);
+  next_();
 }
 
 bool FileInputStream::next_() {
+  long int i = ftell(file_);
   // pop one character
   int c = fgetc(file_);
   if( c == EOF ){  // Error or End of file

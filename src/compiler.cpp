@@ -177,14 +177,13 @@ void Compiler::advance_() {
     }
 }
 
-// void Compiler::rewind_() {
-//     // instead of current and prev token, have circular buffer of three tokens?
-//     // That way rewind and buffering the strings makes more sense
-//     // tokens[prevTokenIdx], tokens[currTokenIdx] perhaps
-// }
-
 bool Compiler::check_(Token::Type type) {
     return currentToken_.type == type;
+}
+
+bool Compiler::peekAndCheck_(Token::Type type) {
+    Token peeked = scanner_.peekToken();
+    return peeked.type == type;
 }
 
 void Compiler::consume_(Token::Type type, const char* fmt, ...) {
@@ -290,9 +289,18 @@ bool Compiler::declaration_(bool canBeExpression) {
     }else if( match_(Token::CONST) ){
         varDeclaration_(true);
 
-    }else if( match_(Token::FN) ){
-        funcDeclaration_();
-
+    }else if( check_(Token::FN) ){
+        // could be a function declaration 
+        // OR an anonymous function which is the start of a larger expression
+        // so we don't want to advance yet
+        if( peekAndCheck_(Token::LEFT_PAREN) ){
+            // anonymous fn, parse as a statement:
+            isExpression = statement_(canBeExpression);
+        }else{
+            // Now we can eat the FN token:
+            advance_();
+            funcDeclaration_();
+        }
     }else{
         isExpression = statement_(canBeExpression);
     }

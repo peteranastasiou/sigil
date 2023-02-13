@@ -20,7 +20,9 @@ public:
 
   virtual char next() override;
 
-  virtual void rewind(int i) override;
+  virtual long getPosition() override;
+
+  virtual void setPosition(long pos) override;
 
   virtual char const * getPath() override;
 

@@ -20,9 +20,14 @@ public:
   virtual char peek() = 0;
 
   /**
-   * Rewind input stream by i characters
+   * Get current position in the stream
    */
-  virtual void rewind(int i) = 0;
+  virtual long getPosition() = 0;
+
+  /**
+   * Set current position in the stream
+   */
+  virtual void setPosition(long pos) = 0;
 
   /**
    * file path or nullptr if not applicable

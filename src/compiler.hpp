@@ -127,6 +127,7 @@ private:
     // parser helpers:
     void advance_();
     bool check_(Token::Type type);
+    bool peekAndCheck_(Token::Type type);
     void consume_(Token::Type type, const char* fmt, ...);
     bool match_(Token::Type type);
     Chunk * getCurrentChunk_();
