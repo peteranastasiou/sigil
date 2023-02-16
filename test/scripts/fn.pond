@@ -51,4 +51,4 @@ fn function_runner(f) {
 
 function_runner( fn() { return true; } );
 
-# fn(i) { print("hello"); print(i); }(7);
+fn(i){ print("hello"); print(i); }(7);
