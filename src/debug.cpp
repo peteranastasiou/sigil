@@ -45,7 +45,7 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
         case OpCode::TYPE_STRING:   return simpleInstruction_("TYPE_STRING");
         case OpCode::ADD:           return simpleInstruction_("ADD");
         case OpCode::POP:           return simpleInstruction_("POP");
-        case OpCode::POP_N:         return argInstruction_("POP_N", chunk, offset);
+        case OpCode::CLOSE_UPVALUE:       return simpleInstruction_("CLOSE_UPVALUE");
         case OpCode::DEFINE_GLOBAL_VAR:   return literalInstruction_("DEFINE_GLOBAL_VAR", chunk, offset);
         case OpCode::DEFINE_GLOBAL_CONST: return literalInstruction_("DEFINE_GLOBAL_CONST", chunk, offset);
         case OpCode::GET_GLOBAL:    return byteInstruction_("GET_GLOBAL", chunk, offset);

@@ -20,8 +20,11 @@ Environment::Environment(Mem * mem, ObjString * name, Type t) {
 
     // Claim first local, reserving space for the "stack pointer"
     Local * local = &locals[localCount++];
-    local->depth = 0;
     local->name = ObjString::newString(mem, "");
+    local->depth = 0;
+    local->isDefined = false;
+    local->isConst = false;
+    local->isCaptured = false;
 }
 
 
@@ -35,6 +38,7 @@ bool Environment::addLocal(ObjString * name, bool isConst) {
     local->depth = scopeDepth;
     local->isDefined = false;
     local->isConst = isConst;
+    local->isCaptured = false;
     return true;
 }
 
@@ -71,6 +75,8 @@ int Environment::resolveUpvalue(Compiler * c, ObjString * name, bool & isConst) 
     // search for local in enclosing environment/function:
     int local = enclosing->resolveLocal(c, name, isConst);
     if( local != Local::NOT_FOUND ){
+        // that local is now captured
+        enclosing->locals[local].isCaptured = true;
         return addUpvalue(c, (uint8_t)local, isConst, true);
     }
 
@@ -102,14 +108,22 @@ int Environment::addUpvalue(Compiler * c, uint8_t index, bool isConst, bool isLo
     return function->numUpvalues++;
 }
 
-uint8_t Environment::freeLocals() {
-    uint8_t nFreed = 0;
-    // remove all locals which have fallen out of scope:
+void Environment::beginScope() {
+    scopeDepth++;
+}
+
+void Environment::endScope(Compiler * c) {
+    scopeDepth--;
+
+    // pop all locals which have fallen out of scope:
     while( localCount > 0 && locals[localCount-1].depth > scopeDepth ){
+        if( locals[localCount-1].isCaptured ){
+            c->emitByte_(OpCode::CLOSE_UPVALUE);
+        }else{
+            c->emitByte_(OpCode::POP);
+        }
         localCount--;
-        nFreed++;
     }
-    return nFreed;
 }
 
 Compiler::Compiler(Mem * mem) : mem_(mem) {
@@ -311,8 +325,6 @@ bool Compiler::declaration_(bool canBeExpression) {
     return isExpression;
 }
 
-// todo continue from 25.4.2
-
 void Compiler::funcDeclaration_() {
     bool isLocal = currentEnv_->scopeDepth > 0;
     bool isConst = true;  // Disallow redefining functions
@@ -343,7 +355,7 @@ void Compiler::function_(ObjString * name, Environment::Type type) {
     // new environment
     Environment env(mem_, name, type);
     initEnvironment_(env);
-    beginScope_();
+    env.beginScope();
 
     // (i.e. function as expression)
     consume_(Token::LEFT_PAREN, "Expected '(' for function.");
@@ -375,7 +387,7 @@ void Compiler::function_(ObjString * name, Environment::Type type) {
 
     // Note: no actual need to endScope(), as we are done with the Environment now
     // call it so that we can check the stack emptied correctly:
-    endScope_();
+    env.endScope(this);
 
     // New function literal:
     ObjFunction * fn = endEnvironment_();
@@ -633,18 +645,6 @@ void Compiler::synchronise_() {
     }
 }
 
-void Compiler::beginScope_() {
-    currentEnv_->scopeDepth++;
-}
-
-void Compiler::endScope_() {
-    currentEnv_->scopeDepth--;
-
-    // At the end of a scope, remove all local variables from the value stack
-    uint8_t n = currentEnv_->freeLocals();
-    if( n > 0 ) emitBytes_(OpCode::POP_N, n);
-}
-
 void Compiler::expressionBlock_() {
     bool isExpression = block_(true);
     if( !isExpression ){
@@ -667,9 +667,9 @@ bool Compiler::block_(bool canBeExpression) {
 }
 
 bool Compiler::nestedBlock_(bool canBeExpression) {
-    beginScope_();
+    currentEnv_->beginScope();
     bool isExpression = block_(canBeExpression);
-    endScope_();
+    currentEnv_->endScope(this);
     return isExpression;
 }
 

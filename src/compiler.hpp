@@ -34,8 +34,9 @@ struct ParseRule {
 struct Local {
     ObjString * name;
     int16_t depth;
-    uint8_t isDefined;
-    uint8_t isConst;
+    bool isDefined;
+    bool isConst;
+    bool isCaptured;  // whether it is referenced by another function
 
     // Used by Environment when searching for locals:
     static int const NOT_FOUND = -1;
@@ -104,10 +105,16 @@ struct Environment {
     void defineLocal();
 
     /**
-     * release all locals which are no longer in scope
-     * @return number of locals freed
+     * Enter another level of scope depth
      */
-    uint8_t freeLocals();
+    void beginScope();
+
+    /**
+     * Exit a level of scope depth
+     * release all locals which are no longer in scope
+     * enclose all locals which are captured as upvalues
+     */
+    void endScope(Compiler * c);
 };
 
 // Note: lox calls this a Parser:
@@ -142,11 +149,9 @@ private:
     bool if_(bool canBeExpression);           // returns isExpression
     void whileStatement_();
     void synchronise_();
-    void beginScope_();
     bool block_(bool canBeExpression);        // returns isExpression
     void expressionBlock_();
     bool nestedBlock_(bool canBeExpression);  // returns isExpression
-    void endScope_();
     void parse_(Precedence precedence);  // parse expressions with >= precendence
     void call_();
     void list_();
