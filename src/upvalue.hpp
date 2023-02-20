@@ -8,23 +8,26 @@
  */
 class ObjUpvalue : public Obj {
 public:
-    ObjUpvalue(Mem * mem, Value * val);
+    /**
+     * Constructor helper - returns existing upvalue or makes a new one
+     */
+    static ObjUpvalue * newUpvalue(Mem * mem, Value * local);
+
     ~ObjUpvalue();
 
     inline void set(Value v) { *value_ = v; }
     inline Value get() { return *value_; }
-
-    inline Value * getPtr() { return value_; }
 
     // implment Obj interface
     virtual ObjString * toString() override;
     virtual void print(bool verbose) override;
 
 private:
+    // Private constructor: must construct with helper!
+    ObjUpvalue(Mem * mem, Value * val);
+
     Value * value_;
 
     // linked list of upvalues so we don't double up on capturing locals:
-    ObjUpvalue * next_;
-
-    friend class Mem;
+    ObjUpvalue * nextUpvalue_;
 };

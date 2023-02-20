@@ -3,6 +3,7 @@
 
 Mem::Mem() {
     objects_ = nullptr;
+    openUpvalues_ = nullptr;
 }
 
 Mem::~Mem() {

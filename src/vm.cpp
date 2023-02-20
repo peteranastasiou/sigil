@@ -180,12 +180,6 @@ bool Vm::indexGet_() {
     }
 }
 
-ObjUpvalue * Vm::captureUpvalue_(Value * local) {
-    ObjUpvalue * upvalue = new ObjUpvalue(&mem_, local);
-    // More to come...
-    return upvalue;
-}
-
 void Vm::resetStack_() {
     stackTop_ = stack_;
     frameCount_ = 0;
@@ -251,7 +245,7 @@ InterpretResult Vm::run_() {
                     closure->upvalues.push_back(
                         isLocal ? 
                         // capture local value to upvalue:
-                        captureUpvalue_( &frame->slots[index] ) :
+                        ObjUpvalue::newUpvalue(&mem_, &frame->slots[index]) :
                         // else, reference existing upvalue
                         frame->closure->upvalues[index]
                     );
@@ -267,7 +261,7 @@ InterpretResult Vm::run_() {
             case OpCode::TYPE_STRING: push(Value::typeId(Value::STRING)); break;
             case OpCode::TYPE_TYPEID:   push(Value::typeId(Value::TYPEID)); break;
             case OpCode::POP: pop(); break;
-            case OpCode::POP_N: pop(frame->readByte()); break;
+
             case OpCode::DEFINE_GLOBAL_VAR:
             case OpCode::DEFINE_GLOBAL_CONST: {
                 ObjString * name = frame->readString();
