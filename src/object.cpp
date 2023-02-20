@@ -3,7 +3,7 @@
 #include "mem.hpp"
 
 
-Obj::Obj(Mem * mem, Type t): type(t), mem_(mem) {
+Obj::Obj(Mem * mem): mem_(mem) {
     mem_->registerObj(this);
 }
 

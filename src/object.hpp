@@ -10,22 +10,13 @@ class ObjString;  // defined in str.hpp
  */
 
 struct Obj {
-    enum Type {
-        STRING,
-        LIST,
-        FUNCTION,
-        CLOSURE,
-        UPVALUE
-    };
-
-    Obj(Mem * mem, Type t);
+    Obj(Mem * mem);
 
     virtual ~Obj();
 
     virtual ObjString * toString() = 0;
     virtual void print(bool verbose) = 0;
 
-    Type type;
     Obj * next;  // linked list of all objects
 
 protected:

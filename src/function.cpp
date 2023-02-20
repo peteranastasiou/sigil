@@ -2,7 +2,7 @@
 #include "function.hpp"
 
 
-ObjFunction::ObjFunction(Mem * mem, ObjString * funcName) : Obj(mem, Obj::Type::FUNCTION) {
+ObjFunction::ObjFunction(Mem * mem, ObjString * funcName) : Obj(mem) {
     numInputs = 0;
     numUpvalues = 0;
     name = funcName;
@@ -26,7 +26,7 @@ void ObjFunction::print(bool verbose) {
 // -----------------------------------------------------
 
 
-ObjClosure::ObjClosure(Mem * mem, ObjFunction * func) : Obj(mem, Obj::Type::CLOSURE) {
+ObjClosure::ObjClosure(Mem * mem, ObjFunction * func) : Obj(mem) {
     function = func;
 }
 
@@ -43,21 +43,4 @@ void ObjClosure::print(bool verbose) {
     }else{
         puts(function->name->get());
     }
-}
-
-// -----------------------------------------------------
-
-ObjUpvalue::ObjUpvalue(Mem * mem, Value * val) : Obj(mem, Obj::Type::UPVALUE) {
-    value = val;
-}
-
-ObjUpvalue::~ObjUpvalue() {
-}
-
-ObjString * ObjUpvalue::toString() {
-    return ObjString::newString(mem_, "<upvalue>");
-}
-
-void ObjUpvalue::print(bool verbose) {
-    puts("<upvalue>");
 }

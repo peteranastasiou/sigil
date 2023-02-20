@@ -25,24 +25,6 @@ public:
     ObjString * name;  // function name
 };
 
-/**
- * Upvalues wrap ordinary Values when they are enclosed by a Closure
- */
-class ObjUpvalue : public Obj {
-public:
-    ObjUpvalue(Mem * mem, Value * val);
-    ~ObjUpvalue();
-
-    inline void set(Value v) { *value = v; }
-    inline Value get() { return *value; }
-
-    // implment Obj interface
-    virtual ObjString * toString() override;
-    virtual void print(bool verbose) override;
-
-private:
-    Value * value;
-};
 
 /**
  * Closures are made at runtime and wrap functions 

@@ -3,10 +3,10 @@
 #include "str.hpp"
 #include <string.h>
 
-ObjList::ObjList(Mem * mem) : Obj(mem, Obj::LIST) {
+ObjList::ObjList(Mem * mem) : Obj(mem) {
 }
 
-ObjList::ObjList(Mem * mem, ObjList * a, ObjList * b) : Obj(mem, Obj::LIST) {
+ObjList::ObjList(Mem * mem, ObjList * a, ObjList * b) : Obj(mem) {
     // Reserve enough space for both lists combined:
     values_.reserve(a->len() + b->len());
 

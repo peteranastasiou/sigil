@@ -79,7 +79,7 @@ ObjString * ObjString::concatenate(Mem * mem, ObjString * a, ObjString * b) {
     return new ObjString(mem, chars, len);
 }
 
-ObjString::ObjString(Mem * mem, char const * chars, int length): Obj(mem, Obj::Type::STRING)  {
+ObjString::ObjString(Mem * mem, char const * chars, int length): Obj(mem)  {
     chars_ = chars;
     length_ = length;
     hash_ = calcHash_(chars_, length_);
