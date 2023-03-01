@@ -21,7 +21,6 @@ enum {
     TYPE_TYPEID,    // TypeId of TypeId
     // Stack and variable manipulation
     POP,            // Pop 1 value from the stack
-    CLOSE_UPVALUE,  // Remove 1 value, uplifting it to into an upvalue
     DEFINE_GLOBAL_VAR,   // Define a global variable
     DEFINE_GLOBAL_CONST, // Define a global variable as const
     GET_GLOBAL,     // Push the value of a global to the stack
@@ -30,6 +29,7 @@ enum {
     SET_LOCAL,
     GET_UPVALUE,
     SET_UPVALUE,
+    CLOSE_UPVALUE,  // Remove 1 value, uplifting it to into an upvalue
     // Binary operators: take two values from the stack and push one:
     EQUAL,
     NOT_EQUAL,

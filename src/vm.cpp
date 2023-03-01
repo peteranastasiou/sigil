@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
+where to put closeUpvalues(frame->slots)
+
 
 uint16_t CallFrame::readUint16() {
     ip += 2;
@@ -313,6 +315,12 @@ InterpretResult Vm::run_() {
             case OpCode::SET_UPVALUE: {
                 uint8_t upvalueIdx = frame->readByte();
                 frame->closure->upvalues[upvalueIdx]->set( peek(0) );
+                break;
+            }
+            case OpCode::CLOSE_UPVALUE: {
+                // close all upvalues to the top of the stack
+                mem_.closeUpvalues(stackTop_ - 1);
+                pop();
                 break;
             }
             case OpCode::EQUAL: {

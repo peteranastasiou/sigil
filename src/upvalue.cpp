@@ -33,6 +33,7 @@ ObjUpvalue * ObjUpvalue::newUpvalue(Mem * mem, Value * value) {
 
 ObjUpvalue::ObjUpvalue(Mem * mem, Value * val) : Obj(mem) {
     value_ = val;
+    closedValue_ = Value::nil();
 }
 
 ObjUpvalue::~ObjUpvalue() {

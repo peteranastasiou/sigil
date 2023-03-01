@@ -20,8 +20,12 @@ public:
 
     // get open upvalue by local it references
     ObjUpvalue * getRootOpenUpvalue(){ return openUpvalues_; }
-
+    
+    // Set the root of the open upvalue list
     void setRootOpenUpvalue(ObjUpvalue * upvalue){ openUpvalues_ = upvalue; }
+
+    // Close all upvalues above and including the value `last` on the variable stack
+    void closeUpvalues(Value * last);
 
     // intern string helper
     StringSet * getInternedStrings(){ return &internedStrings_; }
