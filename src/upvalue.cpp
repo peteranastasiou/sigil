@@ -39,6 +39,14 @@ ObjUpvalue::ObjUpvalue(Mem * mem, Value * val) : Obj(mem) {
 ObjUpvalue::~ObjUpvalue() {
 }
 
+void ObjUpvalue::close() {
+    // Shift the value from the stack to internal value:
+    closedValue_ = *value_;
+
+    // From now on, use the internal value:
+    value_ = &closedValue_;
+}
+
 ObjString * ObjUpvalue::toString() {
     return ObjString::newString(mem_, "<upvalue>");
 }

@@ -25,6 +25,17 @@ public:
     // Get the upvalue's value
     inline Value get() { return *value_; }
 
+    // Get a reference to the upvalue's value
+    inline Value * ref() { return value_; }
+
+    /** close the upvalue, so it uses an internal value
+     * rather than referencing one on the variable stack
+     */
+    void close();
+
+    // Get the next upvalue in the linked list of upvalues
+    inline ObjUpvalue * getNextUpvalue() { return nextUpvalue_; }
+
     // implment Obj interface
     virtual ObjString * toString() override;
     virtual void print(bool verbose) override;
@@ -38,8 +49,4 @@ private:
 
     // linked list of upvalues so we don't double up on capturing locals:
     ObjUpvalue * nextUpvalue_;
-
-    // TODO think about whether closeUpvalues belongs here, meaning Mem doesn't need to be a friend:
-    // Or remove get/set on value
-    friend class Mem;
 };

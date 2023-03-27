@@ -24,8 +24,10 @@ public:
     // Set the root of the open upvalue list
     void setRootOpenUpvalue(ObjUpvalue * upvalue){ openUpvalues_ = upvalue; }
 
-    // Close all upvalues above and including the value `last` on the variable stack
-    void closeUpvalues(Value * last);
+    /**
+     * Close all upvalues left on the end of the stack when the stack top moves to stackTop
+     */
+    void closeUpvalues(Value * stackTop);
 
     // intern string helper
     StringSet * getInternedStrings(){ return &internedStrings_; }

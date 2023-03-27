@@ -10,8 +10,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
-where to put closeUpvalues(frame->slots)
-
 
 uint16_t CallFrame::readUint16() {
     ip += 2;
@@ -464,6 +462,10 @@ InterpretResult Vm::run_() {
                 // return value(s) of function:
                 Value result = pop();
 
+                // close upvalues of function
+                Value * newStackTop = frame->slots;
+                mem_.closeUpvalues(newStackTop);
+
                 // Check if we are returning from the top level script:
                 if( --frameCount_ == 0 ){
                     pop();
@@ -471,7 +473,7 @@ InterpretResult Vm::run_() {
                 }
 
                 // pop function literal & input params:
-                stackTop_ = frame->slots;
+                stackTop_ = newStackTop;
 
                 // put the result(s) back on the stack:
                 push(result);
