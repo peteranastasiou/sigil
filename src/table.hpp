@@ -86,13 +86,21 @@ public:
         return map_.erase(key) == 1;
     }
 
-    void debug() {
-        for( const auto & [key, value] : map_ ){
-            printf("  '%s': ", key->get());
-            value.print();
-            printf("\n");
+    void gcMark() {
+        // Mark all keys and values as in-use for the garbage collector:
+        for( auto & [key, value] : map_ ){
+            ((ObjString *)key)->gcMark();
+            value.gcMark();
         }
     }
+
+    // void debug() {
+    //     for( const auto & [key, value] : map_ ){
+    //         printf("  '%s': ", key->get());
+    //         value.print();
+    //         printf("\n");
+    //     }
+    // }
 
 private:
     std::unordered_map<String*, V, StringHash, StringEqual> map_;

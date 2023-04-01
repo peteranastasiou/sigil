@@ -1,7 +1,12 @@
 
 #include "mem.hpp"
+#include "vm.hpp"
 
-Mem::Mem() {
+// TODO turn off by default
+#define DEBUG_STRESS_GC
+
+Mem::Mem(Vm * vm) {
+    vm_ = vm;
     objects_ = nullptr;
     openUpvalues_ = nullptr;
 }
@@ -10,7 +15,18 @@ Mem::~Mem() {
     freeObjects_();
 }
 
+void Mem::collectGarbage() {
+    // Mark and sweep
+    vm_->gcMarkRoots();
+}
+
 void Mem::registerObj(Obj * obj) {
+    // Creating a new object, so perhaps run garbage collector now
+#ifdef DEBUG_STRESS_GC
+    collectGarbage();
+#endif
+
+    // Add to linked list of objects
     obj->next = objects_;  // previous head
     objects_ = obj;        // new head
 }

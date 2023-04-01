@@ -70,6 +70,7 @@ struct Value {
     ObjUpvalue * asObjUpvalue() const;
 
     // value methods
+    void gcMark();
     bool equals(Value other) const;
     ObjString * toString(Mem * mem);
     void print(bool verbose) const;

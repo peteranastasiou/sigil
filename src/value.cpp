@@ -42,6 +42,27 @@ char const* Value::typeToString(Type t) {
     }
 }
 
+void Value::gcMark() {
+    switch( type ){
+        default:
+        case NIL:
+        case BOOL:
+        case NUMBER:
+        case TYPEID:
+            // Primitive type - nothing to do
+            return;
+
+        case STRING:
+        case LIST:
+        case FUNCTION:
+        case CLOSURE:
+        case UPVALUE:
+            // GC Object types:
+            as.obj->gcMark();
+            return;
+    }
+}
+
 bool Value::equals(Value other) const {
     if( type != other.type ) return false;
 

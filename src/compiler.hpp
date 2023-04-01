@@ -117,7 +117,6 @@ struct Environment {
     void endScope(Compiler * c);
 };
 
-// Note: lox calls this a Parser:
 class Compiler {
 public:
     Compiler(Mem * mem);

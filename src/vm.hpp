@@ -9,6 +9,8 @@
 
 #include <unordered_map>
 
+// Predeclare compiler
+class Compiler;
 
 enum class InterpretResult {
     OK,
@@ -31,6 +33,11 @@ struct CallFrame {
 struct Global {
     Value value;
     bool isConst;
+
+    //  Implement gc mark to use as hashmap element:
+    void gcMark() {
+        value.gcMark();
+    }
 };
 
 class Vm {
@@ -39,6 +46,9 @@ public:
     ~Vm();
 
     InterpretResult interpret(InputStream * stream);
+
+    // Mark root objects to preserve from garbage collection:
+    void gcMarkRoots();
 
     // stack operations:
     void push(Value value);
@@ -61,6 +71,7 @@ private:
     static int const STACK_MAX = FRAMES_MAX * 256;
 
     Mem mem_;
+    Compiler * compiler_;
     CallFrame frames_[FRAMES_MAX];  // TODO to allow continuations/generators, this can't be a stack, GC instead
     int frameCount_;
     Value stack_[STACK_MAX];

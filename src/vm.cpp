@@ -33,7 +33,8 @@ int CallFrame::chunkOffsetOf(uint8_t * addr) {
     return (int)(addr - closure->function->chunk.getCode());
 }
 
-Vm::Vm() {
+Vm::Vm(): mem_(this) {
+    compiler_ = nullptr;
     resetStack_();
 }
 
@@ -42,10 +43,15 @@ Vm::~Vm() {
 
 InterpretResult Vm::interpret(InputStream * stream) {
     // Compile the source string to a function
-    Compiler compiler(&mem_);
-    ObjFunction * fn = compiler.compile(stream);
-    if( fn == nullptr )  return InterpretResult::COMPILE_ERR;
-
+    compiler_ = new Compiler(&mem_);
+    ObjFunction * fn = compiler_->compile(stream);
+    if( fn == nullptr ){
+        // Failed to compile
+        // Done with compiler:
+        delete compiler_;
+        compiler_ = nullptr;
+        return InterpretResult::COMPILE_ERR;
+    }
     // NOTE: not in lox!
     resetStack_();
 
@@ -64,7 +70,21 @@ InterpretResult Vm::interpret(InputStream * stream) {
         // assert nothing is left on the stack at the end of the script!
         assert(stackTop_ - stack_ == 0);
     }
+
+    // Done with compiler:
+    delete compiler_;
+    compiler_ = nullptr;
+
     return res;
+}
+
+void Vm::gcMarkRoots() {
+    // Mark all values in the stack:
+    for( Value * value = stack_; value < stackTop_; value++ ){
+        value->gcMark();
+    }
+    // Mark global values:
+    globals_.gcMark();
 }
 
 void Vm::push(Value value) {
