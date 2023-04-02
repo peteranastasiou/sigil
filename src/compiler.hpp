@@ -129,6 +129,9 @@ public:
     */
     ObjFunction * compile(InputStream * stream);
 
+    // Mark root objects to prevent from garbage collection
+    void gcMarkRoots();
+
 private:
     // parser helpers:
     void advance_();

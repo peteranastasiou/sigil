@@ -1,10 +1,13 @@
 
 #pragma once
 
-#include <stdint.h>
 #include "object.hpp"
 #include "table.hpp"
 #include "upvalue.hpp"
+
+#include <stdint.h>
+#include <vector>
+
 
 // Predeclare Vm
 class Vm;
@@ -19,6 +22,7 @@ public:
 
     // Run garbage collector
     void collectGarbage();
+    void addGrayObj(Obj * obj);
 
     // adding/removing objects, called from Obj(), ~Obj()
     void registerObj(Obj * obj);
@@ -43,4 +47,5 @@ private:
     Obj * objects_;     // linked list of objects
     ObjUpvalue * openUpvalues_;  // linked list of open upvalues
     StringSet internedStrings_;
+    std::vector<Obj*> markedObjects_;  // gc marked objects
 };

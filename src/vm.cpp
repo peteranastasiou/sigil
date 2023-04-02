@@ -83,8 +83,12 @@ void Vm::gcMarkRoots() {
     for( Value * value = stack_; value < stackTop_; value++ ){
         value->gcMark();
     }
+
     // Mark global values:
     globals_.gcMark();
+
+    // Mark compiler-owned objects:
+    compiler_->gcMarkRoots();
 }
 
 void Vm::push(Value value) {

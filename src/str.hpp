@@ -75,6 +75,7 @@ public:
     // implment Obj interface (trivial for strings)
     virtual ObjString * toString() override { return this; }
     virtual void print(bool verbose) override;
+    virtual void gcMarkRefs() override {}
 
     // implement String interface:
     virtual char const * get() const override { return chars_; }

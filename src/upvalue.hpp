@@ -39,6 +39,7 @@ public:
     // implment Obj interface
     virtual ObjString * toString() override;
     virtual void print(bool verbose) override;
+    virtual void gcMarkRefs() override;
 
 private:
     // Private constructor: must construct with helper!

@@ -54,3 +54,7 @@ ObjString * ObjUpvalue::toString() {
 void ObjUpvalue::print(bool verbose) {
     puts("<upvalue>");
 }
+
+void ObjUpvalue::gcMarkRefs() {
+    closedValue_.gcMark();
+}

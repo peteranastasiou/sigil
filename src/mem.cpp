@@ -16,8 +16,69 @@ Mem::~Mem() {
 }
 
 void Mem::collectGarbage() {
-    // Mark and sweep
+    //--------------------------------
+    // MARK ROOTS
+    //--------------------------------
+    // Mark objects owned by vm:
     vm_->gcMarkRoots();
+
+    // Mark open upvalues:
+    for( ObjUpvalue * u = openUpvalues_;
+            u != nullptr; 
+            u = u->getNextUpvalue() ){
+        u->gcMark();
+    }
+
+    //--------------------------------
+    // MARK REFERENCES
+    //--------------------------------
+    while( markedObjects_.size() > 0 ){
+        // Pop last marked object
+        Obj * o = markedObjects_.back();
+        markedObjects_.pop_back();
+
+        // Mark its references 
+        o->gcMarkRefs();
+    }
+
+    //----------------------------------
+    // REMOVE UNMARKED INTERNED STRINGS
+    //----------------------------------
+    // The interned string set is a special case.
+    // We might be about to delete some strings,
+    // but that could leave dangling pointers in
+    // the set. So we sweep through and remove them
+    // first (before isMarked gets cleared):
+    internedStrings_.gcSweep();
+
+    //----------------------------------
+    // SWEEP UNMARKED OBJECTS
+    //----------------------------------
+    Obj * prev = nullptr;
+    Obj * obj = objects_;
+    while( obj != nullptr ){
+        if( obj->isMarked ){
+            // Clear isMarked for next GC cycle:
+            obj->isMarked = false;
+            prev = obj;
+            obj = obj->next;
+        }else{
+            // Unused object, prepare for deletion:
+            Obj * unused = obj;
+            obj = obj->next;
+            // Wire it out of the linked list:
+            if( prev == nullptr ){
+                objects_ = obj;  // new head
+            }else{
+                prev->next = obj; // bypass unused obj
+            }
+            delete unused;
+        }
+    }
+}
+
+void Mem::addGrayObj(Obj * obj) {
+    markedObjects_.push_back(obj);
 }
 
 void Mem::registerObj(Obj * obj) {

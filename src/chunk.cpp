@@ -59,3 +59,9 @@ Value Chunk::getLiteral(uint8_t index) {
 uint8_t Chunk::numLiterals() {
     return (uint8_t)literals.size();
 }
+
+void Chunk::gcMarkRefs() {
+    for( Value & literal : literals ){
+        literal.gcMark();
+    }
+}

@@ -18,6 +18,7 @@ public:
     // implment Obj interface
     virtual ObjString * toString() override;
     virtual void print(bool verbose) override;
+    virtual void gcMarkRefs() override;
 
     void append(Value v);
     bool get(int i, Value & v);

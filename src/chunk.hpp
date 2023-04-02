@@ -94,6 +94,9 @@ public:
 
     uint8_t numLiterals();
 
+    // Mark referenced objects to protect from garbage collection
+    void gcMarkRefs();
+
     static uint8_t const MAX_LITERALS = 255;  // literal index must fit in a byte (for now)
 
 private:

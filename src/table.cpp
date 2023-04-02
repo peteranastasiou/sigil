@@ -43,3 +43,19 @@ void StringSet::debug() {
                (ObjString*) it, it->getHash(), it->getLength(), it->get());
     }
 }
+
+void StringSet::gcSweep() {
+    for( auto it = set_.begin(); it != set_.end(); ){
+        if( ((ObjString*) *it)->isMarked ){
+            // keep it
+            it++;
+        }else{
+            // remove it
+            // Warning: must iterate before erasing to not
+            // invalidate the iterator:
+
+            // TODO ensure that ObjString is not deleted
+            set_.erase(it++);
+        }
+    }
+}

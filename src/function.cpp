@@ -1,6 +1,6 @@
 
 #include "function.hpp"
-
+#include "upvalue.hpp"
 
 ObjFunction::ObjFunction(Mem * mem, ObjString * funcName) : Obj(mem) {
     numInputs = 0;
@@ -23,6 +23,11 @@ void ObjFunction::print(bool verbose) {
     }
 }
 
+void ObjFunction::gcMarkRefs() {
+    name->gcMark();
+    chunk.gcMarkRefs();
+}
+
 // -----------------------------------------------------
 
 
@@ -42,5 +47,12 @@ void ObjClosure::print(bool verbose) {
         printf("<cl:%s>", function->name->get());
     }else{
         puts(function->name->get());
+    }
+}
+
+void ObjClosure::gcMarkRefs() {
+    function->gcMark();
+    for( ObjUpvalue * u : upvalues ){
+        u->gcMark();
     }
 }

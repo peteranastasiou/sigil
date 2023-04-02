@@ -35,6 +35,8 @@ public:
 
     void debug();
 
+    void gcSweep();
+
 private:
     std::unordered_set<String*, StringHash, StringEqual> set_;
 };

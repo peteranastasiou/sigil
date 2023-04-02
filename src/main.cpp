@@ -16,6 +16,11 @@
 static void repl() {
     Vm vm;
 
+    // Use for debugging:
+    // const char * line = "var a = \"abc\";";
+    // StringInputStream s(line);
+    // vm.interpret(&s);
+
     for( ;; ){
         char * line = readline("> ");
         if( line == nullptr ) return;  // Ctrl C or D

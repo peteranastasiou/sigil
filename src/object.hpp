@@ -14,12 +14,15 @@ public:
     virtual ObjString * toString() = 0;
     virtual void print(bool verbose) = 0;
 
-    // Mark to protect against being garbage collected
+    // Marking protects the object being garbage collected
     void gcMark();
 
+    // Mark references to other objects from this one
+    virtual void gcMarkRefs() = 0;
+
     Obj * next;  // linked list of all objects
+    bool isMarked;  // used by GC to track whether object is in use
 
 protected:
     Mem * const mem_;
-    bool isMarked;
 };

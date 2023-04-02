@@ -156,6 +156,18 @@ ObjFunction * Compiler::compile(InputStream * stream) {
     return hadError_ ? nullptr : function;
 }
 
+void Compiler::gcMarkRoots() {
+    // Iterate up through nested environments,
+    // marking function objects as in-use:
+    Environment * env = currentEnv_;
+    while( env != nullptr ){
+        if( env->function != nullptr ){
+            env->function->gcMark();
+        }
+        env = env->enclosing;
+    }
+}
+
 void Compiler::initEnvironment_(Environment & env) {
     env.enclosing = currentEnv_;
     currentEnv_ = &env;

@@ -38,6 +38,12 @@ void ObjList::print(bool verbose) {
     printf("]");
 }
 
+void ObjList::gcMarkRefs() {
+    for( Value & value : values_ ){
+        value.gcMark();
+    }
+}
+
 void ObjList::append(Value v) {
     values_.push_back(v);
 }

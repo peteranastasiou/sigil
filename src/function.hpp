@@ -17,6 +17,7 @@ public:
     // implment Obj interface
     virtual ObjString * toString() override;
     virtual void print(bool verbose) override;
+    virtual void gcMarkRefs() override;
 
 public:
     int numInputs;  // number of expected parameters
@@ -38,6 +39,7 @@ public:
     // implment Obj interface
     virtual ObjString * toString() override;
     virtual void print(bool verbose) override;
+    virtual void gcMarkRefs() override;
 
 public:
     ObjFunction * function;

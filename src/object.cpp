@@ -11,14 +11,17 @@ Obj::Obj(Mem * mem): mem_(mem) {
 }
 
 Obj::~Obj(){
-    mem_->deregisterObj(this);
 }
 
 void Obj::gcMark() {
-    if( !isMarked ){
-        // printf("%p gc mark ", (void *)this);
-        // print(false);
-        // printf("\n");
+    if( isMarked ){
+        return;
     }
+    // printf("%p gc mark ", (void *)this);
+    // print(false);
+    // printf("\n");
     isMarked = true;
+
+    // Add to list of gray objects
+    mem_->addGrayObj(this);
 }
