@@ -3,11 +3,16 @@
 
 CC = g++
 
+
+# TODO switch on cmakegoals debug
 # Whether to build for debugging instead of release
 DEBUG = 1
 
 # Whether to enable verbose execution trace debugging
-VERBOSE = 0
+VERBOSE = 1
+
+# Whether to enable garbage collection as often as possible
+DEBUG_STRESS_GC = 1
 
 # Compilation flags
 CFLAGS = -std=c++17 -W -Wall -Wextra -Werror -Wno-unused -Wconversion -MMD -MP -fno-exceptions
@@ -52,6 +57,10 @@ endif
 # Disable assert() calls:
 ifeq ($(DEBUG), 0)
 	DEFINES += -DNDEBUG
+endif
+
+ifeq ($(DEBUG_STRESS_GC), 1)
+	DEFINES += -DDEBUG_STRESS_GC
 endif
 
 LIBS = -lreadline

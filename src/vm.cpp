@@ -81,6 +81,9 @@ InterpretResult Vm::interpret(InputStream * stream) {
 void Vm::gcMarkRoots() {
     // Mark all values in the stack:
     for( Value * value = stack_; value < stackTop_; value++ ){
+        printf( "Mark value on stack:" );
+        value->print(true);
+        printf("\n");
         value->gcMark();
     }
 

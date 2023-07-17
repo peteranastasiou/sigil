@@ -162,6 +162,10 @@ void Compiler::gcMarkRoots() {
     Environment * env = currentEnv_;
     while( env != nullptr ){
         if( env->function != nullptr ){
+            printf( "Mark function:" );
+            env->function->print(true);
+            printf("\n");
+
             env->function->gcMark();
         }
         env = env->enclosing;

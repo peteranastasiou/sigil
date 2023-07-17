@@ -2,9 +2,6 @@
 #include "mem.hpp"
 #include "vm.hpp"
 
-// TODO turn off by default
-#define DEBUG_STRESS_GC
-
 Mem::Mem(Vm * vm) {
     vm_ = vm;
     objects_ = nullptr;
@@ -16,25 +13,36 @@ Mem::~Mem() {
 }
 
 void Mem::collectGarbage() {
+#ifdef DEBUG_GC
+    printf("Running garbage collector\n");
+#endif
     //--------------------------------
     // MARK ROOTS
     //--------------------------------
     // Mark objects owned by vm:
+    printf( "GC Mark roots:\n" );
     vm_->gcMarkRoots();
 
     // Mark open upvalues:
     for( ObjUpvalue * u = openUpvalues_;
             u != nullptr; 
             u = u->getNextUpvalue() ){
+        printf( "Mark upvalue:" );
+        u->print(true);
+        printf("\n");
         u->gcMark();
     }
 
     //--------------------------------
     // MARK REFERENCES
     //--------------------------------
+    printf( "Mark references: %i\n", (int)markedObjects_.size() );
     while( markedObjects_.size() > 0 ){
+        printf("Mark references of: ");
         // Pop last marked object
         Obj * o = markedObjects_.back();
+        o->print(true);
+        printf("\n");
         markedObjects_.pop_back();
 
         // Mark its references 
@@ -54,6 +62,9 @@ void Mem::collectGarbage() {
     //----------------------------------
     // SWEEP UNMARKED OBJECTS
     //----------------------------------
+
+    // TODO print before linked list
+
     Obj * prev = nullptr;
     Obj * obj = objects_;
     while( obj != nullptr ){
@@ -72,12 +83,21 @@ void Mem::collectGarbage() {
             }else{
                 prev->next = obj; // bypass unused obj
             }
+            printf("Delete object: ");
+            unused->print(true);
+            printf("\n");
+
             delete unused;
         }
     }
+
+    // TODO final linked list
 }
 
 void Mem::addGrayObj(Obj * obj) {
+    printf("Mark gray: ");
+    obj->print(true);
+    printf("\n");
     markedObjects_.push_back(obj);
 }
 
