@@ -13,7 +13,7 @@
 class Vm;
 
 /**
- * Memory Manager for all objects in a running instance of Pond
+ * Memory Manager for all objects in a running instance of Sigil
  */
 class Mem {
 public:

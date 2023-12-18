@@ -59,7 +59,7 @@ int main(int argc, char const * argv[]) {
     }else if( argc == 2 ){
         runFile(argv[1]);
     }else{
-        fprintf(stderr, "Usage: pond [path]\n");
+        fprintf(stderr, "Usage: sigil [path]\n");
         return 64;
     }
 

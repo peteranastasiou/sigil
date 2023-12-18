@@ -30,7 +30,7 @@ else
 	LDFLAGS += -O2
 endif
 
-TARGET = bin/pond
+TARGET = bin/sigil
 
 OBJECTS = $(patsubst src/%.cpp, build/%.o, $(wildcard src/*.cpp))
 OBJECTS += $(patsubst src/inputstream/%.cpp, build/inputstream__%.o, $(wildcard src/inputstream/*.cpp))

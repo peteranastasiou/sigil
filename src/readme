@@ -1,6 +1,6 @@
 no-swig interop
 auto binding generation for C? C++?
-can implement abstract classes in pond and call them from C++ e.g.:
+can implement abstract classes in sigil and call them from C++ e.g.:
 
 // Interface definition
 interface Enemy {
@@ -10,7 +10,7 @@ interface Enemy {
 // example C++ function with bindings
 void addEnemy(Enemy * e);
 
-// pond
+// sigil
 class Cat is Enemy {
     fn attack(int n){
         print("cat attack!");
