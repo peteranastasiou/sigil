@@ -3,8 +3,7 @@
 SIGIL=./bin/sigil
 
 # Clear previous test results:
-rm -rf out
-mkdir out
+rm -rf test/out
 mkdir test/out
 
 RESULT="OK"
