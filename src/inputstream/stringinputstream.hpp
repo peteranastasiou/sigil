@@ -14,10 +14,6 @@ public:
 
   virtual char next() override;
 
-  virtual long getPosition() override;
-
-  virtual void setPosition(long pos) override;
-
   virtual char const * getPath() override;
 
 private:

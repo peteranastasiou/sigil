@@ -23,22 +23,6 @@ char const * Scanner::getPath() {
     return stream_->getPath();
 }
 
-Token Scanner::peekToken() {
-    // save state:
-    auto pos = stream_->getPosition();
-    auto line = line_;
-    auto col = col_;
-
-    Token t = scanToken();
-
-    // restore state:
-    stream_->setPosition(pos);
-    line_ = line;
-    col_ = col;
-
-    return t;
-}
-
 Token Scanner::scanToken() {
     // first, gobble up whitespace and comments:
     skipWhitespace_();

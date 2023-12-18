@@ -43,16 +43,6 @@ char FileInputStream::next() {
   return c;
 }
 
-long FileInputStream::getPosition() {
-  return ftell(file_);
-}
-
-void FileInputStream::setPosition(long pos) {
-  // rewind and reread
-  fseek(file_, pos-1, SEEK_SET);
-  next_();
-}
-
 bool FileInputStream::next_() {
   long int i = ftell(file_);
   // pop one character

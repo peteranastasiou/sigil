@@ -28,15 +28,6 @@ char StringInputStream::next() {
   return c;
 }
 
-long StringInputStream::getPosition() {
-  return index_;
-}
-
-void StringInputStream::setPosition(long pos) {
-  index_ = (int)pos;
-}
-
-
 char const * StringInputStream::getPath() {
   return nullptr;
 }

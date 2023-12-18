@@ -20,16 +20,6 @@ public:
   virtual char peek() = 0;
 
   /**
-   * Get current position in the stream
-   */
-  virtual long getPosition() = 0;
-
-  /**
-   * Set current position in the stream
-   */
-  virtual void setPosition(long pos) = 0;
-
-  /**
    * file path or nullptr if not applicable
    */
   virtual char const * getPath() = 0;
