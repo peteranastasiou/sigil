@@ -51,4 +51,9 @@ fn function_runner(f) {
 
 function_runner( fn() { return true; } );
 
-fn(i){ print("hello"); print(i); }(7);
+# Note: this is not supported:
+# fn(i){ ... }(7);
+# The output of anonymous inline functions must be captured
+
+var result = fn(i){ print("hello"); print(i); i + 1 }(7);
+print(result);

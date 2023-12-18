@@ -3,7 +3,8 @@
  [x]- decide what to do about statement level anonymous functions: rewind scanner or swap anonymous function symbol to @ or $ -- rewind is nicer!
 
  []- garbage collection
- []- undo rewind work. "lambda" or "fn" keyword for anonymous functions
+    [] - make unit tests! track when objects are about to be collected and compare to expected
+ [x]- undo rewind work. uncaptured executed anon functions are now not supported - consider "lambda" keyword for anonymous functions?
 
  []- continue following book from 25.4.4
  []- test for multiple upvalues captured - editing changes all references
