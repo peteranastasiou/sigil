@@ -6,6 +6,7 @@
 
 
 Obj::Obj(Mem * mem): mem_(mem) {
+    printf("New obj at %p\n", this);
     isMarked = false;
     mem_->registerObj(this);
 }
@@ -17,10 +18,10 @@ void Obj::gcMark() {
     if( isMarked ){
         return;
     }
-    // printf("%p gc mark ", (void *)this);
-    // print(false);
-    // printf("\n");
+    printf("gc mark %p\n", (void *)this);
     isMarked = true;
+
+    // TODO optimise by not adding objects to gray list which we know are leaves e.g. strings
 
     // Add to list of gray objects
     mem_->addGrayObj(this);

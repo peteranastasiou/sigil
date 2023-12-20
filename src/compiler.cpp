@@ -893,6 +893,7 @@ void Compiler::getSetVariable_(ObjString * name, bool canAssign) {
 
     // first, try to look up
     bool isConst;
+    printf("compiler %s, %p\n", name_->getCString(), currentEnv_);
     int res = currentEnv_->resolveLocal(this, name, isConst);
     if( res != Local::NOT_FOUND ){
         // its a local variable

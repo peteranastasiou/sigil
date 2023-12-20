@@ -26,6 +26,8 @@ ObjString * ObjString::newString(Mem * mem, char const * str) {
 }
 
 ObjString * ObjString::newString(Mem * mem, char const * str, int length) {
+    // TODO avoid calculating hash twice! once in internedStrings_->find() and once in new ObjString
+
     // is string already interned?
     ObjString * ostr = mem->getInternedStrings()->find(str, length);
     if( ostr != nullptr ) return ostr;  // already have that one!
