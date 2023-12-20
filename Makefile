@@ -9,10 +9,10 @@ CC = g++
 DEBUG = 1
 
 # Whether to enable verbose execution trace debugging
-# VERBOSE = 1
+VERBOSE = 1
 
 # Whether to enable garbage collection as often as possible
-#DEBUG_STRESS_GC = 1
+DEBUG_STRESS_GC = 1
 
 # Compilation flags
 CFLAGS = -std=c++17 -W -Wall -Wextra -Werror -Wno-unused -Wconversion -MMD -MP -fno-exceptions
