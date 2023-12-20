@@ -12,15 +12,15 @@
 #include <vector>
 
 
-Environment::Environment(Mem * mem, ObjString * name, Type t) {
+Environment::Environment(Compiler * c, ObjString * name, Type t) {
     type = t;
     localCount = 0;
     scopeDepth = 0;
-    function = new ObjFunction(mem, name);
+    function = new ObjFunction(c->mem_, name);
 
     // Claim first local, reserving space for the "stack pointer"
     Local * local = &locals[localCount++];
-    local->name = ObjString::newString(mem, "");
+    local->name = c->noName_;
     local->depth = 0;
     local->isDefined = false;
     local->isConst = false;
@@ -133,10 +133,16 @@ Compiler::~Compiler() {
 }
 
 ObjFunction * Compiler::compile(InputStream * stream) {
+    // Construct strings for later usage
+    noName_ = ObjString::newString(mem_, "");
+    anonName_ = ObjString::newString(mem_, "(anon)");
+    scriptName_ = ObjString::newString(mem_, "(script)");
+
+    // Start the scanner
     scanner_.init(mem_, stream);
 
     currentEnv_ = nullptr;
-    Environment env(mem_, ObjString::newString(mem_, "(script)"), Environment::SCRIPT);
+    Environment env(this, scriptName_, Environment::SCRIPT);
     initEnvironment_(env);
 
     hadError_ = false;
@@ -170,6 +176,11 @@ void Compiler::gcMarkRoots() {
         }
         env = env->enclosing;
     }
+
+    // Mark key words
+    noName_->gcMark();
+    anonName_->gcMark();
+    scriptName_->gcMark();
 }
 
 void Compiler::initEnvironment_(Environment & env) {
@@ -352,12 +363,12 @@ void Compiler::funcDeclaration_() {
 
 void Compiler::funcAnonymous_() {
     // Parse a function used in an expression: fn(args) { statements }
-    function_(ObjString::newString(mem_, "(anon)"), Environment::FUNCTION);
+    function_(anonName_, Environment::FUNCTION);
 }
 
 void Compiler::function_(ObjString * name, Environment::Type type) {
     // new environment
-    Environment env(mem_, name, type);
+    Environment env(this, name, type);
     initEnvironment_(env);
     env.beginScope();
 

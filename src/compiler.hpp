@@ -71,7 +71,7 @@ struct Environment {
     uint8_t localCount;
     uint16_t scopeDepth;
 
-    Environment(Mem * mem, ObjString * name, Type t);
+    Environment(Compiler * c, ObjString * name, Type t);
 
     /**
      * track a local variables position in the stack
@@ -223,6 +223,11 @@ private:
     bool hadError_;
     bool hadFatalError_;
     bool panicMode_;
+
+    // Reference loose strings in use to keep them from being garbage collected
+    ObjString * anonName_;
+    ObjString * scriptName_;
+    ObjString * noName_;
 
     friend class Environment; // environment needs to call error functions!
 };
