@@ -12,19 +12,22 @@
 #include <vector>
 
 
-Environment::Environment(Compiler * c, ObjString * name, Type t) {
+Environment::Environment(Mem * mem, ObjString * name, Type t) {
     type = t;
     localCount = 0;
     scopeDepth = 0;
-    function = new ObjFunction(c->mem_, name);
+    function = new ObjFunction(mem, name);
 
     // Claim first local, reserving space for the "stack pointer"
-    Local * local = &locals[localCount++];
-    local->name = c->noName_;
+    Local * local = &locals[0];
+    local->name = mem->EMPTY_STRING;
     local->depth = 0;
     local->isDefined = false;
     local->isConst = false;
     local->isCaptured = false;
+
+    // Now we have constructed the string, we can include the first local
+    localCount = 1;
 }
 
 
@@ -127,22 +130,22 @@ void Environment::endScope(Compiler * c) {
 }
 
 Compiler::Compiler(Mem * mem) : mem_(mem) {
+    name_ = nullptr;
 }
 
 Compiler::~Compiler() {
 }
 
-ObjFunction * Compiler::compile(InputStream * stream) {
-    // Construct strings for later usage
-    noName_ = ObjString::newString(mem_, "");
-    anonName_ = ObjString::newString(mem_, "(anon)");
-    scriptName_ = ObjString::newString(mem_, "(script)");
+ObjFunction * Compiler::compile(const char * name, InputStream * stream) {
+    currentEnv_ = nullptr;
+
+    // Capture the name of the script
+    name_ = ObjString::newString(mem_, name);
 
     // Start the scanner
     scanner_.init(mem_, stream);
 
-    currentEnv_ = nullptr;
-    Environment env(this, scriptName_, Environment::SCRIPT);
+    Environment env(mem_, name_, Environment::SCRIPT);
     initEnvironment_(env);
 
     hadError_ = false;
@@ -163,10 +166,10 @@ ObjFunction * Compiler::compile(InputStream * stream) {
 }
 
 void Compiler::gcMarkRoots() {
-    // Iterate up through nested environments,
-    // marking function objects as in-use:
+    // Iterate up through nested environments, marking objects as in use
     Environment * env = currentEnv_;
     while( env != nullptr ){
+        // Mark function
         if( env->function != nullptr ){
             printf( "Mark function:" );
             env->function->print(true);
@@ -174,13 +177,19 @@ void Compiler::gcMarkRoots() {
 
             env->function->gcMark();
         }
+        // Mark the names of locals
+        for( int i = 0; i < env->localCount; i++ ){
+            env->locals[i].name->gcMark();
+        }
+
         env = env->enclosing;
     }
 
-    // Mark key words
-    noName_->gcMark();
-    anonName_->gcMark();
-    scriptName_->gcMark();
+    // Mark the script name, once provided
+    if( name_ ) name_->gcMark();
+
+    if( currentToken_.string ) currentToken_.string->gcMark();
+    if( previousToken_.string ) previousToken_.string->gcMark();
 }
 
 void Compiler::initEnvironment_(Environment & env) {
@@ -363,12 +372,13 @@ void Compiler::funcDeclaration_() {
 
 void Compiler::funcAnonymous_() {
     // Parse a function used in an expression: fn(args) { statements }
-    function_(anonName_, Environment::FUNCTION);
+    // Use "fn" as the name, which conveniently was the previous token
+    function_(previousToken_.string, Environment::FUNCTION);
 }
 
 void Compiler::function_(ObjString * name, Environment::Type type) {
     // new environment
-    Environment env(this, name, type);
+    Environment env(mem_, name, type);
     initEnvironment_(env);
     env.beginScope();
 
@@ -921,6 +931,8 @@ void Compiler::getSetVariable_(ObjString * name, bool canAssign) {
 // Macros to define lambdas to call each function with or without parameter `canAssign`
 #define ASSIGNMENT_RULE(fn) [this](bool canAssign){ this->fn(canAssign); }
 #define RULE(fn) [this](bool canAssign){ (void) canAssign; this->fn(); }
+
+// Crazy shit happening below: compiler->this is not being preserved when second compile happens (e.g. debug then stdin)
 
 // TODO split into infix and prefix rule:
 ParseRule const * Compiler::getRule_(Token::Type type) {

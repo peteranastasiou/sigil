@@ -33,7 +33,7 @@ struct Token {
     uint16_t col;
     ObjString * string;
 
-    Token() {}
+    Token(): string(nullptr) {}
     Token(Type t, uint16_t l, uint16_t c): type(t), line(l), col(c), string(nullptr) {}
     Token(Type t, uint16_t l, uint16_t c, ObjString * s): type(t), line(l), col(c), string(s) {}
 };

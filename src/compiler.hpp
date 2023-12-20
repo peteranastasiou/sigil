@@ -71,7 +71,7 @@ struct Environment {
     uint8_t localCount;
     uint16_t scopeDepth;
 
-    Environment(Compiler * c, ObjString * name, Type t);
+    Environment(Mem * mem, ObjString * name, Type t);
 
     /**
      * track a local variables position in the stack
@@ -127,7 +127,7 @@ public:
      * @param stream [input]
      * @param chunk [output]
     */
-    ObjFunction * compile(InputStream * stream);
+    ObjFunction * compile(const char * name, InputStream * stream);
 
     // Mark root objects to prevent from garbage collection
     void gcMarkRoots();
@@ -216,6 +216,7 @@ private:
     void errorAtVargs_(Token* token, const char* message, va_list args);
 
     Mem * mem_;
+    ObjString * name_;
     Scanner scanner_;
     Environment * currentEnv_;
     Token currentToken_;
@@ -223,11 +224,6 @@ private:
     bool hadError_;
     bool hadFatalError_;
     bool panicMode_;
-
-    // Reference loose strings in use to keep them from being garbage collected
-    ObjString * anonName_;
-    ObjString * scriptName_;
-    ObjString * noName_;
 
     friend class Environment; // environment needs to call error functions!
 };

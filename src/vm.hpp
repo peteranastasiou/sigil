@@ -45,7 +45,9 @@ public:
     Vm();
     ~Vm();
 
-    InterpretResult interpret(InputStream * stream);
+    void init();
+
+    InterpretResult interpret(char const * name, InputStream * stream);
 
     // Mark root objects to preserve from garbage collection:
     void gcMarkRoots();

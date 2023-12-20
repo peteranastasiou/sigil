@@ -15,11 +15,12 @@
 
 static void repl() {
     Vm vm;
+    vm.init();
 
     // Use for debugging:
     const char * line = "var a = \"abc\";";
     StringInputStream s(line);
-    vm.interpret(&s);
+    vm.interpret("(debug)", &s);
 
     for( ;; ){
         char * line = readline("> ");
@@ -33,7 +34,7 @@ static void repl() {
 
         // TODO try to compile with "echo " on the front, then try to compile without.
         // This requires better error handling instead of printf everywhere! 
-        vm.interpret(&stream);
+        vm.interpret("(stdin)", &stream);
 
         free(line);
     }
@@ -47,7 +48,8 @@ static void runFile(const char* path) {
     }
 
     Vm vm;
-    InterpretResult result = vm.interpret(&stream);
+    vm.init();
+    InterpretResult result = vm.interpret(path, &stream);
 
     if (result == InterpretResult::COMPILE_ERR) exit(65);
     if (result == InterpretResult::RUNTIME_ERR) exit(70);

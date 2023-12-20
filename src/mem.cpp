@@ -2,20 +2,32 @@
 #include "mem.hpp"
 #include "vm.hpp"
 
-Mem::Mem(Vm * vm) {
-    vm_ = vm;
+Mem::Mem() {
+    vm_ = nullptr;
     objects_ = nullptr;
     openUpvalues_ = nullptr;
+    EMPTY_STRING = nullptr;
+    init_ = false;
 }
 
 Mem::~Mem() {
     freeObjects_();
 }
 
+void Mem::init(Vm * vm) {
+    vm_ = vm;
+    EMPTY_STRING = ObjString::newString(this, "");
+    init_ = true;
+}
+
 void Mem::collectGarbage() {
 #ifdef DEBUG_GC
     printf("Running garbage collector\n");
 #endif
+    printf("\n\nRunning garbage collector\n");
+
+    if( !init_ ) return;
+
     //--------------------------------
     // MARK ROOTS
     //--------------------------------
@@ -36,7 +48,7 @@ void Mem::collectGarbage() {
     //--------------------------------
     // MARK REFERENCES
     //--------------------------------
-    printf( "Mark references: %i\n", (int)markedObjects_.size() );
+    printf( "\nMark references: %i\n", (int)markedObjects_.size() );
     while( markedObjects_.size() > 0 ){
         printf("Mark references of: ");
         // Pop last marked object
@@ -48,6 +60,10 @@ void Mem::collectGarbage() {
         // Mark its references 
         o->gcMarkRefs();
     }
+
+    // Mark the empty string to keep it from being collected
+    // Strings have no references so we can do this after the previous step
+    EMPTY_STRING->gcMark();
 
     //----------------------------------
     // REMOVE UNMARKED INTERNED STRINGS
@@ -63,35 +79,50 @@ void Mem::collectGarbage() {
     // SWEEP UNMARKED OBJECTS
     //----------------------------------
 
-    // TODO print before linked list
-
-    Obj * prev = nullptr;
-    Obj * obj = objects_;
-    while( obj != nullptr ){
-        if( obj->isMarked ){
-            // Clear isMarked for next GC cycle:
-            obj->isMarked = false;
-            prev = obj;
-            obj = obj->next;
-        }else{
-            // Unused object, prepare for deletion:
-            Obj * unused = obj;
-            obj = obj->next;
-            // Wire it out of the linked list:
-            if( prev == nullptr ){
-                objects_ = obj;  // new head
-            }else{
-                prev->next = obj; // bypass unused obj
-            }
-            printf("Delete object: ");
-            unused->print(true);
+    printf("\nSweeping:\n");
+    {
+        Obj * prev = nullptr;
+        Obj * obj = objects_;
+        while( obj != nullptr ){
+            printf(" %p: ", obj);
+            obj->print(true);
             printf("\n");
+            if( obj->isMarked ){
+                // Clear isMarked for next GC cycle:
+                obj->isMarked = false;
+                prev = obj;
+                obj = obj->next;
+            }else{
+                // Unused object, prepare for deletion:
+                Obj * unused = obj;
+                obj = obj->next;
+                // Wire it out of the linked list:
+                if( prev == nullptr ){
+                    objects_ = obj;  // new head
+                }else{
+                    prev->next = obj; // bypass unused obj
+                }
+                printf("Delete %p: ", unused);
+                unused->print(true);
+                printf("\n");
 
-            delete unused;
+                delete unused;
+            }
+        }
+    }
+    printf("\nPost garbage collect list of objects:\n");
+    {
+        Obj * prev = nullptr;
+        Obj * obj = objects_;
+        if( obj == nullptr ) printf("(none)\n");
+        while( obj != nullptr ){
+            printf(" %p: ", obj);
+            obj->print(true);
+            printf("\n");
+            obj = obj->next;
         }
     }
 
-    // TODO final linked list
 }
 
 void Mem::addGrayObj(Obj * obj) {

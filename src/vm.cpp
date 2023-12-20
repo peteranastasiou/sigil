@@ -33,18 +33,22 @@ int CallFrame::chunkOffsetOf(uint8_t * addr) {
     return (int)(addr - closure->function->chunk.getCode());
 }
 
-Vm::Vm(): mem_(this) {
+Vm::Vm() {
     compiler_ = nullptr;
     resetStack_();
+}
+
+void Vm::init() {
+    mem_.init(this);
 }
 
 Vm::~Vm() {
 }
 
-InterpretResult Vm::interpret(InputStream * stream) {
+InterpretResult Vm::interpret(char const * name, InputStream * stream) {
     // Compile the source string to a function
     compiler_ = new Compiler(&mem_);
-    ObjFunction * fn = compiler_->compile(stream);
+    ObjFunction * fn = compiler_->compile(name, stream);
     if( fn == nullptr ){
         // Failed to compile
         // Done with compiler:

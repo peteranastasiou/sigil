@@ -17,8 +17,10 @@ class Vm;
  */
 class Mem {
 public:
-    Mem(Vm * vm);
+    Mem();
     ~Mem();
+
+    void init(Vm * vm);
 
     // Run garbage collector
     void collectGarbage();
@@ -40,9 +42,12 @@ public:
     // intern string helper
     StringSet * getInternedStrings(){ return &internedStrings_; }
 
+    // Persist an empty string as a special case for convenience/efficiency
+    ObjString * EMPTY_STRING;
 private:
     void freeObjects_();
 
+    bool init_;
     Vm * vm_;
     Obj * objects_;     // linked list of objects
     ObjUpvalue * openUpvalues_;  // linked list of open upvalues
