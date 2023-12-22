@@ -91,9 +91,12 @@ public:
     void gcMark() {
         // Mark all keys and values as in-use for the garbage collector:
         for( auto & [key, value] : map_ ){
+
+#ifdef DEBUG_TRACE_EXECUTION
             printf( "Mark key-value entry for key:" );
             ((ObjString *)key)->print(true);
             printf("\n");
+#endif
 
             ((ObjString *)key)->gcMark();
             value.gcMark();

@@ -56,9 +56,11 @@ void StringSet::gcSweep() {
 
             // TODO ensure that ObjString is not deleted
 
+#ifdef DEBUG_TRACE_EXECUTION
             printf( "Remove unmarked interned string:" );
             ((ObjString*) *it)->print(true);
             printf("\n");
+#endif
 
             set_.erase(it++);
         }

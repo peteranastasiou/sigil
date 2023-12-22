@@ -26,6 +26,12 @@ private:
     int jumpInstruction_(const char* name, int sign, Chunk* chunk, int offset);
 };
 
+#ifdef DEBUG_TRACE_EXECUTION
+#define debugPrint(...) printf(__VA_ARGS__)
+#else
+#define debugPrint(...)
+#endif
+
 // void debugScanner(char const * source);
 
 // void printToken(Token token);

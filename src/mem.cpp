@@ -1,6 +1,7 @@
 
 #include "mem.hpp"
 #include "vm.hpp"
+#include "debug.hpp"
 
 Mem::Mem() {
     vm_ = nullptr;
@@ -21,10 +22,7 @@ void Mem::init(Vm * vm) {
 }
 
 void Mem::collectGarbage() {
-#ifdef DEBUG_GC
-    printf("Running garbage collector\n");
-#endif
-    printf("\n\nRunning garbage collector\n");
+    debugPrint("\n\nRunning garbage collector\n");
 
     if( !init_ ) return;
 
@@ -32,7 +30,7 @@ void Mem::collectGarbage() {
     // MARK ROOTS
     //--------------------------------
     // Mark objects owned by vm:
-    printf( "GC Mark roots:\n" );
+    debugPrint( "GC Mark roots:\n" );
     vm_->gcMarkRoots();
 
     // Mark open upvalues:
@@ -48,13 +46,10 @@ void Mem::collectGarbage() {
     //--------------------------------
     // MARK REFERENCES
     //--------------------------------
-    printf( "\nMark references: %i\n", (int)markedObjects_.size() );
+    debugPrint( "\nMark references: %i\n", (int)markedObjects_.size() );
     while( markedObjects_.size() > 0 ){
-        printf("Mark references of: ");
         // Pop last marked object
         Obj * o = markedObjects_.back();
-        o->print(true);
-        printf("\n");
         markedObjects_.pop_back();
 
         // Mark its references 
@@ -79,14 +74,17 @@ void Mem::collectGarbage() {
     // SWEEP UNMARKED OBJECTS
     //----------------------------------
 
-    printf("\nSweeping:\n");
+    debugPrint("\nSweeping:\n");
     {
         Obj * prev = nullptr;
         Obj * obj = objects_;
         while( obj != nullptr ){
+
+#ifdef DEBUG_TRACE_EXECUTION
             printf(" %p: ", obj);
             obj->print(true);
             printf("\n");
+#endif
             if( obj->isMarked ){
                 // Clear isMarked for next GC cycle:
                 obj->isMarked = false;
@@ -102,33 +100,36 @@ void Mem::collectGarbage() {
                 }else{
                     prev->next = obj; // bypass unused obj
                 }
+
+#ifdef DEBUG_TRACE_EXECUTION
                 printf("Delete %p: ", unused);
                 unused->print(true);
                 printf("\n");
+#endif
 
                 delete unused;
             }
         }
     }
-    printf("\nPost garbage collect list of objects:\n");
+
+#ifdef DEBUG_TRACE_EXECUTION
+    debugPrint("\nPost garbage collect list of objects:\n");
     {
         Obj * prev = nullptr;
         Obj * obj = objects_;
         if( obj == nullptr ) printf("(none)\n");
         while( obj != nullptr ){
+
             printf(" %p: ", obj);
             obj->print(true);
             printf("\n");
             obj = obj->next;
         }
     }
-
+#endif
 }
 
 void Mem::addGrayObj(Obj * obj) {
-    printf("Mark gray: ");
-    obj->print(true);
-    printf("\n");
     markedObjects_.push_back(obj);
 }
 
