@@ -703,27 +703,25 @@ void Compiler::parse_(Precedence precedence) {
     advance_();
 
     // Perform prefix rule of the token first:
-    auto prefixRule = getRule_(previousToken_.type)->prefix;
-    if( prefixRule == NULL ){
+    // Check whether assignment is possible and pass down to the rule (if it cares)
+    bool canAssign = precedence <= Precedence::ASSIGNMENT;
+    if( !prefixOperation_(previousToken_.type, canAssign) ){
         errorAtPrevious_("Expected expression");
         return;
     }
-    // Check whether assignment is possible and pass down to the rule (if it cares)
-    bool canAssign = precedence <= Precedence::ASSIGNMENT;
-    prefixRule(canAssign);
 
-    // Perforce infix rules on tokens from left to right:
+    // Perform infix rules on tokens from left to right:
     for( ;; ){
-        ParseRule const * rule = getRule_(currentToken_.type);
-        if( rule->precedence < precedence ){
+        const Token::Type type = currentToken_.type;
+        if( getInfixPrecedence_(type) < precedence ) {
             // Stop: the new token has lower precedence so is not part of the current operand
             break;
         }
         // Consume and then compile the operator:
         advance_();
-        rule->infix(canAssign);  // Can't be NULL as Precedence > NONE (refer getRule_ table)
+        infixOperation_(type);
     }
-    // handle a case where assignment is badly placed, otherwise this isn't handled!
+    // Handle a case where assignment is badly placed, otherwise this isn't handled!
     if( canAssign && match_(Token::EQUAL) ){
         errorAtPrevious_("Invalid assignment target.");
     }
@@ -787,30 +785,18 @@ void Compiler::unary_() {
     }
 }
 
-void Compiler::binary_() {
+void Compiler::binary_(uint8_t opCode) {
     // infix operator just got consumed, next token is the start of the second operand
     // the first operand is already compiled and will end up on the stack first
     Token::Type operatorType = previousToken_.type;
-    ParseRule const * rule = getRule_(operatorType);
+    int precedence = (int)getInfixPrecedence_(operatorType);
 
     // parse the second operand, and stop when the precendence is equal or lower
     // stopping when precedence is equal causes math to be left associative: 1+2+3 = (1+2)+3
-    parse_((Precedence)((int)rule->precedence + 1));
+    parse_((Precedence)(precedence + 1));
 
-    // now both operand values will end up on the stack. combine them:
-    switch( operatorType ){
-        case Token::BANG_EQUAL:    emitByte_(OpCode::NOT_EQUAL); break;
-        case Token::EQUAL_EQUAL:   emitByte_(OpCode::EQUAL); break;
-        case Token::GREATER:       emitByte_(OpCode::GREATER); break;
-        case Token::GREATER_EQUAL: emitByte_(OpCode::GREATER_EQUAL); break;
-        case Token::LESS:          emitByte_(OpCode::LESS); break;
-        case Token::LESS_EQUAL:    emitByte_(OpCode::LESS_EQUAL); break;
-        case Token::PLUS:          emitByte_(OpCode::ADD); break;
-        case Token::MINUS:         emitByte_(OpCode::SUBTRACT); break;
-        case Token::STAR:          emitByte_(OpCode::MULTIPLY); break;
-        case Token::SLASH:         emitByte_(OpCode::DIVIDE); break;
-        default: break;
-    }
+    // now both operand values will end up on the stack. emit the operation to combine theM
+    emitByte_(opCode);
 }
 
 void Compiler::call_() {
@@ -893,7 +879,6 @@ void Compiler::getSetVariable_(ObjString * name, bool canAssign) {
 
     // first, try to look up
     bool isConst;
-    printf("compiler %s, %p\n", name_->getCString(), currentEnv_);
     int res = currentEnv_->resolveLocal(this, name, isConst);
     if( res != Local::NOT_FOUND ){
         // its a local variable
@@ -929,67 +914,203 @@ void Compiler::getSetVariable_(ObjString * name, bool canAssign) {
     }
 }
 
-// Macros to define lambdas to call each function with or without parameter `canAssign`
-#define ASSIGNMENT_RULE(fn) [this](bool canAssign){ this->fn(canAssign); }
-#define RULE(fn) [this](bool canAssign){ (void) canAssign; this->fn(); }
+Precedence Compiler::getInfixPrecedence_(Token::Type type) {
+    switch( type ) {
+        case Token::LEFT_PAREN:
+        case Token::LEFT_BRACKET:
+            return Precedence::CALL;
 
-// Crazy shit happening below: compiler->this is not being preserved when second compile happens (e.g. debug then stdin)
+        case Token::STAR:
+        case Token::SLASH:
+            return Precedence::FACTOR;
 
-// TODO split into infix and prefix rule:
-ParseRule const * Compiler::getRule_(Token::Type type) {
-    static const ParseRule rules[] = {
-        // token type             prefix func                 infix func     infix precedence
-        [Token::LEFT_PAREN]    = {RULE(grouping_),            RULE(call_),   Precedence::CALL},
-        [Token::RIGHT_PAREN]   = {NULL,                       NULL,          Precedence::NONE},
-        [Token::LEFT_BRACE]    = {RULE(expressionBlock_),     NULL,          Precedence::NONE},
-        [Token::RIGHT_BRACE]   = {NULL,                       NULL,          Precedence::NONE},
-        [Token::LEFT_BRACKET]  = {RULE(list_),                RULE(index_),  Precedence::CALL},
-        [Token::RIGHT_BRACKET] = {NULL,                       NULL,          Precedence::NONE},
-        [Token::COMMA]         = {NULL,                       NULL,          Precedence::NONE},
-        [Token::MINUS]         = {RULE(unary_),               RULE(binary_), Precedence::TERM},
-        [Token::PLUS]          = {NULL,                       RULE(binary_), Precedence::TERM},
-        [Token::SEMICOLON]     = {NULL,                       NULL,          Precedence::NONE},
-        [Token::SLASH]         = {NULL,                       RULE(binary_), Precedence::FACTOR},
-        [Token::STAR]          = {NULL,                       RULE(binary_), Precedence::FACTOR},
-        [Token::BANG]          = {RULE(unary_),               NULL,          Precedence::NONE},
-        [Token::BANG_EQUAL]    = {NULL,                       RULE(binary_), Precedence::EQUALITY},
-        [Token::EQUAL]         = {NULL,                       NULL,          Precedence::NONE},
-        [Token::EQUAL_EQUAL]   = {NULL,                       RULE(binary_), Precedence::EQUALITY},
-        [Token::GREATER]       = {NULL,                       RULE(binary_), Precedence::COMPARISON},
-        [Token::GREATER_EQUAL] = {NULL,                       RULE(binary_), Precedence::COMPARISON},
-        [Token::LESS]          = {NULL,                       RULE(binary_), Precedence::COMPARISON},
-        [Token::LESS_EQUAL]    = {NULL,                       RULE(binary_), Precedence::COMPARISON},
-        [Token::IDENTIFIER]    = {ASSIGNMENT_RULE(variable_), NULL,          Precedence::NONE},
-        [Token::STRING]        = {RULE(string_),              NULL,          Precedence::NONE},
-        [Token::NUMBER]        = {RULE(number_),              NULL,          Precedence::NONE},
-        [Token::AND]           = {NULL,                       RULE(and_),    Precedence::NONE},
-        [Token::BOOL]          = {RULE(emitBoolType_),        NULL,          Precedence::NONE},
-        [Token::CONST]         = {NULL,                       NULL,          Precedence::NONE},
-        [Token::ELIF]          = {NULL,                       NULL,          Precedence::NONE},
-        [Token::ELSE]          = {NULL,                       NULL,          Precedence::NONE},
-        [Token::FALSE]         = {RULE(emitFalse_),           NULL,          Precedence::NONE},
-        [Token::FOR]           = {NULL,                       NULL,          Precedence::NONE},
-        [Token::FN]            = {RULE(funcAnonymous_),       NULL,          Precedence::NONE},
-        [Token::FLOAT]         = {RULE(emitFloatType_),       NULL,          Precedence::NONE},
-        [Token::IF]            = {RULE(ifExpression_),        NULL,          Precedence::NONE},
-        [Token::NIL]           = {RULE(emitNil_),             NULL,          Precedence::NONE},
-        [Token::OR]            = {NULL,                       RULE(or_),     Precedence::NONE},
-        [Token::OBJECT]        = {RULE(emitObjectType_),      NULL,          Precedence::NONE},
-        [Token::PRINT]         = {RULE(print_),               NULL,          Precedence::NONE},
-        [Token::ECHO]          = {RULE(echo_),                NULL,          Precedence::NONE},
-        [Token::RETURN]        = {NULL,                       NULL,          Precedence::NONE},
-        [Token::STRING_TYPE]   = {RULE(emitStringType_),      NULL,          Precedence::NONE},
-        [Token::TRUE]          = {RULE(emitTrue_),            NULL,          Precedence::NONE},
-        [Token::TYPE]          = {RULE(type_),                NULL,          Precedence::NONE},
-        [Token::TYPEID]        = {RULE(emitTypeIdType_),      NULL,          Precedence::NONE},
-        [Token::VAR]           = {NULL,                       NULL,          Precedence::NONE},
-        [Token::WHILE]         = {NULL,                       NULL,          Precedence::NONE},
-        [Token::ERROR]         = {NULL,                       NULL,          Precedence::NONE},
-        [Token::END]           = {NULL,                       NULL,          Precedence::NONE},
-    };
-    return &rules[type];
+        case Token::PLUS:
+        case Token::MINUS:
+            return Precedence::TERM;
+
+        case Token::GREATER:
+        case Token::GREATER_EQUAL:
+        case Token::LESS:
+        case Token::LESS_EQUAL:
+            return Precedence::COMPARISON;
+
+        case Token::BANG_EQUAL:
+        case Token::EQUAL_EQUAL:
+            return Precedence::EQUALITY;
+
+        case Token::AND:
+            return Precedence::AND;
+
+        case Token::OR:
+            return Precedence::OR;
+
+        case Token::LEFT_BRACE:
+        case Token::EQUAL:
+        case Token::BANG:
+        case Token::SEMICOLON:
+        case Token::RIGHT_PAREN:
+        case Token::RIGHT_BRACE:
+        case Token::RIGHT_BRACKET:
+        case Token::COMMA:
+        case Token::IDENTIFIER:
+        case Token::STRING:
+        case Token::NUMBER:
+        case Token::BOOL:
+        case Token::CONST:
+        case Token::ELIF:
+        case Token::ELSE:
+        case Token::FALSE:
+        case Token::FOR:
+        case Token::FN:
+        case Token::FLOAT:
+        case Token::IF:
+        case Token::NIL:
+        case Token::OBJECT:
+        case Token::PRINT:
+        case Token::ECHO:
+        case Token::RETURN:
+        case Token::STRING_TYPE:
+        case Token::TRUE:
+        case Token::TYPE:
+        case Token::TYPEID:
+        case Token::VAR:
+        case Token::WHILE:
+        case Token::ERROR:
+        case Token::END:
+        default:
+            return Precedence::NONE;
+    }
 }
-#undef RULE
+
+bool Compiler::infixOperation_(Token::Type type) {
+    switch( type ){
+        case Token::LEFT_PAREN:      call_();                           return true;
+        case Token::LEFT_BRACKET:    index_();                          return true;
+
+        case Token::STAR:            binary_(OpCode::MULTIPLY);         return true;
+        case Token::SLASH:           binary_(OpCode::DIVIDE);           return true;
+
+        case Token::PLUS:            binary_(OpCode::ADD);              return true;
+        case Token::MINUS:           binary_(OpCode::SUBTRACT);         return true;
+
+        case Token::GREATER:         binary_(OpCode::GREATER);          return true;
+        case Token::GREATER_EQUAL:   binary_(OpCode::GREATER_EQUAL);    return true;
+        case Token::LESS:            binary_(OpCode::LESS);             return true;
+        case Token::LESS_EQUAL:      binary_(OpCode::LESS_EQUAL);       return true;
+        case Token::BANG_EQUAL:      binary_(OpCode::NOT_EQUAL);        return true;
+        case Token::EQUAL_EQUAL:     binary_(OpCode::EQUAL);            return true;
+
+        case Token::AND:             and_();                            return true;
+
+        case Token::OR:              or_();                             return true;
+
+        case Token::EQUAL:
+        case Token::BANG:
+        case Token::SEMICOLON:
+        case Token::RIGHT_PAREN:
+        case Token::LEFT_BRACE:
+        case Token::RIGHT_BRACE:
+        case Token::RIGHT_BRACKET:
+        case Token::COMMA:
+        case Token::IDENTIFIER:
+        case Token::STRING:
+        case Token::NUMBER:
+        case Token::BOOL:
+        case Token::CONST:
+        case Token::ELIF:
+        case Token::ELSE:
+        case Token::FALSE:
+        case Token::FOR:
+        case Token::FN:
+        case Token::FLOAT:
+        case Token::IF:
+        case Token::NIL:
+        case Token::OBJECT:
+        case Token::PRINT:
+        case Token::ECHO:
+        case Token::RETURN:
+        case Token::STRING_TYPE:
+        case Token::TRUE:
+        case Token::TYPE:
+        case Token::TYPEID:
+        case Token::VAR:
+        case Token::WHILE:
+        case Token::ERROR:
+        case Token::END:
+        default:
+            return false;
+    }
+}
+
+bool Compiler::prefixOperation_(Token::Type type, bool canAssign) {
+    switch( type ){
+        // Control flow
+        case Token::LEFT_PAREN:    grouping_(); return true;
+        case Token::LEFT_BRACKET:  list_(); return true;
+        case Token::LEFT_BRACE:    expressionBlock_(); return true;
+        case Token::IF:            ifExpression_(); return true;
+        case Token::FN:            funcAnonymous_(); return true;
+
+        // Math
+        case Token::MINUS:         unary_(); return true;
+        case Token::BANG:          unary_(); return true;
+
+        // Values
+        case Token::STRING:        string_();return true;
+        case Token::NUMBER:        number_(); return true;
+        case Token::TRUE:          emitTrue_(); return true;
+        case Token::FALSE:         emitFalse_(); return true;
+        case Token::NIL:           emitNil_(); return true;
+
+        // Variables
+        case Token::IDENTIFIER:    variable_(canAssign);return true;
+
+        // Types
+        case Token::BOOL:          emitBoolType_(); return true;
+        case Token::FLOAT:         emitFloatType_(); return true;
+        case Token::STRING_TYPE:   emitStringType_(); return true;
+        case Token::OBJECT:        emitObjectType_(); return true;
+        case Token::TYPEID:        emitTypeIdType_(); return true;
+
+        // Built-in functions
+        case Token::PRINT:         print_(); return true;
+        case Token::ECHO:          echo_(); return true;
+        case Token::TYPE:          type_(); return true;
+
+        // TODO while-expressions and for-expressions
+        case Token::WHILE:
+        case Token::FOR:
+            return false;
+
+        // Not handled here
+        case Token::RIGHT_PAREN:
+        case Token::RIGHT_BRACE:
+        case Token::RIGHT_BRACKET:
+        case Token::COMMA:
+        case Token::PLUS:
+        case Token::SEMICOLON:
+        case Token::SLASH:
+        case Token::STAR:
+        case Token::AND:
+        case Token::OR:
+        case Token::RETURN:
+        case Token::CONST:
+        case Token::ELIF:
+        case Token::ELSE:
+        case Token::BANG_EQUAL:
+        case Token::EQUAL:
+        case Token::EQUAL_EQUAL:
+        case Token::GREATER:
+        case Token::GREATER_EQUAL:
+        case Token::LESS:
+        case Token::LESS_EQUAL:
+        case Token::VAR:
+        case Token::ERROR:
+        case Token::END:
+        default:
+            return false;
+    }
+}
 
 void Compiler::fatalError_(const char* fmt, ...) {
     hadFatalError_ = true;

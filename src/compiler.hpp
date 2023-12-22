@@ -4,8 +4,6 @@
 #include "scanner.hpp"
 #include "inputstream/inputstream.hpp"
 
-#include <functional>
-
 class Mem;
 class Compiler;
 
@@ -22,13 +20,6 @@ enum class Precedence {
   UNARY,       // ! -
   CALL,        // . () []
   PRIMARY
-};
-
-// Parse rule to define how to parse each token:
-struct ParseRule {
-    std::function<void(bool)> prefix;
-    std::function<void(bool)> infix;
-    Precedence precedence;
 };
 
 struct Local {
@@ -140,9 +131,8 @@ private:
     void consume_(Token::Type type, const char* fmt, ...);
     bool match_(Token::Type type);
     Chunk * getCurrentChunk_();
-    ParseRule const * getRule_(Token::Type type);
 
-    // parsing different types of things:
+    // parsing code structures:
     void expression_();
     bool declaration_(bool canBeExpression);  // returns isExpression
     bool statement_(bool canBeExpression);    // returns isExpression
@@ -155,6 +145,12 @@ private:
     void expressionBlock_();
     bool nestedBlock_(bool canBeExpression);  // returns isExpression
     void parse_(Precedence precedence);  // parse expressions with >= precendence
+
+    // parsing operations:
+    // all return true if the token was valid for the operation and the operation created
+    Precedence getInfixPrecedence_(Token::Type type);
+    bool prefixOperation_(Token::Type type, bool canAssign);
+    bool infixOperation_(Token::Type type);
     void call_();
     void list_();
     void type_();
@@ -166,7 +162,7 @@ private:
     void number_();
     void string_();
     void unary_();
-    void binary_();
+    void binary_(uint8_t opCode);
     void grouping_();  // parentheses in expressions
 
     // parsing functions:
