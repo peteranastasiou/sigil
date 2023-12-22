@@ -31,3 +31,10 @@ char StringInputStream::next() {
 char const * StringInputStream::getPath() {
   return nullptr;
 }
+
+InputStream * StringInputStream::newCopy() {
+    return new StringInputStream(line_);
+}
+
+void StringInputStream::close() {
+}

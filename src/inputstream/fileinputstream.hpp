@@ -10,7 +10,7 @@ class FileInputStream : public InputStream {
 public:
   FileInputStream();
 
-  ~FileInputStream();
+  virtual ~FileInputStream();
 
   bool open(char const * path);
 
@@ -21,6 +21,8 @@ public:
   virtual char next() override;
 
   virtual char const * getPath() override;
+
+  virtual InputStream * newCopy() override;
 
 private:
   bool next_();

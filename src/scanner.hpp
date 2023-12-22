@@ -48,9 +48,9 @@ public:
 
     Token scanToken();
 
-    Token peekToken();
-
     char const * getPath();
+
+    InputStream * newCopyOfStream();
 
     static uint16_t const MAX_LINES = 0xFFFF;
 

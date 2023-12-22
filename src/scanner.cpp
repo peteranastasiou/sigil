@@ -23,6 +23,10 @@ char const * Scanner::getPath() {
     return stream_->getPath();
 }
 
+InputStream * Scanner::newCopyOfStream() {
+    return stream_->newCopy();
+}
+
 Token Scanner::scanToken() {
     // first, gobble up whitespace and comments:
     skipWhitespace_();

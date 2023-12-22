@@ -60,3 +60,9 @@ bool FileInputStream::next_() {
 char const * FileInputStream::getPath() {
   return path_;
 }
+
+InputStream * FileInputStream::newCopy() {
+    auto f = new FileInputStream();
+    f->open(path_);
+    return f;
+}

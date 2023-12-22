@@ -3,7 +3,6 @@
 #include "debug.hpp"
 #include "mem.hpp"
 #include "function.hpp"
-#include "inputstream/fileinputstream.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -171,10 +170,6 @@ void Compiler::gcMarkRoots() {
     while( env != nullptr ){
         // Mark function
         if( env->function != nullptr ){
-            printf( "Mark function:" );
-            env->function->print(true);
-            printf("\n");
-
             env->function->gcMark();
         }
         // Mark the names of locals
@@ -1159,24 +1154,24 @@ void Compiler::errorAtVargs_(Token* token, const char* fmt, va_list args) {
     vfprintf(stderr, fmt, args);
     fprintf(stderr, "\n");
 
-    if( scanner_.getPath() ){
-        // Reopen the file to print the offending line:
-        FileInputStream fstream;
-        fstream.open(scanner_.getPath());
+    // Reopen the stream to print the offending line, if available:
+    InputStream * stream = scanner_.newCopyOfStream();
+    if( stream ){
         // fast forward to the line
         for( int line = 0; line < token->line-1; ){
-            char c = fstream.next();
+            char c = stream->next();
             if( c == '\n' ) line++;
             if( c == '\0' ) break;
         }
         // print the line
-        char c = fstream.next();
+        char c = stream->next();
         while( c != '\n' && c != '\0' ){
             fprintf(stderr, "%c", c);
-            c = fstream.next();
+            c = stream->next();
         }
         fprintf(stderr, "\n");
-        fstream.close();
+        stream->close();
+        delete stream;
 
         for( int i = 0; i < token->col - 2; ++i ){
             fprintf(stderr, " ");

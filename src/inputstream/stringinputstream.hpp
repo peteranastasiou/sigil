@@ -8,13 +8,17 @@ class StringInputStream : public InputStream {
 public:
   StringInputStream(char const * line);
 
-  ~StringInputStream();
+  virtual ~StringInputStream();
 
   virtual char peek() override;
 
   virtual char next() override;
 
   virtual char const * getPath() override;
+
+  virtual InputStream * newCopy() override;
+
+  virtual void close() override;
 
 private:
   char const * line_;

@@ -5,7 +5,7 @@
 
 class InputStream {
 public:
-  ~InputStream() {}
+  virtual ~InputStream() {}
 
   /**
    * return the next input character
@@ -23,4 +23,14 @@ public:
    * file path or nullptr if not applicable
    */
   virtual char const * getPath() = 0;
+
+  /**
+   * construct a copy of the stream (reset to the start)
+   */
+  virtual InputStream * newCopy() = 0;
+
+  /**
+   * close the stream
+   */
+  virtual void close() = 0;
 };
