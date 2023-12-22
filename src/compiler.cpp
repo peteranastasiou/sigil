@@ -367,8 +367,7 @@ void Compiler::funcDeclaration_() {
 
 void Compiler::funcAnonymous_() {
     // Parse a function used in an expression: fn(args) { statements }
-    // Use "fn" as the name, which conveniently was the previous token
-    function_(previousToken_.string, Environment::FUNCTION);
+    function_(mem_->EMPTY_STRING, Environment::FUNCTION);
 }
 
 void Compiler::function_(ObjString * name, Environment::Type type) {
