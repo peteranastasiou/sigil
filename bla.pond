@@ -1,5 +1,0 @@
-print 1 + 2;
-# this is a comment
-  print    31.556+4;
-print "Hello world";
-
