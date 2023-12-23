@@ -12,16 +12,18 @@ struct Token {
         LEFT_BRACKET, RIGHT_BRACKET,  // []
         COMMA, MINUS, PLUS,
         SEMICOLON, SLASH, STAR,
-        // One or two character tokens:
+        DOT,
+        // One or more character tokens:
         BANG, BANG_EQUAL,
         EQUAL, EQUAL_EQUAL,
         GREATER, GREATER_EQUAL,
         LESS, LESS_EQUAL,
+        COLON, COLON_EQUAL,
         // Literals:
         IDENTIFIER, STRING, NUMBER,   // TODO int
         // Keywords:
         AND, BOOL, CONST, ELIF, ELSE, FALSE,
-        FOR, FN, FLOAT, IF, NIL, OR, OBJECT,
+        FOR, FN, FLOAT, IF, IN, NIL, OR, OBJECT,
         PRINT, ECHO, RETURN, STRING_TYPE,
         TRUE, TYPE, TYPEID, VAR, WHILE,
         // Special tokens:
@@ -62,7 +64,6 @@ private:
                 c == '_';
     }
 
-    Token scan_();
     bool isAtEnd_();
     char peek_();
     char nextChar_();

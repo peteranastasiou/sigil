@@ -55,6 +55,7 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
         case OpCode::GET_UPVALUE:   return argInstruction_("GET_UPVALUE", chunk, offset);
         case OpCode::SET_UPVALUE:   return argInstruction_("SET_UPVALUE", chunk, offset);
         case OpCode::EQUAL:         return simpleInstruction_("EQUAL"); 
+        case OpCode::EQUAL_PEEK:    return simpleInstruction_("EQUAL_PEEK"); 
         case OpCode::NOT_EQUAL:     return simpleInstruction_("NOT_EQUAL");     
         case OpCode::GREATER:       return simpleInstruction_("GREATER");   
         case OpCode::GREATER_EQUAL: return simpleInstruction_("GREATER_EQUAL");         

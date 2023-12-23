@@ -59,10 +59,12 @@ Token Scanner::scanToken() {
         case '+': return makeToken_(Token::PLUS);
         case '/': return makeToken_(Token::SLASH);
         case '*': return makeToken_(Token::STAR);
+        case '.': return makeToken_(Token::DOT);
         case '!': return makeToken_(matchNext_('=') ? Token::BANG_EQUAL : Token::BANG);
         case '=': return makeToken_(matchNext_('=') ? Token::EQUAL_EQUAL : Token::EQUAL);
         case '<': return makeToken_(matchNext_('=') ? Token::LESS_EQUAL : Token::LESS);
         case '>': return makeToken_(matchNext_('=') ? Token::GREATER_EQUAL : Token::GREATER);
+        case ':': return makeToken_(matchNext_('=') ? Token::COLON_EQUAL : Token::COLON);
         case '"': return makeStringToken_();
     }
 
@@ -217,14 +219,22 @@ Token::Type Scanner::identifierType_() {
             if( tokenStrLen_ > 1 ){
                 switch( tokenStr_[1] ){
                     case 'a': return checkKeyword_(2, 3, "lse", Token::FALSE);
-                    case 'o': return checkKeyword_(2, 1, "r", Token::FALSE);
+                    case 'o': return checkKeyword_(2, 1, "r", Token::FOR);
                     case 'l': return checkKeyword_(2, 3, "oat", Token::FLOAT);
                     case 'n': return Token::FN;
                 }
             }
             break;
         }
-        case 'i': return checkKeyword_(1, 1, "f", Token::IF);
+        case 'i': {
+            if( tokenStrLen_ == 2 ){
+                switch( tokenStr_[1] ){
+                    case 'f': return Token::IF;
+                    case 'n': return Token::IN;
+                }
+            }
+            break;
+        }
         case 'n': return checkKeyword_(1, 2, "il", Token::NIL);
         case 'o': {
             if( tokenStrLen_ > 1 ){

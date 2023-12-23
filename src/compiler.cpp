@@ -44,14 +44,16 @@ bool Environment::addLocal(ObjString * name, bool isConst) {
     return true;
 }
 
-void Environment::defineLocal() {
+uint8_t Environment::defineLocal() {
     // Mark local as having a value now:
-    locals[localCount-1].isDefined = true;
+    uint8_t latest = localCount-1;
+    locals[latest].isDefined = true;
+    return latest;
 }
 
 int Environment::resolveLocal(Compiler * c, ObjString * name, bool & isConst) {
     // search for a local by name in the environment
-    // NOTE: searching from higher depth to lower, to support shadowing correctly
+    // NOTE: searching from inner (deepest) to outer, to support shadowing correctly
     for( int i = localCount-1; i >= 0; i-- ){
         Local * local = &locals[i];
         if( name == local->name ){
@@ -329,9 +331,7 @@ bool Compiler::declaration_(bool canBeExpression) {
     }else if( match_(Token::CONST) ){
         varDeclaration_(true);
 
-    }else if( check_(Token::FN) ){
-        // Now we can eat the FN token:
-        advance_();
+    }else if( match_(Token::FN) ){
         funcDeclaration_();
 
     }else{
@@ -349,7 +349,7 @@ void Compiler::funcDeclaration_() {
     bool isConst = true;  // Disallow redefining functions
 
     // Load the function variable name, getting the literals index (if global) or 0 (if local):
-    uint8_t global = parseVariable_("Expected variable name.", isConst, isLocal);
+    uint8_t global = parseVariable_("Expected function name.", isConst, isLocal);
 
     // capture function name for the environment too:
     ObjString * name = previousToken_.string;
@@ -513,6 +513,10 @@ bool Compiler::statement_(bool canBeExpression) {
         whileStatement_();
         return false;  // statement only (for now!)
 
+    }else if( match_(Token::FOR) ){
+        forStatement_();
+        return false;  // statement only (for now!)
+
     }else if( match_(Token::LEFT_BRACE) ){
         // recurse into a nested scope:
         return nestedBlock_(canBeExpression);
@@ -633,6 +637,64 @@ void Compiler::whileStatement_() {
     emitLoop_(loopStart);
     // escape the loop to here:
     setJumpDestination_(jumpToEnd);
+}
+
+void Compiler::forStatement_() {
+    // Scope for the loop variable
+    currentEnv_->beginScope();
+
+    // TODO support inclusive end value, implicit initial value, & decrementing loops
+
+    // next up is the loop variable
+    bool isConst = true;  // loop variable is const for the user, but vm can increment it!
+    bool isLocal = true;
+    parseVariable_("Expected loop variable name.", isConst, isLocal);
+    consume_(Token::IN, "Expected 'in' after loop variable.");
+
+    // The initial value
+    expression_();
+    uint8_t localPos = currentEnv_->defineLocal();
+
+    // The range separator
+    consume_(Token::COLON, "Expected ':' after initial value");
+
+    // Evaluate the end value.
+    expression_();
+    // TODO add 1 if inclusive end?
+
+    // Remember where to loop back to
+    int loopStart = getCurrentChunk_()->count();
+
+    // Check whether we should exit
+    emitByte_(OpCode::EQUAL_PEEK);
+
+    // Jump out of the loop if the end condition is met.
+    int jumpToEnd = emitJump_(OpCode::JUMP_IF_TRUE_POP);
+
+    // The body of the for loop
+    consume_(Token::LEFT_BRACE, "Expected '{' after loop range.");
+    nestedBlock_(false);
+
+    // TODO decrement or increment depending on comparison
+    // Now do the increment
+    emitBytes_(OpCode::GET_LOCAL, localPos);
+    //emitByte_(OpCode::COMPARE_PEEK);  // puts -1, 1 or 0 to the stack
+    emitLiteral_(Value::number(1));  // for now we only support upward increments
+    emitByte_(OpCode::ADD);
+    emitBytes_(OpCode::SET_LOCAL, localPos);
+    emitByte_(OpCode::POP);  // Clean up the value used by SET_LOCAL
+
+    // Loop back 
+    emitLoop_(loopStart);
+
+    // This is where we exit
+    setJumpDestination_(jumpToEnd);
+
+    // Pop the end value
+    emitByte_(OpCode::POP);
+
+    // Pop the loop variable
+    currentEnv_->endScope(this);
 }
 
 void Compiler::synchronise_() {
@@ -1006,6 +1068,7 @@ bool Compiler::infixOperation_(Token::Type type) {
         case Token::RIGHT_BRACE:
         case Token::RIGHT_BRACKET:
         case Token::COMMA:
+        case Token::DOT:
         case Token::IDENTIFIER:
         case Token::STRING:
         case Token::NUMBER:

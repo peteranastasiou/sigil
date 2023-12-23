@@ -92,8 +92,9 @@ struct Environment {
 
     /**
      * mark latest local as initialised
+     * @return the index of the latest local
      */
-    void defineLocal();
+    uint8_t defineLocal();
 
     /**
      * Enter another level of scope depth
@@ -140,6 +141,7 @@ private:
     void ifExpression_();
     bool if_(bool canBeExpression);           // returns isExpression
     void whileStatement_();
+    void forStatement_();
     void synchronise_();
     bool block_(bool canBeExpression);        // returns isExpression
     void expressionBlock_();

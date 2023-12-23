@@ -358,6 +358,10 @@ InterpretResult Vm::run_() {
                 push(Value::boolean( pop().equals(pop()) ));
                 break;
             }
+            case OpCode::EQUAL_PEEK: {
+                push(Value::boolean( peek(0).equals(peek(1)) ));
+                break;
+            }
             case OpCode::NOT_EQUAL: {
                 push(Value::boolean( !pop().equals(pop()) ));
                 break;
