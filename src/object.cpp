@@ -7,7 +7,7 @@
 
 Obj::Obj(Mem * mem): mem_(mem) {
 
-#ifdef DEBUG_TRACE_EXECUTION
+#ifdef DEBUG_GC
     printf("New obj at %p\n", this);
 #endif
 

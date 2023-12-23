@@ -52,6 +52,7 @@ DEFINES =
 # Enable debug messages:
 ifeq ($(VERBOSE), 1)
 	DEFINES += -DDEBUG_TRACE_EXECUTION
+#    DEFINES += -DDEBUG_GC
 endif
 
 # Disable assert() calls:

@@ -92,7 +92,7 @@ public:
         // Mark all keys and values as in-use for the garbage collector:
         for( auto & [key, value] : map_ ){
 
-#ifdef DEBUG_TRACE_EXECUTION
+#ifdef DEBUG_GC
             printf( "Mark key-value entry for key:" );
             ((ObjString *)key)->print(true);
             printf("\n");

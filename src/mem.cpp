@@ -22,7 +22,7 @@ void Mem::init(Vm * vm) {
 }
 
 void Mem::collectGarbage() {
-    debugPrint("\n\nRunning garbage collector\n");
+    debugGcPrint("\n\nRunning garbage collector\n");
 
     if( !init_ ) return;
 
@@ -30,7 +30,7 @@ void Mem::collectGarbage() {
     // MARK ROOTS
     //--------------------------------
     // Mark objects owned by vm:
-    debugPrint( "GC Mark roots:\n" );
+    debugGcPrint( "GC Mark roots:\n" );
     vm_->gcMarkRoots();
 
     // Mark open upvalues:
@@ -46,7 +46,7 @@ void Mem::collectGarbage() {
     //--------------------------------
     // MARK REFERENCES
     //--------------------------------
-    debugPrint( "\nMark references: %i\n", (int)markedObjects_.size() );
+    debugGcPrint( "\nMark references: %i\n", (int)markedObjects_.size() );
     while( markedObjects_.size() > 0 ){
         // Pop last marked object
         Obj * o = markedObjects_.back();
@@ -74,13 +74,13 @@ void Mem::collectGarbage() {
     // SWEEP UNMARKED OBJECTS
     //----------------------------------
 
-    debugPrint("\nSweeping:\n");
+    debugGcPrint("\nSweeping:\n");
     {
         Obj * prev = nullptr;
         Obj * obj = objects_;
         while( obj != nullptr ){
 
-#ifdef DEBUG_TRACE_EXECUTION
+#ifdef DEBUG_GC
             printf(" %p: ", obj);
             obj->print(true);
             printf("\n");
@@ -101,7 +101,7 @@ void Mem::collectGarbage() {
                     prev->next = obj; // bypass unused obj
                 }
 
-#ifdef DEBUG_TRACE_EXECUTION
+#ifdef DEBUG_GC
                 printf("Delete %p: ", unused);
                 unused->print(true);
                 printf("\n");
@@ -112,8 +112,8 @@ void Mem::collectGarbage() {
         }
     }
 
-#ifdef DEBUG_TRACE_EXECUTION
-    debugPrint("\nPost garbage collect list of objects:\n");
+#ifdef DEBUG_GC
+    debugGcPrint("\nPost garbage collect list of objects:\n");
     {
         Obj * prev = nullptr;
         Obj * obj = objects_;
