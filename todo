@@ -1,0 +1,24 @@
+ [x]- implement incremental scanner with extra level of look ahead to check for anonymous function
+ [x]   - makeToken_ needs to allocate a new string object if its an identifier (not if its a keyword)
+ [x]- decide what to do about statement level anonymous functions: rewind scanner or swap anonymous function symbol to @ or $ -- rewind is nicer!
+
+ [x]- garbage collection
+ [x]- undo rewind work. uncaptured executed anon functions are now not supported - consider "lambda" keyword for anonymous functions?
+
+ []- for i in 0..10 | ..10 | 0..=9 | 9..-1 | 9..=0
+ []- bytecode intermediate format, output/input from file
+ []- continue following book from 25.4.4
+ []- test for multiple upvalues captured - editing changes all references
+ []- while expression
+ []- error types - @ catch block after function  -- does return output a value or return from surrounding function?
+ []- better internal error management (reified errors)
+ []- 
+ []- structs / objects
+
+ideas
+ []- usage as preprocessor with -pp
+ []- simple standard lib:
+    - stdin
+    - fileio
+ []- rest server
+ []- c++ interop with abstract classes

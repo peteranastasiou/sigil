@@ -1,44 +1,77 @@
 #pragma once
 
 #include "object.hpp"
-#include "str.hpp"
-#include <string>
-#include <string.h>
+
+// Predeclare object types
+class ObjString;
+class ObjList;
+class ObjFunction;
+class ObjClosure;
+class ObjUpvalue;
 
 struct Value {
+    /**
+     * internal types
+     */
     enum Type {
-        NIL,
+        // Primitive types:
+        NIL = 0,  // Must be 0 so we can clear memory to NIL
         BOOL,
-        NUMBER,
-        OBJECT
+        NUMBER,  // TODO rename to FLOAT, add INT type
+        TYPEID,
+        // Garbage-Collected Object Types:
+        STRING,
+        LIST,
+        FUNCTION,
+        CLOSURE,
+        UPVALUE
     } type;
 
     union {
         bool boolean;
         double number;
         Obj * obj;
+        Type typeId;
     } as;
 
     // Constructor-likes:
     static inline Value nil() { return (Value){NIL, {.number = 0}}; }
     static inline Value boolean(bool b) { return (Value){BOOL, {.boolean = b}}; }
     static inline Value number(double n) { return (Value){NUMBER, {.number = n}}; }
-    static inline Value object(Obj * o) { return (Value){OBJECT, {.obj = o}}; }
+    static inline Value typeId(Type t) {
+        if( t == NIL ) return Value::nil();     // We want type(nil) == nil
+        return (Value){TYPEID, {.typeId = t}};
+    }
+    static inline Value string(Obj * o) { return (Value){STRING, {.obj = o}}; }
+    static inline Value list(Obj * o) { return (Value){LIST, {.obj = o}}; }
+    static inline Value function(Obj * o) { return (Value){FUNCTION, {.obj = o}}; }
+    static inline Value closure(Obj * o) { return (Value){CLOSURE, {.obj = o}}; }
+    static inline Value upvalue(Obj * o) { return (Value){UPVALUE, {.obj = o}}; }
+
+    // Type to string
+    static char const * typeToString(Type t);
 
     // Helpers for value types
     inline bool isNil() const { return type == NIL; }
     inline bool isBoolean() const { return type == BOOL; }
     inline bool isNumber() const { return type == NUMBER; }
-    inline bool isObject() const { return type == OBJECT; }
+    inline bool isTypeId() const { return type == TYPEID; }
+    inline bool isString() const { return type == STRING; }
+    inline bool isList() const { return type == LIST; }
+    inline bool isFunction() const { return type == FUNCTION; }
+    inline bool isClosure() const { return type == CLOSURE; }
+    inline bool isUpvalue() const { return type == UPVALUE; }
 
-    // Helpers for object types
-    inline bool isObjType(Obj::Type t) const { return isObject() && as.obj->type == t; }
-    inline bool isString() const { return isObjType(Obj::Type::STRING); }
-    inline ObjString * asObjString() const { return (ObjString*)as.obj; }
-    inline char const * asCString() const { return asObjString()->get(); }
+    // As object helpers:
+    ObjString * asObjString() const;
+    ObjList * asObjList() const;
+    ObjFunction * asObjFunction() const;
+    ObjClosure * asObjClosure() const;
+    ObjUpvalue * asObjUpvalue() const;
 
     // value methods
+    void gcMark();
     bool equals(Value other) const;
-    ObjString * toString(Vm * vm);
-    void print() const;
+    ObjString * toString(Mem * mem);
+    void print(bool verbose) const;
 };

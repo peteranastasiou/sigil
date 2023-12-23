@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
-// predeclare Vm
-class Vm;
+// predeclare Mem
+class Mem;
 
 /**
  * Interface for strings
@@ -50,24 +50,32 @@ public:
     /**
      * Constructor helpers - copies string memory into this class
      */
-    static ObjString * newString(Vm * vm, char const * str);
-    static ObjString * newString(Vm * vm, char const * str, int length);
+    static ObjString * newString(Mem * mem, char const * str);
+    static ObjString * newString(Mem * mem, char const * str, int length);
 
     /**
      * Constructor helper to make a new formatted string
      */
-    static ObjString * newStringFmt(Vm * vm, char const * format, ...);
+    static ObjString * newStringFmt(Mem * mem, char const * format, ...);
 
     /**
      * Constructor helper to make a string from two other strings
      */
-    static ObjString * concatenate(Vm * vm, ObjString * a, ObjString * b);
+    static ObjString * concatenate(Mem * mem, ObjString * a, ObjString * b);
+
+    /**
+     * Indexing into string:
+     */
+    bool get(int index, char & value);
+
+    char const * getCString() { return chars_; }
 
     virtual ~ObjString();
 
     // implment Obj interface (trivial for strings)
     virtual ObjString * toString() override { return this; }
-    virtual void print() override { printf("%s", chars_); }
+    virtual void print(bool verbose) override;
+    virtual void gcMarkRefs() override {}
 
     // implement String interface:
     virtual char const * get() const override { return chars_; }
@@ -77,7 +85,7 @@ public:
 private:
     // Private constructor: must construct with helper!
     // Takes ownership of str
-    ObjString(Vm * vm, char const * str, int length);
+    ObjString(Mem * mem, char const * str, int length);
 
     char const * chars_;  // null terminated sequence
     int length_;          // number of characters, NOT including null terminator

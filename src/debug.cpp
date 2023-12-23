@@ -4,14 +4,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "function.hpp"
 
-Dissassembler::Dissassembler(){
+
+Disassembler::Disassembler(){
 }
 
-Dissassembler::~Dissassembler(){
+Disassembler::~Disassembler(){
 }
 
-void Dissassembler::disassembleChunk(Chunk * chunk, char const * name){
+void Disassembler::disassembleChunk(Chunk * chunk, char const * name){
     printf("== %s ==\n", name);
 
     for( int offset = 0; offset < chunk->count(); ) {
@@ -21,27 +23,39 @@ void Dissassembler::disassembleChunk(Chunk * chunk, char const * name){
     }
 }
 
-int Dissassembler::disassembleInstruction(Chunk * chunk, int offset){
+int Disassembler::disassembleInstruction(Chunk * chunk, int offset){
     int line = chunk->getLineNumber(offset);
     return disassembleInstruction_(chunk, offset, line);
 }
 
-int Dissassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
+int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
     printf("%04i ", offset);
     printf("%4d ", line);
 
     uint8_t instr = chunk->code[(size_t)offset];
     switch(instr){
-        case OpCode::CONSTANT:      return constantInstruction_("CONSTANT", chunk, offset);
+        case OpCode::LITERAL:       return literalInstruction_("LITERAL", chunk, offset);
+        case OpCode::CLOSURE:       return closureInstruction_("CLOSURE", chunk, offset);
         case OpCode::NIL:           return simpleInstruction_("NIL");
         case OpCode::TRUE:          return simpleInstruction_("TRUE");
         case OpCode::FALSE:         return simpleInstruction_("FALSE");
+        case OpCode::TYPE_BOOL:     return simpleInstruction_("TYPE_BOOL");
+        case OpCode::TYPE_FLOAT:    return simpleInstruction_("TYPE_FLOAT");
+        case OpCode::TYPE_FUNCTION: return simpleInstruction_("TYPE_FUNCTION");
+        case OpCode::TYPE_STRING:   return simpleInstruction_("TYPE_STRING");
         case OpCode::ADD:           return simpleInstruction_("ADD");
         case OpCode::POP:           return simpleInstruction_("POP");
-        case OpCode::DEFINE_GLOBAL: return constantInstruction_("DEFINE_GLOBAL", chunk, offset);
-        case OpCode::GET_GLOBAL:    return constantInstruction_("GET_GLOBAL", chunk, offset);
-        case OpCode::SET_GLOBAL:    return constantInstruction_("SET_GLOBAL", chunk, offset);
+        case OpCode::CLOSE_UPVALUE:       return simpleInstruction_("CLOSE_UPVALUE");
+        case OpCode::DEFINE_GLOBAL_VAR:   return literalInstruction_("DEFINE_GLOBAL_VAR", chunk, offset);
+        case OpCode::DEFINE_GLOBAL_CONST: return literalInstruction_("DEFINE_GLOBAL_CONST", chunk, offset);
+        case OpCode::GET_GLOBAL:    return byteInstruction_("GET_GLOBAL", chunk, offset);
+        case OpCode::SET_GLOBAL:    return byteInstruction_("SET_GLOBAL", chunk, offset);
+        case OpCode::GET_LOCAL:     return argInstruction_("GET_LOCAL", chunk, offset);
+        case OpCode::SET_LOCAL:     return argInstruction_("SET_LOCAL", chunk, offset);
+        case OpCode::GET_UPVALUE:   return argInstruction_("GET_UPVALUE", chunk, offset);
+        case OpCode::SET_UPVALUE:   return argInstruction_("SET_UPVALUE", chunk, offset);
         case OpCode::EQUAL:         return simpleInstruction_("EQUAL"); 
+        case OpCode::EQUAL_PEEK:    return simpleInstruction_("EQUAL_PEEK"); 
         case OpCode::NOT_EQUAL:     return simpleInstruction_("NOT_EQUAL");     
         case OpCode::GREATER:       return simpleInstruction_("GREATER");   
         case OpCode::GREATER_EQUAL: return simpleInstruction_("GREATER_EQUAL");         
@@ -53,6 +67,14 @@ int Dissassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
         case OpCode::NEGATE:        return simpleInstruction_("NEGATE");
         case OpCode::NOT:           return simpleInstruction_("NOT");
         case OpCode::PRINT:         return simpleInstruction_("PRINT");
+        case OpCode::TYPE:          return simpleInstruction_("TYPE");
+        case OpCode::JUMP:          return jumpInstruction_("JUMP", 1, chunk, offset);
+        case OpCode::LOOP:          return jumpInstruction_("LOOP", 1, chunk, offset);
+        case OpCode::JUMP_IF_TRUE:  return jumpInstruction_("JUMP_IF_TRUE", 1, chunk, offset);
+        case OpCode::JUMP_IF_FALSE: return jumpInstruction_("JUMP_IF_FALSE", 1, chunk, offset);
+        case OpCode::JUMP_IF_TRUE_POP: return jumpInstruction_("JUMP_IF_TRUE_POP", 1, chunk, offset);
+        case OpCode::JUMP_IF_FALSE_POP: return jumpInstruction_("JUMP_IF_FALSE_POP", 1, chunk, offset);
+        case OpCode::CALL:          return byteInstruction_("CALL", chunk, offset);
         case OpCode::RETURN:        return simpleInstruction_("RETURN");
         default:
             printf("Unknown opcode %i\n", instr);
@@ -60,42 +82,80 @@ int Dissassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
     }
 }
 
-int Dissassembler::constantInstruction_(char const * name, Chunk * chunk, int offset){
-    uint8_t constantIdx = chunk->code[offset + 1];
-    printf("%-16s %4d '", name, constantIdx);
-    chunk->constants[constantIdx].print();
-    printf("'\n");
+int Disassembler::literalInstruction_(char const * name, Chunk * chunk, int offset){
+    uint8_t literalIdx = chunk->code[offset + 1];
+    printf("%-16s %4d ", name, literalIdx);
+    chunk->literals[literalIdx].print(true);
+    printf("\n");
     return 2;
 }
 
-int Dissassembler::simpleInstruction_(char const * name){
+int Disassembler::closureInstruction_(char const * name, Chunk * chunk, int offset){
+    int initialOffset = offset;
+    offset ++;
+    uint8_t literalIdx = chunk->code[offset++];
+    printf("%-16s %4d ", name, literalIdx);
+    chunk->literals[literalIdx].print(true);
+    printf("\n");
+
+    ObjFunction* fn = chunk->literals[literalIdx].asObjFunction();
+    for (int j = 0; j < fn->numUpvalues; j++) {
+        int isLocal = chunk->code[offset++];
+        int index = chunk->code[offset++];
+        printf("%04d      |                     %s %d\n",
+                offset - 2, isLocal ? "local" : "upvalue", index);
+    }
+
+    return offset - initialOffset;
+}
+
+int Disassembler::byteInstruction_(const char* name, Chunk* chunk, int offset) {
+  uint8_t b = chunk->code[offset + 1];
+  printf("%-16s %4d\n", name, b);
+  return 2;
+}
+
+int Disassembler::argInstruction_(char const * name, Chunk * chunk, int offset){
+    uint8_t arg = chunk->code[offset + 1];
+    printf("%-16s %4d\n", name, arg);
+    return 2;
+}
+
+int Disassembler::simpleInstruction_(char const * name){
     printf("%s\n", name);
     return 1;
 }
 
-void debugScanner(char const * source) {
-    Scanner scanner;
-    scanner.init(source);
-    int line = -1;
-    for(;;){
-        Token token = scanner.scanToken();
-        if( token.line != line ){
-            printf("%4d ", token.line);
-            line = token.line;
-        }else{
-            printf("   | ");
-        }
-        printToken(token);
-        printf("\n");
-        if( token.type == Token::END ){
-            break;
-        }
-    }
+int Disassembler::jumpInstruction_(const char* name, int sign, Chunk* chunk, int offset) {
+    int jumpLen = (chunk->code[offset + 1] << 8) | chunk->code[offset + 2];
+    printf("%-16s %4d -> %d\n", name, offset,
+            offset + 3 + sign * jumpLen);
+    return 3;
 }
 
-void printToken(Token token) {
-    printf("%s '%.*s'", tokenTypeToStr(token.type), token.length, token.start); 
-}
+// void debugScanner(char const * source) {
+//     Scanner scanner;
+//     scanner.init(source);
+//     int line = -1;
+//     for(;;){
+//         Token token = scanner.scanToken();
+//         if( token.line != line ){
+//             printf("%4d ", token.line);
+//             line = token.line;
+//         }else{
+//             printf("   | ");
+//         }
+//         printToken(token);
+//         printf("\n");
+//         if( token.type == Token::END ){
+//             break;
+//         }
+//     }
+// }
+
+// void printToken(Token token) {
+//     printf("%s '%.*s'", tokenTypeToStr(token.type), token.length, token.start); 
+// }
 
 char const * tokenTypeToStr(Token::Type t) {
     switch(t) {           
@@ -121,6 +181,7 @@ char const * tokenTypeToStr(Token::Type t) {
         case Token::STRING:         return "STRING";
         case Token::NUMBER:         return "NUMBER";
         case Token::AND:            return "AND";
+        case Token::CONST:          return "CONST";
         case Token::ELSE:           return "ELSE";
         case Token::FALSE:          return "FALSE";
         case Token::FOR:            return "FOR";
@@ -131,6 +192,7 @@ char const * tokenTypeToStr(Token::Type t) {
         case Token::PRINT:          return "PRINT";
         case Token::RETURN:         return "RETURN";
         case Token::TRUE:           return "TRUE";
+        case Token::TYPE:           return "TYPE";
         case Token::VAR:            return "VAR";
         case Token::WHILE:          return "WHILE";
         case Token::ERROR:          return "ERROR";
@@ -143,9 +205,9 @@ char const * tokenTypeToStr(Token::Type t) {
 void debugObjectLinkedList(Obj * obj) {
     printf("Objects:\n");
     while( obj != nullptr ){
-        printf("  %p: [", obj);
-        obj->print();
-        printf("]\n");
+        printf("  %p: ", obj);
+        obj->print(true);
+        printf("\n");
         obj = obj->next;
     }
 }

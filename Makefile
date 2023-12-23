@@ -3,11 +3,16 @@
 
 CC = g++
 
+
+# TODO switch on cmakegoals debug
 # Whether to build for debugging instead of release
-DEBUG = 0
+DEBUG = 1
 
 # Whether to enable verbose execution trace debugging
-DEBUG_TRACE_EXECUTION = 1
+#VERBOSE = 1
+
+# Whether to enable garbage collection as often as possible
+DEBUG_STRESS_GC = 1
 
 # Compilation flags
 CFLAGS = -std=c++17 -W -Wall -Wextra -Werror -Wno-unused -Wconversion -MMD -MP -fno-exceptions
@@ -25,9 +30,10 @@ else
 	LDFLAGS += -O2
 endif
 
-TARGET = bin/pond
+TARGET = bin/sigil
 
 OBJECTS = $(patsubst src/%.cpp, build/%.o, $(wildcard src/*.cpp))
+OBJECTS += $(patsubst src/inputstream/%.cpp, build/inputstream__%.o, $(wildcard src/inputstream/*.cpp))
 DEPS = $(OBJECTS:.o=.d)
 
 ifeq ($(OS), Windows_NT)
@@ -44,13 +50,18 @@ endif
 DEFINES = 
 
 # Enable debug messages:
-ifeq ($(DEBUG_TRACE_EXECUTION), 1)
+ifeq ($(VERBOSE), 1)
 	DEFINES += -DDEBUG_TRACE_EXECUTION
+#    DEFINES += -DDEBUG_GC
 endif
 
 # Disable assert() calls:
 ifeq ($(DEBUG), 0)
 	DEFINES += -DNDEBUG
+endif
+
+ifeq ($(DEBUG_STRESS_GC), 1)
+	DEFINES += -DDEBUG_STRESS_GC
 endif
 
 LIBS = -lreadline
@@ -64,6 +75,10 @@ $(TARGET): $(OBJECTS)
 
 # Compile sources
 build/%.o: src/%.cpp
+	@$(MKDIR_BUILD)
+	$(CC) $(CFLAGS) $(DEFINES) -c $< -o $@
+
+build/inputstream__%.o: src/inputstream/%.cpp
 	@$(MKDIR_BUILD)
 	$(CC) $(CFLAGS) $(DEFINES) -c $< -o $@
 

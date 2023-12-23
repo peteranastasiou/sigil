@@ -1,0 +1,11 @@
+
+var myVar = 0;
+var b = 4;
+{
+    myVar = 1;
+    b = myVar;
+    var myVar = 2;
+    print(myVar);
+}
+print(myVar);
+print(b);

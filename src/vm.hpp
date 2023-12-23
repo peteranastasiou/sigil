@@ -1,11 +1,16 @@
 #pragma once
 
+#include "mem.hpp"
 #include "chunk.hpp"
 #include "value.hpp"
 #include "object.hpp"
 #include "table.hpp"
+#include "inputstream/inputstream.hpp"
 
 #include <unordered_map>
+
+// Predeclare compiler
+class Compiler;
 
 enum class InterpretResult {
     OK,
@@ -13,45 +18,65 @@ enum class InterpretResult {
     RUNTIME_ERR
 };
 
+struct CallFrame {
+    inline uint8_t readByte() { return *ip++; }
+    uint16_t readUint16();
+    Value readLiteral();
+    ObjString * readString();
+    int chunkOffsetOf(uint8_t * addr);  // instruction address to chunk offset
+
+    ObjClosure * closure;
+    uint8_t * ip;   // instruction pointer
+    Value * slots;  // first value in stack which can be used by function
+};
+
+struct Global {
+    Value value;
+    bool isConst;
+
+    //  Implement gc mark to use as hashmap element:
+    void gcMark() {
+        value.gcMark();
+    }
+};
+
 class Vm {
 public:
     Vm();
-    
     ~Vm();
 
-    InterpretResult interpret(char const * source);
+    void init();
+
+    InterpretResult interpret(char const * name, InputStream * stream);
+
+    // Mark root objects to preserve from garbage collection:
+    void gcMarkRoots();
 
     // stack operations:
     void push(Value value);
     Value pop();
+    void pop(int n);
     Value peek(int index);  // index counts from top (end) of stack
 
-    // adding/removing objects, called from Obj(), ~Obj()
-    void registerObj(Obj * obj);
-    void deregisterObj(Obj * obj);
-
-    // intern string helper
-    StringSet * getInternedStrings(){ return &internedStrings_; }
-
 private:
+    void resetStack_();
     InterpretResult run_();
-    inline uint8_t readByte_() { return *ip_++; }
-    inline void resetStack_() { stackTop_ = stack_; }
+    bool call_(ObjClosure * fn, uint8_t argCount);
+    bool callValue_(Value value, uint8_t argCount);
     bool binaryOp_(uint8_t op);
     bool isTruthy_(Value value);
     void concatenate_();
-    void runtimeError_(const char* format, ...);
-    Value readConstant_();
-    ObjString * readString_();
-    void freeObjects_();
+    bool indexGet_();
+    InterpretResult runtimeError_(const char* format, ...);
 
-    static int const STACK_MAX = 256;
+    static int const FRAMES_MAX = 64;
+    static int const STACK_MAX = FRAMES_MAX * 256;
 
-    Chunk * chunk_;     // current chunk of bytecode
-    uint8_t * ip_;      // instruction pointer
+    Mem mem_;
+    Compiler * compiler_;
+    CallFrame frames_[FRAMES_MAX];  // TODO to allow continuations/generators, this can't be a stack, GC instead
+    int frameCount_;
     Value stack_[STACK_MAX];
     Value * stackTop_;  // points past the last value in the stack
-    Obj * objects_;     // linked list of objects
-    StringSet internedStrings_;
-    HashMap globals_; 
+    HashMap<Global> globals_; 
 };

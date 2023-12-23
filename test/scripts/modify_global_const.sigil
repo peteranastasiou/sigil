@@ -1,0 +1,5 @@
+
+const K = 7;
+K = 2;    # Fail here
+
+print "Shouldn't get here"

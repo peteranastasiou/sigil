@@ -44,37 +44,25 @@ void StringSet::debug() {
     }
 }
 
-// ----------------------------------------------------------------------------
-// HashMap
-// ----------------------------------------------------------------------------
+void StringSet::gcSweep() {
+    for( auto it = set_.begin(); it != set_.end(); ){
+        if( ((ObjString*) *it)->isMarked ){
+            // keep it
+            it++;
+        }else{
+            // remove it
+            // Warning: must iterate before erasing to not
+            // invalidate the iterator:
 
+            // TODO ensure that ObjString is not deleted
 
-HashMap::HashMap() {
-}
+#ifdef DEBUG_GC
+            printf( "Remove unmarked interned string:" );
+            ((ObjString*) *it)->print(true);
+            printf("\n");
+#endif
 
-HashMap::~HashMap() {
-}
-
-bool HashMap::set(ObjString * key, Value value) {
-    // returns pair of iterator and bool isNew:
-    return map_.insert_or_assign(key, value).second;
-}
-
-bool HashMap::get(ObjString * key, Value & value) {
-    auto search = map_.find(key);
-    if( search == map_.end() ) return false;
-    value = (*search).second;
-    return true;
-}
-
-bool HashMap::remove(ObjString * key) {
-    return map_.erase(key) == 1;
-}
-
-void HashMap::debug() {
-    for( const auto & [key, value] : map_ ){
-        printf("  '%s': ", key->get());
-        value.print();
-        printf("\n");
+            set_.erase(it++);
+        }
     }
 }

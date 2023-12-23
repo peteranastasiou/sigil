@@ -1,29 +1,28 @@
 #pragma once
 
 // Predeclare references
-class Vm;
-class ObjString;
+class Mem;
+class ObjString;  // defined in str.hpp
 
-/**
- * NOTE: if objects are all created via Vm, then we can do the register/deregister there, 
- * this may simplify ObjStrings
- */
 
-struct Obj {
-    enum Type {
-        STRING
-    };
-
-    Obj(Vm * vm, Type t);
+class Obj {
+public:
+    Obj(Mem * mem);
 
     virtual ~Obj();
 
     virtual ObjString * toString() = 0;
-    virtual void print() = 0;
+    virtual void print(bool verbose) = 0;
 
-    Type type;
+    // Marking protects the object being garbage collected
+    void gcMark();
+
+    // Mark references to other objects from this one
+    virtual void gcMarkRefs() = 0;
+
     Obj * next;  // linked list of all objects
+    bool isMarked;  // used by GC to track whether object is in use
 
-private:
-    Vm * vm_;
+protected:
+    Mem * const mem_;
 };

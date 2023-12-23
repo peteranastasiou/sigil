@@ -1,0 +1,17 @@
+
+for i in iterator {
+
+}
+
+e.g. range ala python
+
+# construct lists:
+var list = [1,2,3,4];
+
+# return implicitly forms a list:
+return a, b, c
+
+# destructure lists:
+var a, b, c = list;
+
+# the reason destructure doesn't have [] is common case is to destructure return values:

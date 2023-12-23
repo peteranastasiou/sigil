@@ -1,0 +1,82 @@
+
+if true {
+    print("A1");
+}
+
+if false {
+    print("B1");
+}
+
+if true {
+    print("C1");
+}else{
+    print("C2");
+}
+
+if false {
+    print("D1");
+}else{
+    print("D2");
+}
+
+if 15==15 {
+    print("E1");
+} elif true {
+    print("E2");
+}
+
+if "hello"=="bye" {
+    print("F1");
+} elif "hello"=="hello" {
+    print("F2");
+}
+
+if "hello"=="bye" {
+    print("F3");
+} elif "hello"=="hi" {
+    print("F4");
+}
+
+if true {
+    print("G1");
+} elif true {
+    print("G2");
+} else {
+    print("G3");
+}
+
+if false {
+    print("H1");
+} elif true {
+    print("H2");
+} else {
+    print("H3");
+}
+
+if false {
+    print("I1");
+} elif false {
+    print("I2");
+} else {
+    print("I3");
+}
+
+if false {
+    print("J1");
+} elif false {
+    print("J2");
+} elif true {
+    print("J2");
+} else {
+    print("J3");
+}
+
+if false {
+    print("K1");
+} elif false {
+    print("K2");
+} elif false {
+    print("K2");
+} else {
+    print("K3");
+}

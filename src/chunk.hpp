@@ -9,16 +9,30 @@
 namespace OpCode {
 enum {
     // Literals:
-    CONSTANT,       // Push a constant (literal) from the chunk
+    LITERAL,        // Push a literal value from the chunk
+    CLOSURE,        // Instantiate a function literal, making a closure
     NIL,            // Push nil to the stack
     TRUE,           // Push true to the stack
     FALSE,          // Push false to the stack
+    TYPE_BOOL,      // TypeId of bool
+    TYPE_FLOAT,     // TypeId of float
+    TYPE_FUNCTION,  // TypeId of Object
+    TYPE_STRING,    // TypeId of String
+    TYPE_TYPEID,    // TypeId of TypeId
+    // Stack and variable manipulation
     POP,            // Pop 1 value from the stack
-    DEFINE_GLOBAL,  // Define a global variable
+    DEFINE_GLOBAL_VAR,   // Define a global variable
+    DEFINE_GLOBAL_CONST, // Define a global variable as const
     GET_GLOBAL,     // Push the value of a global to the stack
     SET_GLOBAL,     // Set the value of a variable
+    GET_LOCAL,
+    SET_LOCAL,
+    GET_UPVALUE,
+    SET_UPVALUE,
+    CLOSE_UPVALUE,  // Remove 1 value, uplifting it to into an upvalue
     // Binary operators: take two values from the stack and push one:
     EQUAL,
+    EQUAL_PEEK,  // Variant of equal which leaves the operands on the stack
     NOT_EQUAL,
     GREATER,
     GREATER_EQUAL,
@@ -31,8 +45,21 @@ enum {
     // Unary operators: take one value, push one value:
     NEGATE,
     NOT,
+    // Built-ins:
+    PRINT,              // Pop 1 value, print it, Push nil
+    ECHO,               // Pop 1 value, print it, Push nil
+    TYPE,               // Pop 1 value, Push 1 typeid
+    MAKE_LIST,          // Pop n values into a list, Push list
+    INDEX_GET,          // TODO Pop 2 values as a,i, Push a[i]
+    INDEX_SET,          // TODO Pop 3 values as a,i,b; set a[i] = b; Push ???
     // Control flow:
-    PRINT,
+    JUMP,               // Unconditionally jump forward by bytecode offset 
+    LOOP,               // Unconditionally jump backwards by bytecode offset 
+    JUMP_IF_TRUE,       // If top of stack is truthy, jump fwd by bytecode offset
+    JUMP_IF_FALSE,      // If top of stack is falsy, jump fwd by bytecode offset
+    JUMP_IF_TRUE_POP,   // Same as JUMP_IF_FALSE, but also pops the value
+    JUMP_IF_FALSE_POP,  // Same as JUMP_IF_TRUE, but also pops the value
+    CALL,               // call function
     RETURN,
 };
 }
@@ -49,7 +76,7 @@ public:
     ~Chunk();
 
     // append to bytecode array
-    void write(uint8_t byte, uint16_t line);
+    bool write(uint8_t byte, uint16_t line);
     
     // Get a line number corresponding to position in bytecode array
     uint16_t getLineNumber(int offset);
@@ -60,22 +87,25 @@ public:
     // Get a pointer to the bytecode array
     uint8_t * getCode();
 
-    // Add a constant value and return its index
-    uint8_t addConstant(Value value);
+    // Add a literal value and return its index
+    uint8_t addLiteral(Value value);
 
-    // Get a constant value by its index
-    Value getConstant(uint8_t index);
+    // Get a literal value by its index
+    Value getLiteral(uint8_t index);
 
-    uint8_t numConstants();
+    uint8_t numLiterals();
 
-    static uint8_t const MAX_CONSTANTS = 255;  // constant index must fit in a byte (for now)
+    // Mark referenced objects to protect from garbage collection
+    void gcMarkRefs();
+
+    static uint8_t const MAX_LITERALS = 255;  // literal index must fit in a byte (for now)
 
 private:
     std::vector<uint8_t> code;
     std::vector<uint16_t> lines;    // line numbers corresponding to bytecode array
-    std::vector<Value> constants;
+    std::vector<Value> literals;
 
     // Disassembler needs access within the chunk:
-    friend class Dissassembler;
+    friend class Disassembler;
 };
 

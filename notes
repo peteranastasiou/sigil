@@ -1,0 +1,46 @@
+# Design notes:
+{} can only be used for scoping and never part of an expression, otherwise if/while/etc would need () around the expression
+
+# Where GC objects are created:
+ObjFunction: new
+    compiler:compile(): Environment
+
+ObjString: newString*, concatenate
+    scanner::make*Token()
+    compiler:compile(): Environment
+    compiler:funcAnonymous()
+    *::toString()
+
+ObjUpvalue: newUpvalue
+    vm: OpCode::CLOSURE
+
+ObjList: new
+    vm: OpCode::ADD, MAKE_LIST
+
+ObjClosure: new
+    vm: interpret(), OpCode::CLOSURE
+
+
+# Impl notes:
+
+Destructuring with ',' is hard to parse.
+Could loop in getSetVariable as long as we match ',' <identifier> but consider this case:
+a.b.c, b, g = list;
+Also, if it is a mix of new and existing variable names, where does the var go.
+It might be simpler to force the use of new variables when destructuring:
+var a, b, c = list;
+This is probably not very nice language design.
+Also, it is hard to parse if assignment can also be used as expression!
+Would be best to remove that ability before implementing destructuring
+
+
+objects e.g. strings live in the heap
+both the hash set and constants vector have pointers to the actual objstrings
+tableFindString returns the pointer
+rehashing will juggle the pointers in the hash set, but the pointers obtained from querying the hashset will still be valid
+
+ObjString : public Key
+
+ObjString * a = ...
+(Key *) k = (Key *)a;
+(int)k != (int)a   !!!!!!!!!!!!

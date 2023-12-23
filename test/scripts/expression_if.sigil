@@ -1,0 +1,10 @@
+
+var arg1 = "hello";
+
+var a = if arg1 == "hello" { print("A1"); "A2" } else { "A3" };
+print(a);   # should be A2
+
+{
+    var d = if 7>6 { print("B1"); if false {"B2"} else {"B3"} } else { print("B4"); "B5" };
+    print(d);   # should be 2
+}
