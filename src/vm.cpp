@@ -140,6 +140,27 @@ bool Vm::binaryOp_(uint8_t op) {
     return true;
 }
 
+bool Vm::compareIterator_() {
+    Value aV = peek(1);
+    Value bV = peek(0);
+    if( !aV.isNumber() || !bV.isNumber() ){
+        runtimeError_("Operands must be numbers.");
+        return false;
+    }
+
+    double b = bV.as.number;
+    double a = aV.as.number;
+    double diff = b - a;
+    if( abs(diff) < 1 ){
+        // consider different within 1 as equal
+        // we need this logic for for loops so they terminate correctly
+        push(Value::number( 0 ));
+    }else{
+        push(Value::number( diff > 0 ? 1 : -1 ));
+    }
+    return true;
+}
+
 bool Vm::callValue_(Value fn, uint8_t argCount) {
     if( fn.type != Value::CLOSURE ){
         runtimeError_("Can only call functions.");
@@ -358,8 +379,8 @@ InterpretResult Vm::run_() {
                 push(Value::boolean( pop().equals(pop()) ));
                 break;
             }
-            case OpCode::EQUAL_PEEK: {
-                push(Value::boolean( peek(0).equals(peek(1)) ));
+            case OpCode::COMPARE_ITERATOR: {
+                compareIterator_();
                 break;
             }
             case OpCode::NOT_EQUAL: {
@@ -477,6 +498,12 @@ InterpretResult Vm::run_() {
             case OpCode::JUMP_IF_FALSE_POP:{
                 uint16_t offset = frame->readUint16();
                 if( !isTruthy_(pop()) ) frame->ip += offset;
+                break;
+            }
+            case OpCode::JUMP_IF_ZERO:{
+                uint16_t offset = frame->readUint16();
+                Value a = peek(0);
+                if( a.type == Value::NUMBER && a.as.number == 0.0 ) frame->ip += offset;
                 break;
             }
             case OpCode::CALL: {

@@ -64,6 +64,7 @@ private:
     bool call_(ObjClosure * fn, uint8_t argCount);
     bool callValue_(Value value, uint8_t argCount);
     bool binaryOp_(uint8_t op);
+    bool compareIterator_();
     bool isTruthy_(Value value);
     void concatenate_();
     bool indexGet_();
