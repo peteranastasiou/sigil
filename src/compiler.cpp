@@ -46,7 +46,7 @@ bool Environment::addLocal(ObjString * name, bool isConst) {
 
 uint8_t Environment::defineLocal() {
     // Mark local as having a value now:
-    uint8_t latest = (uint8_t)(localCount-1);
+    uint8_t latest = (uint8_t)(localCount - 1);
     locals[latest].isDefined = true;
     return latest;
 }
@@ -643,46 +643,43 @@ void Compiler::forStatement_() {
     // Scope for the loop variable
     currentEnv_->beginScope();
 
-    // TODO support inclusive end value, implicit initial value, & decrementing loops
-
-    // next up is the loop variable
-    bool isConst = true;  // loop variable is const for the user, but vm can increment it!
+    // Next up is the iterator
+    bool isConst = true;  // iterator is const for the user, but vm can increment it!
     bool isLocal = true;
-    parseVariable_("Expected loop variable name.", isConst, isLocal);
-    consume_(Token::IN, "Expected 'in' after loop variable.");
+    parseVariable_("Expected iterator name.", isConst, isLocal);
+    consume_(Token::IN, "Expected 'in' after iterator.");
 
     // The initial value
     expression_();
     uint8_t localPos = currentEnv_->defineLocal();
+
+    // TODO implicit start value!
 
     // The range separator
     consume_(Token::COLON, "Expected ':' after initial value");
 
     // Evaluate the end value.
     expression_();
-    // TODO add 1 if inclusive end?
+    // TODO add/sub 1 if inclusive end?
 
     // Remember where to loop back to
     int loopStart = getCurrentChunk_()->count();
 
-    // Check whether we should exit
-    emitByte_(OpCode::EQUAL_PEEK);
+    // Compare iterator to end value and put +1, -1 or 0 on the stack
+    emitByte_(OpCode::COMPARE_ITERATOR);
 
     // Jump out of the loop if the end condition is met.
-    int jumpToEnd = emitJump_(OpCode::JUMP_IF_TRUE_POP);
+    int jumpToEnd = emitJump_(OpCode::JUMP_IF_ZERO);
 
     // The body of the for loop
     consume_(Token::LEFT_BRACE, "Expected '{' after loop range.");
     nestedBlock_(false);
 
-    // TODO decrement or increment depending on comparison
-    // Now do the increment
+    // Add the compare value to the iterator:
     emitBytes_(OpCode::GET_LOCAL, localPos);
-    //emitByte_(OpCode::COMPARE_PEEK);  // puts -1, 1 or 0 to the stack
-    emitLiteral_(Value::number(1));  // for now we only support upward increments
     emitByte_(OpCode::ADD);
     emitBytes_(OpCode::SET_LOCAL, localPos);
-    emitByte_(OpCode::POP);  // Clean up the value used by SET_LOCAL
+    emitByte_(OpCode::POP);  // Clean up the new loop value
 
     // Loop back 
     emitLoop_(loopStart);
@@ -690,8 +687,8 @@ void Compiler::forStatement_() {
     // This is where we exit
     setJumpDestination_(jumpToEnd);
 
-    // Pop the end value
-    emitByte_(OpCode::POP);
+    emitByte_(OpCode::POP);  // Clean up the compare value
+    emitByte_(OpCode::POP);  // Clean up the end value
 
     // Pop the loop variable
     currentEnv_->endScope(this);
