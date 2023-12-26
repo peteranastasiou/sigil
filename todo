@@ -5,7 +5,7 @@
  [x]- garbage collection
  [x]- undo rewind work. uncaptured executed anon functions are now not supported - consider do block?
 
- []- for i in 0..10 | ..10 | 0..=9 | 9..-1 | 9..=0
+ []- for loops
  []- bytecode intermediate format, output/input from file
  []- continue following book from 25.4.4
  []- replace all stdlib stuff with c from lox impl so it can be wasmd

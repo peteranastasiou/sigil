@@ -1,15 +1,24 @@
 
-for i in 1:10 {
+echo "forward loop";
+for i in 0:10 {
     print(i);
 }
 
+echo "reverse loop";
 for i in 5 + 5 : 0 {
     print(i);
 }
 
-#for i in 10 {
-#    print(i);
-#}
+echo "expression in range";
+fn ten() { 10 }
+for i in 5 - 5 : ten() {
+    print(i);
+}
+
+echo "implicit start value";
+for i in 10 {
+    print(i);
+}
 
 #for i in 1:=10 {
 #    print(i);

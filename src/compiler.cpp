@@ -649,18 +649,30 @@ void Compiler::forStatement_() {
     parseVariable_("Expected iterator name.", isConst, isLocal);
     consume_(Token::IN, "Expected 'in' after iterator.");
 
-    // The initial value
+    // The initial value (or the end value if there is no ':')
     expression_();
-    uint8_t localPos = currentEnv_->defineLocal();
+    uint8_t iteratorLocal = currentEnv_->defineLocal();
 
-    // TODO implicit start value!
+    // Ranges are denoted by 0-10
+    if( match_(Token::COLON) ){
+        // Evaluate the end value.
+        expression_();
+        // TODO add/sub 1 if inclusive end?
 
-    // The range separator
-    consume_(Token::COLON, "Expected ':' after initial value");
+        consume_(Token::LEFT_BRACE, "Expected '{' after range.");
 
-    // Evaluate the end value.
-    expression_();
-    // TODO add/sub 1 if inclusive end?
+    }else{
+        consume_(Token::LEFT_BRACE, "Expected ':' or '{' after value");
+
+        // This means we have an implicit start value
+        // We need to rearrange.
+        // Put the current iterator value where the end value goes:
+        emitBytes_(OpCode::GET_LOCAL, iteratorLocal);
+        // Set the iterator to zero:
+        emitByte_(OpCode::PUSH_ZERO);
+        emitBytes_(OpCode::SET_LOCAL, iteratorLocal);
+        emitByte_(OpCode::POP);  // Remove the zero
+    }
 
     // Remember where to loop back to
     int loopStart = getCurrentChunk_()->count();
@@ -672,13 +684,12 @@ void Compiler::forStatement_() {
     int jumpToEnd = emitJump_(OpCode::JUMP_IF_ZERO);
 
     // The body of the for loop
-    consume_(Token::LEFT_BRACE, "Expected '{' after loop range.");
     nestedBlock_(false);
 
     // Add the compare value to the iterator:
-    emitBytes_(OpCode::GET_LOCAL, localPos);
+    emitBytes_(OpCode::GET_LOCAL, iteratorLocal);
     emitByte_(OpCode::ADD);
-    emitBytes_(OpCode::SET_LOCAL, localPos);
+    emitBytes_(OpCode::SET_LOCAL, iteratorLocal);
     emitByte_(OpCode::POP);  // Clean up the new loop value
 
     // Loop back 
