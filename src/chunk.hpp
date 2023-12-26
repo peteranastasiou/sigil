@@ -9,6 +9,8 @@
 namespace OpCode {
 enum {
     // Literals:
+    PUSH_ZERO,      // Push the value 0 to the stack
+    PUSH_ONE,       // Push the value 1 to the stack
     LITERAL,        // Push a literal value from the chunk
     CLOSURE,        // Instantiate a function literal, making a closure
     NIL,            // Push nil to the stack

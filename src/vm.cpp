@@ -281,6 +281,14 @@ InterpretResult Vm::run_() {
 
         uint8_t instr = frame->readByte();
         switch( instr ){
+            case OpCode::PUSH_ZERO:{
+                push(Value::number(0));
+                break;
+            }
+            case OpCode::PUSH_ONE:{
+                push(Value::number(1));
+                break;
+            }
             case OpCode::LITERAL:{
                 push(frame->readLiteral());
                 break;

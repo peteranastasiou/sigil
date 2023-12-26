@@ -916,7 +916,15 @@ void Compiler::index_() {
 void Compiler::number_() {
     // shouldn't fail as we already validated the token as a number:
     double n = strtod(previousToken_.string->getCString(), nullptr);
-    emitLiteral_(Value::number(n));
+    
+    // simplify operation for common values:
+    if( n == 0 ){
+        emitByte_(OpCode::PUSH_ZERO);
+    }else if( n == 1 ){
+        emitByte_(OpCode::PUSH_ONE);
+    }else{
+        emitLiteral_(Value::number(n));
+    }
 }
 
 void Compiler::string_() {
