@@ -34,6 +34,8 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
 
     uint8_t instr = chunk->code[(size_t)offset];
     switch(instr){
+        case OpCode::PUSH_ZERO:     return simpleInstruction_("PUSH_ZERO");
+        case OpCode::PUSH_ONE:      return simpleInstruction_("PUSH_ONE");
         case OpCode::LITERAL:       return literalInstruction_("LITERAL", chunk, offset);
         case OpCode::CLOSURE:       return closureInstruction_("CLOSURE", chunk, offset);
         case OpCode::NIL:           return simpleInstruction_("NIL");
@@ -67,6 +69,7 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
         case OpCode::NOT:           return simpleInstruction_("NOT");
         case OpCode::COMPARE_ITERATOR:   return simpleInstruction_("COMPARE_ITERATOR");
         case OpCode::PRINT:         return simpleInstruction_("PRINT");
+        case OpCode::ECHO:          return simpleInstruction_("ECHO");
         case OpCode::TYPE:          return simpleInstruction_("TYPE");
         case OpCode::JUMP:          return jumpInstruction_("JUMP", 1, chunk, offset);
         case OpCode::LOOP:          return jumpInstruction_("LOOP", -1, chunk, offset);
