@@ -5,13 +5,13 @@
  [x]- garbage collection
  [x]- undo rewind work. uncaptured executed anon functions are now not supported - consider do block?
 
- []- for loops
+ [x]- for loops
  []- bytecode intermediate format, output/input from file
  []- continue following book from 25.4.4
  []- replace all stdlib stuff with c from lox impl so it can be wasmd
 
  []- test for multiple upvalues captured - editing changes all references
- []- while expression
+ []- while & for expression using break value;
  []- error types - @ catch block after function  -- does return output a value or return from surrounding function?
  []- better internal error management (reified errors)
  []- 

@@ -20,14 +20,12 @@ for i in 10 {
     print(i);
 }
 
-#for i in 1:=10 {
-#    print(i);
-#}
+echo "inclusive end value";
+for i in 1:=10 {
+    print(i);
+}
 
-#for i in 10:0 {
-#    print(i);
-#}
-
-#for i in 10:=0 {
-#    print(i);
-#}
+echo "inclusive end value, reverse";
+for i in 10:=0 {
+    print(i);
+}

@@ -649,20 +649,20 @@ void Compiler::forStatement_() {
     parseVariable_("Expected iterator name.", isConst, isLocal);
     consume_(Token::IN, "Expected 'in' after iterator.");
 
-    // The initial value (or the end value if there is no ':')
+    // The initial value (or the end value if there is no range separator)
     expression_();
     uint8_t iteratorLocal = currentEnv_->defineLocal();
 
-    // Ranges are denoted by 0-10
-    if( match_(Token::COLON) ){
+    // Ranges are denoted by : or := (indicating exclusive and inclusive of end value)
+    bool inclusiveRange = check_(Token::COLON_EQUAL);
+    if( match_(Token::COLON) || match_(Token::COLON_EQUAL) ){
         // Evaluate the end value.
         expression_();
-        // TODO add/sub 1 if inclusive end?
 
         consume_(Token::LEFT_BRACE, "Expected '{' after range.");
 
     }else{
-        consume_(Token::LEFT_BRACE, "Expected ':' or '{' after value");
+        consume_(Token::LEFT_BRACE, "Expected ':', ':=' or '{' after value");
 
         // This means we have an implicit start value
         // We need to rearrange.
@@ -677,14 +677,16 @@ void Compiler::forStatement_() {
     // Remember where to loop back to
     int loopStart = getCurrentChunk_()->count();
 
-    // Compare iterator to end value and put +1, -1 or 0 on the stack
-    emitByte_(OpCode::COMPARE_ITERATOR);
+    // To include the final value, do the body before the check
+    if( inclusiveRange ) nestedBlock_(false);
 
-    // Jump out of the loop if the end condition is met.
+    // Compare iterator to end value and put +1, -1 or 0 on the stack
+    // This is used both to check when to exit and for the iteration direction
+    emitByte_(OpCode::COMPARE_ITERATOR);
     int jumpToEnd = emitJump_(OpCode::JUMP_IF_ZERO);
 
-    // The body of the for loop
-    nestedBlock_(false);
+    // To exclude the final value, we do the body after the check
+    if( !inclusiveRange ) nestedBlock_(false);
 
     // Add the compare value to the iterator:
     emitBytes_(OpCode::GET_LOCAL, iteratorLocal);
