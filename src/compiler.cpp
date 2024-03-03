@@ -46,7 +46,7 @@ bool Environment::addLocal(ObjString * name, bool isConst) {
 
 uint8_t Environment::defineLocal() {
     // Mark local as having a value now:
-    uint8_t latest = localCount-1;
+    uint8_t latest = (uint8_t)(localCount-1);
     locals[latest].isDefined = true;
     return latest;
 }
