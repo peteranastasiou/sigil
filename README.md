@@ -16,10 +16,16 @@ Sigil has one dependency: readline.
 `./bin/sigil [filename.sigil]` to run a script
 
 # Features
+Sigil is a whitespace agnostic, semicolons-and-braces language.
+
+Parentheses are optional around conditionals and braces are compulsory.
+
 ### Variables
 Declaration is made with `var` (mutable) or `const` (immutable).
+
 Scoped variables are stored on the stack, top-level variables are globals in the heap.
-Lists, numbers and strings are supported
+
+Lists, numbers and strings are supported at this time.
 ```
 var ls = [1, "2", 3];
 const a = 0.5;
@@ -54,8 +60,11 @@ const absn = if n > 0 { n } else { -n };
 The expression form of `for` and `while` capture each iteration's result in a list (not implemented yet!)
 ```
 const doubles = for i in 1:10 { print(i); 2*i };
-
-const evens = for i in 0:10 { if i % 2 == 0 { i } else { continue } };  # filter using continue
+```
+```
+const evens = for i in 0:10 {
+    if i % 2 == 0 { i } else { continue }
+};
 ```
 
 Implicit return is also available to functions:
