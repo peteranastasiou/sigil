@@ -602,23 +602,25 @@ bool Compiler::if_(bool canBeExpression) {
     }
 
     // optional `else` block:
-    if( match_(Token::ELSE) ){
+    bool hasElse = match_(Token::ELSE);
+    if( hasElse || isExpression ){
         // protect against fallthrough
         jumpsToEnd.push_back(emitJump_(OpCode::JUMP));
         // jump over the previous if/elif-block to here:
         setJumpDestination_(jumpOver);
-        // the block
-        consume_(Token::LEFT_BRACE, "Expected '{' after 'else'.");
-        if( nestedBlock_(canBeExpression) != isExpression ){
-            errorAtPrevious_("Inconsistent if-statement/if-expression.");
+        if( hasElse ){
+            // the block
+            consume_(Token::LEFT_BRACE, "Expected '{' after 'else'.");
+            if( nestedBlock_(canBeExpression) != isExpression ){
+                errorAtPrevious_("Inconsistent if-statement/if-expression.");
+            }
+        }else{
+            // implicit else block for if expressions produces nil
+            emitByte_(OpCode::NIL);
         }
     }else{
         // no else block, so the last "jumpOver" goes to here:
         setJumpDestination_(jumpOver);
-
-        if( isExpression ){
-            errorAtPrevious_("Expected 'else' on if expression.");
-        }
     }
     // link up all the end jumps to here
     for( int jump : jumpsToEnd ){
