@@ -423,7 +423,8 @@ InterpretResult Vm::run_() {
                     double a = pop().as.number;
                     push(Value::number( a + b ));
                 }else{
-                    return runtimeError_("Invalid operands for +");
+                    return runtimeError_("Invalid operands for '+': %s, %s", 
+                        Value::typeToString(peek(0).type), Value::typeToString(peek(1).type));
                 }
                 break;
             }
