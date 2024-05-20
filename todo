@@ -6,12 +6,12 @@
  [x]- undo rewind work. uncaptured executed anon functions are now not supported - consider do block?
 
  [x]- for loops
+ []- while & for expression using break value & expression block accumulation
  []- bytecode intermediate format, output/input from file
- []- continue following book from 25.4.4
  []- replace all stdlib stuff with c from lox impl so it can be wasmd
 
+ []- continue following book from 25.4.4
  []- test for multiple upvalues captured - editing changes all references
- []- while & for expression using break value;
  []- error types - @ catch block after function  -- does return output a value or return from surrounding function?
  []- better internal error management (reified errors)
  []- 

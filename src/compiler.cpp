@@ -532,6 +532,9 @@ bool Compiler::statement_(bool canBeExpression) {
             expression_();
             emitByte_(OpCode::RETURN);
         }
+    }else if( match_(Token::SEMICOLON) ){
+        // Empty statement
+        return false;
     }else{
         // expression-statement:
         expression_();
