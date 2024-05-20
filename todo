@@ -3,7 +3,7 @@
  [x]- decide what to do about statement level anonymous functions: rewind scanner or swap anonymous function symbol to @ or $ -- rewind is nicer!
 
  [x]- garbage collection
- [x]- undo rewind work. uncaptured executed anon functions are now not supported - consider "lambda" keyword for anonymous functions?
+ [x]- undo rewind work. uncaptured executed anon functions are now not supported - consider do block?
 
  []- for i in 0..10 | ..10 | 0..=9 | 9..-1 | 9..=0
  []- bytecode intermediate format, output/input from file
