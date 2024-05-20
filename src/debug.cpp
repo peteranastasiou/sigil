@@ -68,6 +68,7 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
         case OpCode::NEGATE:        return simpleInstruction_("NEGATE");
         case OpCode::NOT:           return simpleInstruction_("NOT");
         case OpCode::COMPARE_ITERATOR:   return simpleInstruction_("COMPARE_ITERATOR");
+        case OpCode::MAKE_LIST:     return argInstruction_("MAKE_LIST", chunk, offset);
         case OpCode::PRINT:         return simpleInstruction_("PRINT");
         case OpCode::ECHO:          return simpleInstruction_("ECHO");
         case OpCode::TYPE:          return simpleInstruction_("TYPE");

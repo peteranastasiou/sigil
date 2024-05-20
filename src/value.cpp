@@ -111,6 +111,6 @@ void Value::print(bool verbose) const {
         case STRING:
             // Object types:
             as.obj->print(verbose); return;
-        default:      printf("???");
+        default:      printf("?%i", (int)type);
     }
 }

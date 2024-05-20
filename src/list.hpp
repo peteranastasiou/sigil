@@ -7,11 +7,6 @@
 class ObjList : public Obj {
 public:
     ObjList(Mem * mem);
-    
-    /**
-     * Concatenation constructor:
-     */
-    ObjList(Mem * mem, ObjList * a, ObjList * b);
 
     ~ObjList();
 
@@ -20,6 +15,7 @@ public:
     virtual void print(bool verbose) override;
     virtual void gcMarkRefs() override;
 
+    void concat(ObjList * a);
     void append(Value v);
     bool get(int i, Value & v);
     bool set(int i, Value v);

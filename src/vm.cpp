@@ -406,25 +406,39 @@ InterpretResult Vm::run_() {
                 break;
             }
             case OpCode::ADD:{
-                if( peek(1).isString() ){  // the first argument is second on stack
+                if( peek(0).isNumber() && peek(1).isNumber() ){
+                    double b = pop().as.number;
+                    double a = pop().as.number;
+                    push(Value::number( a + b ));
+
+                }else if( peek(1).isString() ){  // the first argument is second on stack
                     // implicitly convert second operand to string
                     Value bValue = pop();
                     ObjString * b = bValue.toString(&mem_);
                     ObjString * a = pop().asObjString();
                     push( Value::string(ObjString::concatenate(&mem_, a, b)) );
 
-                }else if( peek(0).isList() && peek(1).isList() ){
+                }else if( peek(1).isList() && peek(0).isList() ){
+                    // Concatenate two lists
+                    ObjList * list = new ObjList(&mem_);
                     ObjList * b = pop().asObjList();
                     ObjList * a = pop().asObjList();
-                    push( Value::list(new ObjList(&mem_, a, b)) );
+                    list->concat(a);
+                    list->concat(b);
+                    push( Value::list(list) );
 
-                }else if( peek(0).isNumber() && peek(1).isNumber() ){
-                    double b = pop().as.number;
-                    double a = pop().as.number;
-                    push(Value::number( a + b ));
+                }else if( peek(1).isList() ){
+                    // Copy a list and append a value
+                    ObjList * list = new ObjList(&mem_);
+                    Value b = pop();
+                    ObjList * a = pop().asObjList();
+                    list->concat(a);
+                    list->append(b);
+                    push( Value::list(list) );
+
                 }else{
                     return runtimeError_("Invalid operands for '+': %s, %s", 
-                        Value::typeToString(peek(0).type), Value::typeToString(peek(1).type));
+                        Value::typeToString(peek(1).type), Value::typeToString(peek(0).type));
                 }
                 break;
             }

@@ -6,15 +6,6 @@
 ObjList::ObjList(Mem * mem) : Obj(mem) {
 }
 
-ObjList::ObjList(Mem * mem, ObjList * a, ObjList * b) : Obj(mem) {
-    // Reserve enough space for both lists combined:
-    values_.reserve(a->len() + b->len());
-
-    // Copy both vectors into this one:
-    values_.insert(values_.end(), a->values_.begin(), a->values_.end());
-    values_.insert(values_.end(), b->values_.begin(), b->values_.end());
-}
-
 ObjList::~ObjList() {
 }
 
@@ -42,6 +33,10 @@ void ObjList::gcMarkRefs() {
     for( Value & value : values_ ){
         value.gcMark();
     }
+}
+
+void ObjList::concat(ObjList * a) {
+    values_.insert(values_.end(), a->values_.begin(), a->values_.end());
 }
 
 void ObjList::append(Value v) {
