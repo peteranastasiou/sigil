@@ -1,3 +1,7 @@
+#
+# Usage: `make -j` to build
+#        use `VERBOSE=1` to get stack traces
+#        use `VERBOSE_GC=1` to get garbage collection traces 
 
 .DEFAULT_GOAL := all
 
@@ -7,9 +11,6 @@ CC = g++
 # TODO switch on cmakegoals debug
 # Whether to build for debugging instead of release
 DEBUG = 1
-
-# Whether to enable verbose execution trace debugging
-#VERBOSE = 1
 
 # Whether to enable garbage collection as often as possible
 DEBUG_STRESS_GC = 1
@@ -52,7 +53,10 @@ DEFINES =
 # Enable debug messages:
 ifeq ($(VERBOSE), 1)
 	DEFINES += -DDEBUG_TRACE_EXECUTION
-#    DEFINES += -DDEBUG_GC
+endif
+
+ifeq ($(VERBOSE_GC), 1)
+	DEFINES += -DDEBUG_GC
 endif
 
 # Disable assert() calls:

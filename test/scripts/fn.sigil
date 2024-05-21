@@ -33,7 +33,7 @@ print(d1(2));
 print(d2(2));
 print(d3(2));
 
-var e1 = fn(i) { var g = i; return g*2; };
+var e1 = fn(i) { var g = i; const b = 2; return g*b; };
 var e2 = fn(i) { var g = i; g*2 };
 fn e3(i) { var g = i; g*2 }
 

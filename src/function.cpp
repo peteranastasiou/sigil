@@ -43,11 +43,7 @@ ObjString * ObjClosure::toString() {
 }
 
 void ObjClosure::print(bool verbose) {
-    if( verbose ){
-        printf("<cl:%s>", function->name->get());
-    }else{
-        puts(function->name->get());
-    }
+    printf("%s", function->name->get());
 }
 
 void ObjClosure::gcMarkRefs() {

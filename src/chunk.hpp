@@ -11,6 +11,7 @@ enum {
     // Literals:
     PUSH_ZERO,      // Push the value 0 to the stack
     PUSH_ONE,       // Push the value 1 to the stack
+    PUSH_TWO,       // Push the value 2 to the stack
     LITERAL,        // Push a literal value from the chunk
     CLOSURE,        // Instantiate a function literal, making a closure
     NIL,            // Push nil to the stack
@@ -29,6 +30,7 @@ enum {
     SET_GLOBAL,     // Set the value of a variable
     GET_LOCAL,
     SET_LOCAL,
+    APPEND_LOCAL,
     GET_UPVALUE,
     SET_UPVALUE,
     CLOSE_UPVALUE,  // Remove 1 value, uplifting it to into an upvalue
@@ -53,7 +55,7 @@ enum {
     ECHO,               // Pop 1 value, print it, Push nil
     TYPE,               // Pop 1 value, Push 1 typeid
     MAKE_LIST,          // Pop n values into a list, Push list
-    INDEX_GET,          // TODO Pop 2 values as a,i, Push a[i]
+    INDEX_GET,          // Pop 2 values as a,i, Push a[i]
     INDEX_SET,          // TODO Pop 3 values as a,i,b; set a[i] = b; Push ???
     // Control flow:
     JUMP,               // Unconditionally jump forward by bytecode offset 

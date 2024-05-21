@@ -289,6 +289,10 @@ InterpretResult Vm::run_() {
                 push(Value::number(1));
                 break;
             }
+            case OpCode::PUSH_TWO:{
+                push(Value::number(2));
+                break;
+            }
             case OpCode::LITERAL:{
                 push(frame->readLiteral());
                 break;
@@ -365,6 +369,17 @@ InterpretResult Vm::run_() {
             case OpCode::SET_LOCAL: {
                 uint8_t slot = frame->readByte();  // stack position of the local
                 frame->slots[slot] = peek(0);      // note: no pop: assignment can be an expression
+                break;
+            }
+            case OpCode::APPEND_LOCAL: {
+                uint8_t slot = frame->readByte();  // stack position of the local
+                Value dest = frame->slots[slot];
+                Value src = pop();
+                if( !dest.isList() ) {
+                    return runtimeError_("Cannot append to %s type",
+                        Value::typeToString(dest.type));
+                }
+                dest.asObjList()->append(src);
                 break;
             }
             case OpCode::GET_UPVALUE: {

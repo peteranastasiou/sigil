@@ -36,6 +36,7 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
     switch(instr){
         case OpCode::PUSH_ZERO:     return simpleInstruction_("PUSH_ZERO");
         case OpCode::PUSH_ONE:      return simpleInstruction_("PUSH_ONE");
+        case OpCode::PUSH_TWO:      return simpleInstruction_("PUSH_TWO");
         case OpCode::LITERAL:       return literalInstruction_("LITERAL", chunk, offset);
         case OpCode::CLOSURE:       return closureInstruction_("CLOSURE", chunk, offset);
         case OpCode::NIL:           return simpleInstruction_("NIL");
@@ -54,6 +55,7 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
         case OpCode::SET_GLOBAL:    return byteInstruction_("SET_GLOBAL", chunk, offset);
         case OpCode::GET_LOCAL:     return argInstruction_("GET_LOCAL", chunk, offset);
         case OpCode::SET_LOCAL:     return argInstruction_("SET_LOCAL", chunk, offset);
+        case OpCode::APPEND_LOCAL:  return argInstruction_("APPEND_LOCAL", chunk, offset);
         case OpCode::GET_UPVALUE:   return argInstruction_("GET_UPVALUE", chunk, offset);
         case OpCode::SET_UPVALUE:   return argInstruction_("SET_UPVALUE", chunk, offset);
         case OpCode::EQUAL:         return simpleInstruction_("EQUAL");
