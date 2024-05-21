@@ -6,9 +6,22 @@
  [x]- undo rewind work. uncaptured executed anon functions are now not supported - consider do block?
 
  [x]- for loops
- []- while & for expression using break value & expression block accumulation
+ [x]- for expression using expression block accumulation
+ []- fix local variable reference e.g. in echo ""+for i in 0:10 {2*i}; # local for loop outputVar points to ""!
+      []- Larger issue with local var references, assumes that stack contains only locals by the time each one executes
+          Actually, expressions like "a"+{var b="b" .... } has a literal on the stack, which offsets the locals.
+          How do we know when pushing to the stack whether it will remain?
+          -> Create a separate 
+ []- check zeroth stack element is correct. filename until first function call, then becomes destroyed?
+ []- expression block should create a scope rather than define globals when used on top level
+ []- functions: len, toString
+ []- for expression using break value
+ []- for loop on list
+ []- same for while loop
+ []- list get/set by index
  []- bytecode intermediate format, output/input from file
  []- replace all stdlib stuff with c from lox impl so it can be wasmd
+ []- intermediate format can be used to generate syntax highlighting
 
  []- continue following book from 25.4.4
  []- test for multiple upvalues captured - editing changes all references

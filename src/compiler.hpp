@@ -137,15 +137,16 @@ private:
     void expression_();
     bool declaration_(bool canBeExpression);  // returns isExpression
     bool statement_(bool canBeExpression);    // returns isExpression
-    void ifStatement_();
     void ifExpression_();
     bool if_(bool canBeExpression);           // returns isExpression
     void whileStatement_();
-    void forStatement_();
-    void synchronise_();
+    void forExpression_();
+    bool for_(bool canBeExpression);          // returns isExpression
+    bool forBody_(bool canBeExpression, uint8_t outputLocal);
     bool block_(bool canBeExpression);        // returns isExpression
     void expressionBlock_();
     bool nestedBlock_(bool canBeExpression);  // returns isExpression
+    void synchronise_();
     void parse_(Precedence precedence);  // parse expressions with >= precendence
 
     // parsing operations:

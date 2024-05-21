@@ -505,6 +505,7 @@ void Compiler::or_() {
     setJumpDestination_(jumpOverRhs);
 }
 
+// Can this return true if canBeExpression is false?
 bool Compiler::statement_(bool canBeExpression) {
     if( match_(Token::IF) ){
         return if_(canBeExpression);
@@ -514,8 +515,7 @@ bool Compiler::statement_(bool canBeExpression) {
         return false;  // statement only (for now!)
 
     }else if( match_(Token::FOR) ){
-        forStatement_();
-        return false;  // statement only (for now!)
+        return for_(canBeExpression);
 
     }else if( match_(Token::LEFT_BRACE) ){
         // recurse into a nested scope:
@@ -562,13 +562,6 @@ void Compiler::ifExpression_() {
     bool isExpression = if_(true);
     if( !isExpression ){
         errorAtPrevious_("Expected if-expression, not if-statement.");
-    }
-}
-
-void Compiler::ifStatement_() {
-    bool isExpression = if_(false);
-    if( isExpression ){
-        errorAtPrevious_("Expected if-statement, not if-expression.");
     }
 }
 
@@ -644,8 +637,40 @@ void Compiler::whileStatement_() {
     setJumpDestination_(jumpToEnd);
 }
 
-void Compiler::forStatement_() {
-    // Scope for the loop variable
+void Compiler::forExpression_() {
+    bool isExpression = for_(true);
+    if( !isExpression ){
+        errorAtPrevious_("Expected for-expression, not for-statement.");
+    }
+}
+
+bool Compiler::forBody_(bool canBeExpression, uint8_t outputLocal) {
+    // Compile the body of the for loop
+    bool isExpression = nestedBlock_(canBeExpression);
+    if( isExpression ) {
+        if( canBeExpression ){
+            // Accumulate the result into the output value
+            emitBytes_(OpCode::APPEND_LOCAL, outputLocal);
+        }else{
+            errorAtPrevious_("Expected a statement not an expression.");
+        }
+    }
+    return isExpression;
+}
+
+bool Compiler::for_(bool canBeExpression) {
+    // For-expressions need an output list value
+    uint8_t outputLocal = 0;
+    if( canBeExpression ){
+        emitBytes_(OpCode::MAKE_LIST, 0); // initially empty
+        if( !currentEnv_->addLocal(mem_->EMPTY_STRING, true) ){
+            errorAtPrevious_("Too many local variables in function.");
+        }
+        outputLocal = currentEnv_->defineLocal();
+        printf("output is at %i\n", outputLocal);
+    }
+
+    // Scope for the iterator value
     currentEnv_->beginScope();
 
     // Next up is the iterator
@@ -657,6 +682,7 @@ void Compiler::forStatement_() {
     // The initial value (or the end value if there is no range separator)
     expression_();
     uint8_t iteratorLocal = currentEnv_->defineLocal();
+    printf("iterator is at %i\n", iteratorLocal);
 
     // Ranges are denoted by : or := (indicating exclusive and inclusive of end value)
     bool inclusiveRange = check_(Token::COLON_EQUAL);
@@ -679,20 +705,28 @@ void Compiler::forStatement_() {
         emitByte_(OpCode::POP);  // Remove the zero
     }
 
+    // At this point the stack is: (outputList,) iterator, endValue
+
     // Remember where to loop back to
     int loopStart = getCurrentChunk_()->count();
 
-    // To include the final value, do the body before the check
-    if( inclusiveRange ) nestedBlock_(false);
+    bool isExpression = false;
 
+    // To include the final value, do the body before the check
+    if( inclusiveRange ){
+        isExpression = forBody_(canBeExpression, outputLocal);
+    }
     // Compare iterator to end value and put +1, -1 or 0 on the stack
     // This is used both to check when to exit and for the iteration direction
     emitByte_(OpCode::COMPARE_ITERATOR);
     int jumpToEnd = emitJump_(OpCode::JUMP_IF_ZERO);
 
-    // To exclude the final value, we do the body after the check
-    if( !inclusiveRange ) nestedBlock_(false);
+    // At this point, the stack is: (outputList,) iterator, endValue, compareValue
 
+    // To exclude the final value, we do the body after the check
+    if( !inclusiveRange ) {
+        isExpression = forBody_(canBeExpression, outputLocal);
+    }
     // Add the compare value to the iterator:
     emitBytes_(OpCode::GET_LOCAL, iteratorLocal);
     emitByte_(OpCode::ADD);
@@ -708,8 +742,9 @@ void Compiler::forStatement_() {
     emitByte_(OpCode::POP);  // Clean up the compare value
     emitByte_(OpCode::POP);  // Clean up the end value
 
-    // Pop the loop variable
+    // Pop the iterator
     currentEnv_->endScope(this);
+    return isExpression;
 }
 
 void Compiler::synchronise_() {
@@ -823,7 +858,6 @@ void Compiler::setJumpDestination_(int offset) {
     chunk->getCode()[offset] = (uint8_t)(jumpLen >> 8);
     chunk->getCode()[offset+1] = (uint8_t)(jumpLen & 0xFF);
 }
-
 
 void Compiler::emitLoop_(int loopStart) {
     emitByte_(OpCode::LOOP);
@@ -940,6 +974,8 @@ void Compiler::number_() {
         emitByte_(OpCode::PUSH_ZERO);
     }else if( n == 1 ){
         emitByte_(OpCode::PUSH_ONE);
+    }else if( n == 2 ){
+        emitByte_(OpCode::PUSH_TWO);
     }else{
         emitLiteral_(Value::number(n));
     }
@@ -1129,6 +1165,7 @@ bool Compiler::prefixOperation_(Token::Type type, bool canAssign) {
         case Token::LEFT_BRACKET:  list_(); return true;
         case Token::LEFT_BRACE:    expressionBlock_(); return true;
         case Token::IF:            ifExpression_(); return true;
+        case Token::FOR:           forExpression_(); return true;
         case Token::FN:            funcAnonymous_(); return true;
 
         // Math
@@ -1157,9 +1194,8 @@ bool Compiler::prefixOperation_(Token::Type type, bool canAssign) {
         case Token::ECHO:          echo_(); return true;
         case Token::TYPE:          type_(); return true;
 
-        // TODO while-expressions and for-expressions
+        // TODO while-expressions
         case Token::WHILE:
-        case Token::FOR:
             return false;
 
         // Not handled here
