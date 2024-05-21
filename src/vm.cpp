@@ -185,6 +185,7 @@ bool Vm::call_(ObjClosure * closure, uint8_t argCount) {
     frame->closure = closure;
     frame->ip = closure->function->chunk.getCode();
     frame->slots = stackTop_ - argCount - 1;
+    frame->locals.clear();
     return true;
 }
 
@@ -270,8 +271,14 @@ InterpretResult Vm::run_() {
 #ifdef DEBUG_TRACE_EXECUTION
         printf("stack: ");
         for( Value * slot = stack_; slot < stackTop_; slot++ ){
+            if ( slot != stack_ ) printf(" | ");
             slot->print(true);
-            printf(" | ");
+        }
+        printf("\n");
+        printf("locals: ");
+        for( uint8_t i = 0; i < frame->locals.size(); i++ ){
+            if ( i != 0 ) printf(" | ");
+            frame->locals[i].print(true);
         }
         printf("\n");
 
@@ -309,9 +316,9 @@ InterpretResult Vm::run_() {
                     uint8_t index = frame->readByte();
 
                     closure->upvalues.push_back(
-                        isLocal ? 
+                        isLocal ?
                         // capture local value to upvalue:
-                        ObjUpvalue::newUpvalue(&mem_, &frame->slots[index]) :
+                        ObjUpvalue::newUpvalue(&mem_, &frame->locals[index]) :
                         // else, reference existing upvalue
                         frame->closure->upvalues[index]
                     );
@@ -335,7 +342,7 @@ InterpretResult Vm::run_() {
                 if( !globals_.add(name, {peek(0), isConst}) ){
                     return runtimeError_("Redeclaration of variable '%s'.", name->get());
                 }
-                pop(); // Note: lox has this late pop as `set` might trigger garbage collection
+                pop(); // `set` might trigger garbage collection, we can safely pop now
                 break;
             }
             case OpCode::GET_GLOBAL: {
@@ -360,26 +367,38 @@ InterpretResult Vm::run_() {
                 // don't pop: the assignment can be used in an expression
                 break;
             }
+            case OpCode::DEFINE_LOCAL: {
+                frame->locals.push_back(peek(0));
+                pop(); // now that the local has a new home, we can remove it (GC)
+                break;
+            }
             case OpCode::GET_LOCAL: {
                 // local is already on the stack at the predicted index:
-                uint8_t slot = frame->readByte();
-                push(frame->slots[slot]);
+                uint8_t localId = frame->readByte();
+                if( localId >= frame->locals.size() ){
+                    return runtimeError_("Internal error: get non-existant local");
+                }
+                push(frame->locals[localId]);
                 break;
             }
             case OpCode::SET_LOCAL: {
-                uint8_t slot = frame->readByte();  // stack position of the local
-                frame->slots[slot] = peek(0);      // note: no pop: assignment can be an expression
+                uint8_t localId = frame->readByte();
+                frame->locals[localId] = peek(0);      // note: no pop: assignment can be an expression
                 break;
             }
             case OpCode::APPEND_LOCAL: {
-                uint8_t slot = frame->readByte();  // stack position of the local
-                Value dest = frame->slots[slot];
+                uint8_t localId = frame->readByte();
+                Value dest = frame->locals[localId];
                 Value src = pop();
                 if( !dest.isList() ) {
                     return runtimeError_("Cannot append to %s type",
                         Value::typeToString(dest.type));
                 }
                 dest.asObjList()->append(src);
+                break;
+            }
+            case OpCode::REMOVE_LOCAL: {
+                frame->locals.pop_back();
                 break;
             }
             case OpCode::GET_UPVALUE: {
@@ -567,6 +586,9 @@ InterpretResult Vm::run_() {
                 // close upvalues of function
                 Value * newStackTop = frame->slots;
                 mem_.closeUpvalues(newStackTop);
+
+                // Clear locals
+                frame->locals.clear();
 
                 // Check if we are returning from the top level script:
                 if( --frameCount_ == 0 ){

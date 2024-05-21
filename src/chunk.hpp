@@ -28,12 +28,14 @@ enum {
     DEFINE_GLOBAL_CONST, // Define a global variable as const
     GET_GLOBAL,     // Push the value of a global to the stack
     SET_GLOBAL,     // Set the value of a variable
+    DEFINE_LOCAL,   // Defines a local variable
     GET_LOCAL,
     SET_LOCAL,
     APPEND_LOCAL,
+    REMOVE_LOCAL,   // Remove 1 local 
     GET_UPVALUE,
     SET_UPVALUE,
-    CLOSE_UPVALUE,  // Remove 1 value, uplifting it to into an upvalue
+    CLOSE_UPVALUE,  // Remove 1 local, uplifting it to into an upvalue
     // Binary operators: take two values from the stack and push one:
     EQUAL,
     NOT_EQUAL,

@@ -18,9 +18,9 @@ static void repl() {
     vm.init();
 
     // Use for debugging:
-    const char * line = "var a = \"abc\";";
-    StringInputStream s(line);
-    vm.interpret("(debug)", &s);
+    // const char * line = "print(for i in 0:3 {i*2});";
+    // StringInputStream s(line);
+    // vm.interpret("(debug)", &s);
 
     for( ;; ){
         char * line = readline("> ");

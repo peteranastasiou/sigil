@@ -28,6 +28,7 @@ struct CallFrame {
     ObjClosure * closure;
     uint8_t * ip;   // instruction pointer
     Value * slots;  // first value in stack which can be used by function
+    std::vector<Value> locals; 
 };
 
 struct Global {
@@ -75,7 +76,7 @@ private:
 
     Mem mem_;
     Compiler * compiler_;
-    CallFrame frames_[FRAMES_MAX];  // TODO to allow continuations/generators, this can't be a stack, GC instead
+    CallFrame frames_[FRAMES_MAX];
     int frameCount_;
     Value stack_[STACK_MAX];
     Value * stackTop_;  // points past the last value in the stack

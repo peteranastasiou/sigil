@@ -53,6 +53,8 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
         case OpCode::DEFINE_GLOBAL_CONST: return literalInstruction_("DEFINE_GLOBAL_CONST", chunk, offset);
         case OpCode::GET_GLOBAL:    return byteInstruction_("GET_GLOBAL", chunk, offset);
         case OpCode::SET_GLOBAL:    return byteInstruction_("SET_GLOBAL", chunk, offset);
+        case OpCode::DEFINE_LOCAL:  return simpleInstruction_("DEFINE_LOCAL");
+        case OpCode::REMOVE_LOCAL:  return simpleInstruction_("REMOVE_LOCAL");
         case OpCode::GET_LOCAL:     return argInstruction_("GET_LOCAL", chunk, offset);
         case OpCode::SET_LOCAL:     return argInstruction_("SET_LOCAL", chunk, offset);
         case OpCode::APPEND_LOCAL:  return argInstruction_("APPEND_LOCAL", chunk, offset);

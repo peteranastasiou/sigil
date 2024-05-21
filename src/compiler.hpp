@@ -177,6 +177,7 @@ private:
     void varDeclaration_(bool isConst);
     uint8_t parseVariable_(const char * errorMsg, bool isConst, bool isLocal);
     void declareLocal_(bool isConst);
+    uint8_t defineLocal_();
     void defineVariable_(uint8_t global, bool isConst, bool isLocal);
 
     // references to variables:

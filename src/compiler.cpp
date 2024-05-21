@@ -17,16 +17,7 @@ Environment::Environment(Mem * mem, ObjString * name, Type t) {
     scopeDepth = 0;
     function = new ObjFunction(mem, name);
 
-    // Claim first local, reserving space for the "stack pointer"
-    Local * local = &locals[0];
-    local->name = mem->EMPTY_STRING;
-    local->depth = 0;
-    local->isDefined = false;
-    local->isConst = false;
-    local->isCaptured = false;
 
-    // Now we have constructed the string, we can include the first local
-    localCount = 1;
 }
 
 
@@ -65,7 +56,6 @@ int Environment::resolveLocal(Compiler * c, ObjString * name, bool & isConst) {
 
             // Found it:
             isConst = local->isConst;
-            // The local index happens to also be its position on the stack at runtime:
             return i;
         }
     }
@@ -124,7 +114,7 @@ void Environment::endScope(Compiler * c) {
         if( locals[localCount-1].isCaptured ){
             c->emitByte_(OpCode::CLOSE_UPVALUE);
         }else{
-            c->emitByte_(OpCode::POP);
+            c->emitByte_(OpCode::REMOVE_LOCAL);
         }
         localCount--;
     }
@@ -477,9 +467,15 @@ void Compiler::declareLocal_(bool isConst) {
     }
 }
 
+uint8_t Compiler::defineLocal_() {
+    uint8_t local = currentEnv_->defineLocal();
+    emitByte_(OpCode::DEFINE_LOCAL);
+    return local;
+}
+
 void Compiler::defineVariable_(uint8_t global, bool isConst, bool isLocal) {
     if( isLocal ){
-        currentEnv_->defineLocal();
+        defineLocal_();
     }else if( isConst ){
         emitBytes_(OpCode::DEFINE_GLOBAL_CONST, global);
     }else{
@@ -666,7 +662,7 @@ bool Compiler::for_(bool canBeExpression) {
         if( !currentEnv_->addLocal(mem_->EMPTY_STRING, true) ){
             errorAtPrevious_("Too many local variables in function.");
         }
-        outputLocal = currentEnv_->defineLocal();
+        outputLocal = defineLocal_();
         printf("output is at %i\n", outputLocal);
     }
 
@@ -681,7 +677,7 @@ bool Compiler::for_(bool canBeExpression) {
 
     // The initial value (or the end value if there is no range separator)
     expression_();
-    uint8_t iteratorLocal = currentEnv_->defineLocal();
+    uint8_t iteratorLocal = defineLocal_();
     printf("iterator is at %i\n", iteratorLocal);
 
     // Ranges are denoted by : or := (indicating exclusive and inclusive of end value)
