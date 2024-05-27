@@ -12,7 +12,16 @@
           Actually, expressions like "a"+{var b="b" .... } has a literal on the stack, which offsets the locals.
           How do we know when pushing to the stack whether it will remain?
       [x] Create a separate locals array
+        [] Can't use vector because it might realloc somewhere else
+           Can upvalue local reference span a function context? if so, also a bad idea.
+           -> Use a secondary global stack (more efficient anyway, but troublesome for generators later)
         [] Why do we iterate when closing upvalues? But emit 1 opcode per upvalue.
+
+TODO investigation with main code:
+  - can close_upvalue close multiple upvalues?
+  - how does local indexing (e.g. GET_LOCAL) work when you can have multiple function's locals stacked up in the stack
+
+
       [] Check locals aren't garbage collected
       [] Check locals enclose correctly. I'm assuming the local index assignment to upvalue is correct
       [] Check nonLocal upvalues (upvalues of upvalues) indices are correct when forming closure

@@ -93,6 +93,14 @@ void Vm::gcMarkRoots() {
         value->gcMark();
     }
 
+    // In all active callframes, mark all locals:
+    for( uint8_t frameIdx = 0; frameIdx < frameCount_; frameIdx++ ){
+        CallFrame * frame = &frames_[frameIdx];
+        for( uint8_t localIdx = 0; localIdx < frame->locals.size(); localIdx++ ){
+            frame->locals[localIdx].gcMark();
+        }
+    }
+
     // Mark global values:
     globals_.gcMark();
 
@@ -269,21 +277,32 @@ InterpretResult Vm::run_() {
     for(;;) {
 
 #ifdef DEBUG_TRACE_EXECUTION
-        printf("stack: ");
-        for( Value * slot = stack_; slot < stackTop_; slot++ ){
-            if ( slot != stack_ ) printf(" | ");
-            slot->print(true);
-        }
-        printf("\n");
-        printf("locals: ");
-        for( uint8_t i = 0; i < frame->locals.size(); i++ ){
-            if ( i != 0 ) printf(" | ");
-            frame->locals[i].print(true);
-        }
-        printf("\n");
+        {
+            printf("stack: ");
+            for( Value * slot = stack_; slot < stackTop_; slot++ ){
+                if ( slot != stack_ ) printf(" | ");
+                slot->print(true);
+            }
+            printf("\n");
+            printf("locals: ");
+            for( uint8_t i = 0; i < frame->locals.size(); i++ ){
+                if ( i != 0 ) printf(" | ");
+                frame->locals[i].print(true);
+            }
+            printf("\n");
 
-        disasm.disassembleInstruction(&frame->closure->function->chunk,
-            frame->chunkOffsetOf(frame->ip));
+            printf("open-upvalues: ");
+            ObjUpvalue * upvalue = mem_.getRootOpenUpvalue();
+            while( upvalue != nullptr ){
+                upvalue->print(true);
+                upvalue = upvalue->getNextUpvalue();
+                if ( upvalue != nullptr ) printf(" | ");
+            }
+            printf("\n");
+
+            disasm.disassembleInstruction(&frame->closure->function->chunk,
+                frame->chunkOffsetOf(frame->ip));
+        }
 #endif
 
         uint8_t instr = frame->readByte();
@@ -315,6 +334,7 @@ InterpretResult Vm::run_() {
                     uint8_t isLocal = frame->readByte();
                     uint8_t index = frame->readByte();
 
+                    printf("Capture %s %i to upvalue\n", isLocal ? "local" : "existing", index);
                     closure->upvalues.push_back(
                         isLocal ?
                         // capture local value to upvalue:
@@ -413,7 +433,7 @@ InterpretResult Vm::run_() {
             }
             case OpCode::CLOSE_UPVALUE: {
                 // close all upvalues to the top of the stack
-                mem_.closeUpvalues(stackTop_ - 1);
+                mem_.closeUpvalues(stackTop_ - 1);  // NEEDS WORK!
                 pop();
                 break;
             }
@@ -585,6 +605,7 @@ InterpretResult Vm::run_() {
 
                 // close upvalues of function
                 Value * newStackTop = frame->slots;
+                printf("TODO enclose upvalues from locals not stack!\n");
                 mem_.closeUpvalues(newStackTop);
 
                 // Clear locals

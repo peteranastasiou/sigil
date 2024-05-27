@@ -19,7 +19,7 @@ void ObjFunction::print(bool verbose) {
     if( verbose ){
         printf("<fn:%s>", name->get());
     }else{
-        puts(name->get());
+        printf("%s", name->get());
     }
 }
 

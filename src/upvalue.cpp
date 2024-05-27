@@ -46,13 +46,20 @@ void ObjUpvalue::close() {
     // From now on, use the internal value:
     value_ = &closedValue_;
 }
-
 ObjString * ObjUpvalue::toString() {
+
     return ObjString::newString(mem_, "<upvalue>");
 }
 
 void ObjUpvalue::print(bool verbose) {
-    puts("<upvalue>");
+    if( verbose ){
+        printf("<upvalue %s ",
+            value_ == &closedValue_ ? "closed" : "open");
+        value_->print(true);
+        printf(">");
+    }else{
+        printf("<upvalue>");
+    }
 }
 
 void ObjUpvalue::gcMarkRefs() {

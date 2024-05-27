@@ -408,7 +408,7 @@ void Compiler::function_(ObjString * name, Environment::Type type) {
     for( int i = 0; i < fn->numUpvalues; i++ ){
         // track whether it is a local or already an upvalue which is being uplifted:
         emitByte_(env.upvalues[i].isLocal ? 1 : 0);
-        // stack position of value to lift:
+        // local index: // TODO needs work, if separate stacks have 
         emitByte_(env.upvalues[i].index);
     }
 }

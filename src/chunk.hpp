@@ -31,7 +31,7 @@ enum {
     DEFINE_LOCAL,   // Defines a local variable
     GET_LOCAL,
     SET_LOCAL,
-    APPEND_LOCAL,
+    APPEND_LOCAL,   // Pop a value and append it to a local
     REMOVE_LOCAL,   // Remove 1 local 
     GET_UPVALUE,
     SET_UPVALUE,
