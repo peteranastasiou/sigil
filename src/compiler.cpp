@@ -46,7 +46,7 @@ bool Environment::addLocal(ObjString * name, bool isConst) {
 
 uint8_t Environment::defineLocal() {
     // Mark local as having a value now:
-    uint8_t latest = (uint8_t)(localCount-1);
+    uint8_t latest = (uint8_t)(localCount - 1);
     locals[latest].isDefined = true;
     return latest;
 }
@@ -532,6 +532,9 @@ bool Compiler::statement_(bool canBeExpression) {
             expression_();
             emitByte_(OpCode::RETURN);
         }
+    }else if( match_(Token::SEMICOLON) ){
+        // Empty statement
+        return false;
     }else{
         // expression-statement:
         expression_();
@@ -599,23 +602,25 @@ bool Compiler::if_(bool canBeExpression) {
     }
 
     // optional `else` block:
-    if( match_(Token::ELSE) ){
+    bool hasElse = match_(Token::ELSE);
+    if( hasElse || isExpression ){
         // protect against fallthrough
         jumpsToEnd.push_back(emitJump_(OpCode::JUMP));
         // jump over the previous if/elif-block to here:
         setJumpDestination_(jumpOver);
-        // the block
-        consume_(Token::LEFT_BRACE, "Expected '{' after 'else'.");
-        if( nestedBlock_(canBeExpression) != isExpression ){
-            errorAtPrevious_("Inconsistent if-statement/if-expression.");
+        if( hasElse ){
+            // the block
+            consume_(Token::LEFT_BRACE, "Expected '{' after 'else'.");
+            if( nestedBlock_(canBeExpression) != isExpression ){
+                errorAtPrevious_("Inconsistent if-statement/if-expression.");
+            }
+        }else{
+            // implicit else block for if expressions produces nil
+            emitByte_(OpCode::NIL);
         }
     }else{
         // no else block, so the last "jumpOver" goes to here:
         setJumpDestination_(jumpOver);
-
-        if( isExpression ){
-            errorAtPrevious_("Expected 'else' on if expression.");
-        }
     }
     // link up all the end jumps to here
     for( int jump : jumpsToEnd ){
@@ -643,46 +648,56 @@ void Compiler::forStatement_() {
     // Scope for the loop variable
     currentEnv_->beginScope();
 
-    // TODO support inclusive end value, implicit initial value, & decrementing loops
-
-    // next up is the loop variable
-    bool isConst = true;  // loop variable is const for the user, but vm can increment it!
+    // Next up is the iterator
+    bool isConst = true;  // iterator is const for the user, but vm can increment it!
     bool isLocal = true;
-    parseVariable_("Expected loop variable name.", isConst, isLocal);
-    consume_(Token::IN, "Expected 'in' after loop variable.");
+    parseVariable_("Expected iterator name.", isConst, isLocal);
+    consume_(Token::IN, "Expected 'in' after iterator.");
 
-    // The initial value
+    // The initial value (or the end value if there is no range separator)
     expression_();
-    uint8_t localPos = currentEnv_->defineLocal();
+    uint8_t iteratorLocal = currentEnv_->defineLocal();
 
-    // The range separator
-    consume_(Token::COLON, "Expected ':' after initial value");
+    // Ranges are denoted by : or := (indicating exclusive and inclusive of end value)
+    bool inclusiveRange = check_(Token::COLON_EQUAL);
+    if( match_(Token::COLON) || match_(Token::COLON_EQUAL) ){
+        // Evaluate the end value.
+        expression_();
 
-    // Evaluate the end value.
-    expression_();
-    // TODO add 1 if inclusive end?
+        consume_(Token::LEFT_BRACE, "Expected '{' after range.");
+
+    }else{
+        consume_(Token::LEFT_BRACE, "Expected ':', ':=' or '{' after value");
+
+        // This means we have an implicit start value
+        // We need to rearrange.
+        // Put the current iterator value where the end value goes:
+        emitBytes_(OpCode::GET_LOCAL, iteratorLocal);
+        // Set the iterator to zero:
+        emitByte_(OpCode::PUSH_ZERO);
+        emitBytes_(OpCode::SET_LOCAL, iteratorLocal);
+        emitByte_(OpCode::POP);  // Remove the zero
+    }
 
     // Remember where to loop back to
     int loopStart = getCurrentChunk_()->count();
 
-    // Check whether we should exit
-    emitByte_(OpCode::EQUAL_PEEK);
+    // To include the final value, do the body before the check
+    if( inclusiveRange ) nestedBlock_(false);
 
-    // Jump out of the loop if the end condition is met.
-    int jumpToEnd = emitJump_(OpCode::JUMP_IF_TRUE_POP);
+    // Compare iterator to end value and put +1, -1 or 0 on the stack
+    // This is used both to check when to exit and for the iteration direction
+    emitByte_(OpCode::COMPARE_ITERATOR);
+    int jumpToEnd = emitJump_(OpCode::JUMP_IF_ZERO);
 
-    // The body of the for loop
-    consume_(Token::LEFT_BRACE, "Expected '{' after loop range.");
-    nestedBlock_(false);
+    // To exclude the final value, we do the body after the check
+    if( !inclusiveRange ) nestedBlock_(false);
 
-    // TODO decrement or increment depending on comparison
-    // Now do the increment
-    emitBytes_(OpCode::GET_LOCAL, localPos);
-    //emitByte_(OpCode::COMPARE_PEEK);  // puts -1, 1 or 0 to the stack
-    emitLiteral_(Value::number(1));  // for now we only support upward increments
+    // Add the compare value to the iterator:
+    emitBytes_(OpCode::GET_LOCAL, iteratorLocal);
     emitByte_(OpCode::ADD);
-    emitBytes_(OpCode::SET_LOCAL, localPos);
-    emitByte_(OpCode::POP);  // Clean up the value used by SET_LOCAL
+    emitBytes_(OpCode::SET_LOCAL, iteratorLocal);
+    emitByte_(OpCode::POP);  // Clean up the new loop value
 
     // Loop back 
     emitLoop_(loopStart);
@@ -690,8 +705,8 @@ void Compiler::forStatement_() {
     // This is where we exit
     setJumpDestination_(jumpToEnd);
 
-    // Pop the end value
-    emitByte_(OpCode::POP);
+    emitByte_(OpCode::POP);  // Clean up the compare value
+    emitByte_(OpCode::POP);  // Clean up the end value
 
     // Pop the loop variable
     currentEnv_->endScope(this);
@@ -919,7 +934,15 @@ void Compiler::index_() {
 void Compiler::number_() {
     // shouldn't fail as we already validated the token as a number:
     double n = strtod(previousToken_.string->getCString(), nullptr);
-    emitLiteral_(Value::number(n));
+    
+    // simplify operation for common values:
+    if( n == 0 ){
+        emitByte_(OpCode::PUSH_ZERO);
+    }else if( n == 1 ){
+        emitByte_(OpCode::PUSH_ONE);
+    }else{
+        emitLiteral_(Value::number(n));
+    }
 }
 
 void Compiler::string_() {

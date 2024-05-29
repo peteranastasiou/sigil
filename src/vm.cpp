@@ -140,6 +140,27 @@ bool Vm::binaryOp_(uint8_t op) {
     return true;
 }
 
+bool Vm::compareIterator_() {
+    Value aV = peek(1);
+    Value bV = peek(0);
+    if( !aV.isNumber() || !bV.isNumber() ){
+        runtimeError_("Operands must be numbers.");
+        return false;
+    }
+
+    double b = bV.as.number;
+    double a = aV.as.number;
+    double diff = b - a;
+    if( abs(diff) < 1 ){
+        // consider different within 1 as equal
+        // we need this logic for for loops so they terminate correctly
+        push(Value::number( 0 ));
+    }else{
+        push(Value::number( diff > 0 ? 1 : -1 ));
+    }
+    return true;
+}
+
 bool Vm::callValue_(Value fn, uint8_t argCount) {
     if( fn.type != Value::CLOSURE ){
         runtimeError_("Can only call functions.");
@@ -273,6 +294,14 @@ InterpretResult Vm::run_() {
 
         uint8_t instr = frame->readByte();
         switch( instr ){
+            case OpCode::PUSH_ZERO:{
+                push(Value::number(0));
+                break;
+            }
+            case OpCode::PUSH_ONE:{
+                push(Value::number(1));
+                break;
+            }
             case OpCode::LITERAL:{
                 push(frame->readLiteral());
                 break;
@@ -371,8 +400,8 @@ InterpretResult Vm::run_() {
                 push(Value::boolean( pop().equals(pop()) ));
                 break;
             }
-            case OpCode::EQUAL_PEEK: {
-                push(Value::boolean( peek(0).equals(peek(1)) ));
+            case OpCode::COMPARE_ITERATOR: {
+                compareIterator_();
                 break;
             }
             case OpCode::NOT_EQUAL: {
@@ -390,24 +419,39 @@ InterpretResult Vm::run_() {
                 break;
             }
             case OpCode::ADD:{
-                if( peek(1).isString() ){  // the first argument is second on stack
+                if( peek(0).isNumber() && peek(1).isNumber() ){
+                    double b = pop().as.number;
+                    double a = pop().as.number;
+                    push(Value::number( a + b ));
+
+                }else if( peek(1).isString() ){  // the first argument is second on stack
                     // implicitly convert second operand to string
                     Value bValue = pop();
                     ObjString * b = bValue.toString(&mem_);
                     ObjString * a = pop().asObjString();
                     push( Value::string(ObjString::concatenate(&mem_, a, b)) );
 
-                }else if( peek(0).isList() && peek(1).isList() ){
+                }else if( peek(1).isList() && peek(0).isList() ){
+                    // Concatenate two lists
+                    ObjList * list = new ObjList(&mem_);
                     ObjList * b = pop().asObjList();
                     ObjList * a = pop().asObjList();
-                    push( Value::list(new ObjList(&mem_, a, b)) );
+                    list->concat(a);
+                    list->concat(b);
+                    push( Value::list(list) );
 
-                }else if( peek(0).isNumber() && peek(1).isNumber() ){
-                    double b = pop().as.number;
-                    double a = pop().as.number;
-                    push(Value::number( a + b ));
+                }else if( peek(1).isList() ){
+                    // Copy a list and append a value
+                    ObjList * list = new ObjList(&mem_);
+                    Value b = pop();
+                    ObjList * a = pop().asObjList();
+                    list->concat(a);
+                    list->append(b);
+                    push( Value::list(list) );
+
                 }else{
-                    return runtimeError_("Invalid operands for +");
+                    return runtimeError_("Invalid operands for '+': %s, %s", 
+                        Value::typeToString(peek(1).type), Value::typeToString(peek(0).type));
                 }
                 break;
             }
@@ -490,6 +534,12 @@ InterpretResult Vm::run_() {
             case OpCode::JUMP_IF_FALSE_POP:{
                 uint16_t offset = frame->readUint16();
                 if( !isTruthy_(pop()) ) frame->ip += offset;
+                break;
+            }
+            case OpCode::JUMP_IF_ZERO:{
+                uint16_t offset = frame->readUint16();
+                Value a = peek(0);
+                if( a.type == Value::NUMBER && a.as.number == 0.0 ) frame->ip += offset;
                 break;
             }
             case OpCode::CALL: {

@@ -34,6 +34,8 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
 
     uint8_t instr = chunk->code[(size_t)offset];
     switch(instr){
+        case OpCode::PUSH_ZERO:     return simpleInstruction_("PUSH_ZERO");
+        case OpCode::PUSH_ONE:      return simpleInstruction_("PUSH_ONE");
         case OpCode::LITERAL:       return literalInstruction_("LITERAL", chunk, offset);
         case OpCode::CLOSURE:       return closureInstruction_("CLOSURE", chunk, offset);
         case OpCode::NIL:           return simpleInstruction_("NIL");
@@ -54,26 +56,29 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
         case OpCode::SET_LOCAL:     return argInstruction_("SET_LOCAL", chunk, offset);
         case OpCode::GET_UPVALUE:   return argInstruction_("GET_UPVALUE", chunk, offset);
         case OpCode::SET_UPVALUE:   return argInstruction_("SET_UPVALUE", chunk, offset);
-        case OpCode::EQUAL:         return simpleInstruction_("EQUAL"); 
-        case OpCode::EQUAL_PEEK:    return simpleInstruction_("EQUAL_PEEK"); 
-        case OpCode::NOT_EQUAL:     return simpleInstruction_("NOT_EQUAL");     
-        case OpCode::GREATER:       return simpleInstruction_("GREATER");   
-        case OpCode::GREATER_EQUAL: return simpleInstruction_("GREATER_EQUAL");         
-        case OpCode::LESS:          return simpleInstruction_("LESS"); 
-        case OpCode::LESS_EQUAL:    return simpleInstruction_("LESS_EQUAL");  
+        case OpCode::EQUAL:         return simpleInstruction_("EQUAL");
+        case OpCode::NOT_EQUAL:     return simpleInstruction_("NOT_EQUAL");
+        case OpCode::GREATER:       return simpleInstruction_("GREATER");
+        case OpCode::GREATER_EQUAL: return simpleInstruction_("GREATER_EQUAL");
+        case OpCode::LESS:          return simpleInstruction_("LESS");
+        case OpCode::LESS_EQUAL:    return simpleInstruction_("LESS_EQUAL");
         case OpCode::SUBTRACT:      return simpleInstruction_("SUBTRACT");
         case OpCode::MULTIPLY:      return simpleInstruction_("MULTIPLY");
         case OpCode::DIVIDE:        return simpleInstruction_("DIVIDE");
         case OpCode::NEGATE:        return simpleInstruction_("NEGATE");
         case OpCode::NOT:           return simpleInstruction_("NOT");
+        case OpCode::COMPARE_ITERATOR:   return simpleInstruction_("COMPARE_ITERATOR");
+        case OpCode::MAKE_LIST:     return argInstruction_("MAKE_LIST", chunk, offset);
         case OpCode::PRINT:         return simpleInstruction_("PRINT");
+        case OpCode::ECHO:          return simpleInstruction_("ECHO");
         case OpCode::TYPE:          return simpleInstruction_("TYPE");
         case OpCode::JUMP:          return jumpInstruction_("JUMP", 1, chunk, offset);
-        case OpCode::LOOP:          return jumpInstruction_("LOOP", 1, chunk, offset);
+        case OpCode::LOOP:          return jumpInstruction_("LOOP", -1, chunk, offset);
         case OpCode::JUMP_IF_TRUE:  return jumpInstruction_("JUMP_IF_TRUE", 1, chunk, offset);
         case OpCode::JUMP_IF_FALSE: return jumpInstruction_("JUMP_IF_FALSE", 1, chunk, offset);
         case OpCode::JUMP_IF_TRUE_POP: return jumpInstruction_("JUMP_IF_TRUE_POP", 1, chunk, offset);
         case OpCode::JUMP_IF_FALSE_POP: return jumpInstruction_("JUMP_IF_FALSE_POP", 1, chunk, offset);
+        case OpCode::JUMP_IF_ZERO:  return jumpInstruction_("JUMP_IF_ZERO", 1, chunk, offset);
         case OpCode::CALL:          return byteInstruction_("CALL", chunk, offset);
         case OpCode::RETURN:        return simpleInstruction_("RETURN");
         default:

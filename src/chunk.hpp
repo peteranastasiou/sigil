@@ -9,6 +9,8 @@
 namespace OpCode {
 enum {
     // Literals:
+    PUSH_ZERO,      // Push the value 0 to the stack
+    PUSH_ONE,       // Push the value 1 to the stack
     LITERAL,        // Push a literal value from the chunk
     CLOSURE,        // Instantiate a function literal, making a closure
     NIL,            // Push nil to the stack
@@ -32,7 +34,6 @@ enum {
     CLOSE_UPVALUE,  // Remove 1 value, uplifting it to into an upvalue
     // Binary operators: take two values from the stack and push one:
     EQUAL,
-    EQUAL_PEEK,  // Variant of equal which leaves the operands on the stack
     NOT_EQUAL,
     GREATER,
     GREATER_EQUAL,
@@ -45,6 +46,8 @@ enum {
     // Unary operators: take one value, push one value:
     NEGATE,
     NOT,
+    // Compare iterator takes two values, but leaves them on the stack
+    COMPARE_ITERATOR,   // Push -1 if <, 1 if >, 0 if difference is < 1
     // Built-ins:
     PRINT,              // Pop 1 value, print it, Push nil
     ECHO,               // Pop 1 value, print it, Push nil
@@ -59,6 +62,7 @@ enum {
     JUMP_IF_FALSE,      // If top of stack is falsy, jump fwd by bytecode offset
     JUMP_IF_TRUE_POP,   // Same as JUMP_IF_FALSE, but also pops the value
     JUMP_IF_FALSE_POP,  // Same as JUMP_IF_TRUE, but also pops the value
+    JUMP_IF_ZERO,       // If top of stack is zero, jump fwd by bytecode offset
     CALL,               // call function
     RETURN,
 };
