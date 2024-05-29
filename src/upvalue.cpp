@@ -52,7 +52,14 @@ ObjString * ObjUpvalue::toString() {
 }
 
 void ObjUpvalue::print(bool verbose) {
-    puts("<upvalue>");
+    if( verbose ){
+        printf("<upvalue %s ",
+            value_ == &closedValue_ ? "closed" : "open");
+        value_->print(true);
+        printf(">");
+    }else{
+        printf("<upvalue>");
+    }
 }
 
 void ObjUpvalue::gcMarkRefs() {

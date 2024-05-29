@@ -247,15 +247,28 @@ InterpretResult Vm::run_() {
     for(;;) {
 
 #ifdef DEBUG_TRACE_EXECUTION
-        printf("stack: ");
-        for( Value * slot = stack_; slot < stackTop_; slot++ ){
-            slot->print(true);
-            printf(" | ");
-        }
-        printf("\n");
+       {
+           printf("stack: ");
+           for( Value * stackPos = stack_; stackPos < stackTop_; stackPos++ ){
+               if ( stackPos != stack_ ) printf(" | ");
+               if ( stackPos == frame->slots ){
+                  printf("SF: "); // Stack Frame
+               }
+               stackPos->print(true);
+           }
+           printf("\n");
+           printf("open-upvalues: ");
+           ObjUpvalue * upvalue = mem_.getRootOpenUpvalue();
+           while( upvalue != nullptr ){
+               upvalue->print(true);
+               upvalue = upvalue->getNextUpvalue();
+               if ( upvalue != nullptr ) printf(" | ");
+           }
+           printf("\n");
 
-        disasm.disassembleInstruction(&frame->closure->function->chunk,
-            frame->chunkOffsetOf(frame->ip));
+           disasm.disassembleInstruction(&frame->closure->function->chunk,
+               frame->chunkOffsetOf(frame->ip));
+        }
 #endif
 
         uint8_t instr = frame->readByte();
