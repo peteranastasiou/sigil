@@ -32,7 +32,7 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
     printf("%04i ", offset);
     printf("%4d ", line);
 
-    uint8_t instr = chunk->code[(size_t)offset];
+    OpCode instr = (OpCode)chunk->code[(size_t)offset];
     switch(instr){
         case OpCode::PUSH_ZERO:     return simpleInstruction_("PUSH_ZERO");
         case OpCode::PUSH_ONE:      return simpleInstruction_("PUSH_ONE");
@@ -84,7 +84,7 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
         case OpCode::CALL:          return byteInstruction_("CALL", chunk, offset);
         case OpCode::RETURN:        return simpleInstruction_("RETURN");
         default:
-            printf("Unknown opcode %i\n", instr);
+            printf("Unknown opcode %i\n", (int)instr);
             return 1;
     }
 }

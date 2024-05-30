@@ -6,8 +6,7 @@
 #include <stddef.h>
 #include <vector>
 
-namespace OpCode {
-enum {
+enum class OpCode {
     // Literals:
     PUSH_ZERO,      // Push the value 0 to the stack
     PUSH_ONE,       // Push the value 1 to the stack
@@ -68,7 +67,6 @@ enum {
     CALL,               // call function
     RETURN,
 };
-}
 
 struct LineNum {
     uint16_t line;  // line number

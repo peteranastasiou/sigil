@@ -122,9 +122,9 @@ void Environment::endScope(Compiler * c) {
     // pop all locals which have fallen out of scope:
     while( localCount > 0 && locals[localCount-1].depth > scopeDepth ){
         if( locals[localCount-1].isCaptured ){
-            c->emitByte_(OpCode::CLOSE_UPVALUE);
+            c->emitInstruction_(OpCode::CLOSE_UPVALUE);
         }else{
-            c->emitByte_(OpCode::POP);
+            c->emitInstruction_(OpCode::POP);
         }
         localCount--;
     }
@@ -255,12 +255,23 @@ Chunk * Compiler::getCurrentChunk_() {
     return &currentEnv_->function->chunk;
 }
 
-void Compiler::emitByte_(uint8_t byte) {
-    emitByteAtLine_(byte, previousToken_.line);
+void Compiler::emitInstruction_(OpCode instr) {
+    // Work out the stack impact of the instruction:
+    writeToCodeChunk_((uint8_t)instr);
 }
 
-void Compiler::emitByteAtLine_(uint8_t byte, uint16_t line) {
-    if( !getCurrentChunk_()->write(byte, line) ){
+void Compiler::emitInstruction_(OpCode instr, uint8_t arg) {
+    emitInstruction_(instr);
+    writeToCodeChunk_(arg);
+}
+
+void Compiler::emitInstructionArg_(uint8_t arg) {
+    writeToCodeChunk_(arg);
+}
+
+void Compiler::writeToCodeChunk_(uint8_t byte) {
+    uint16_t line = previousToken_.line;
+    if( !getCurrentChunk_()->write((uint8_t)byte, line) ){
         if( currentEnv_->type == Environment::FUNCTION ){
             fatalError_("Too much code in function.");
         }else{
@@ -270,44 +281,46 @@ void Compiler::emitByteAtLine_(uint8_t byte, uint16_t line) {
 }
 
 void Compiler::emitReturn_() {
-    emitByte_(OpCode::NIL); // implicit return value
-    emitByte_(OpCode::RETURN);
+    emitInstruction_(OpCode::NIL); // implicit return value
+    emitInstruction_(OpCode::RETURN);
 }
 
+// TODO abstract all use of opcode to emit functions so we can predict stack loc
+
 void Compiler::emitTrue_() {
-    emitByte_(OpCode::TRUE);
+    emitInstruction_(OpCode::TRUE);
 }
 
 void Compiler::emitFalse_() {
-    emitByte_(OpCode::FALSE);
+    emitInstruction_(OpCode::FALSE);
 }
 
 void Compiler::emitNil_() {
-    emitByte_(OpCode::NIL);
+    emitInstruction_(OpCode::NIL);
 }
 
 void Compiler::emitBoolType_() {
-    emitByte_(OpCode::TYPE_BOOL);
+    emitInstruction_(OpCode::TYPE_BOOL);
 }
 
 void Compiler::emitFloatType_() {
-    emitByte_(OpCode::TYPE_FLOAT);
+    emitInstruction_(OpCode::TYPE_FLOAT);
 }
 
 void Compiler::emitObjectType_() {
-    emitByte_(OpCode::TYPE_FUNCTION);
+    emitInstruction_(OpCode::TYPE_FUNCTION);
 }
 
 void Compiler::emitStringType_() {
-    emitByte_(OpCode::TYPE_STRING);
+    emitInstruction_(OpCode::TYPE_STRING);
 }
 
 void Compiler::emitTypeIdType_() {
-    emitByte_(OpCode::TYPE_TYPEID);
+    emitInstruction_(OpCode::TYPE_TYPEID);
 }
 
 void Compiler::emitLiteral_(Value value) {
-    emitBytes_(OpCode::LITERAL, makeLiteral_(value));
+    emitInstruction_(OpCode::LITERAL, makeLiteral_(value));
 }
 
 uint8_t Compiler::makeLiteral_(Value value) {
@@ -401,7 +414,7 @@ void Compiler::function_(ObjString * name, Environment::Type type) {
     if( isExpression ){
         // function ends with an expression (omitted semi-colon)
         // to produce an implicit return:
-        emitByte_(OpCode::RETURN);
+        emitInstruction_(OpCode::RETURN);
     }
 
     // Note: no actual need to endScope(), as we are done with the Environment now
@@ -412,14 +425,14 @@ void Compiler::function_(ObjString * name, Environment::Type type) {
     ObjFunction * fn = endEnvironment_();
     uint8_t literal = makeLiteral_(Value::function(fn));
     // Note: CLOSURE instruction takes a function literal and wraps it to make a Closure
-    emitBytes_(OpCode::CLOSURE, literal);
+    emitInstruction_(OpCode::CLOSURE, literal);
 
     // List all the upvalues (variables enclosed by function):
     for( int i = 0; i < fn->numUpvalues; i++ ){
         // track whether it is a local or already an upvalue which is being uplifted:
-        emitByte_(env.upvalues[i].isLocal ? 1 : 0);
+        emitInstructionArg_(env.upvalues[i].isLocal ? 1 : 0);
         // stack position of value to lift:
-        emitByte_(env.upvalues[i].index);
+        emitInstructionArg_(env.upvalues[i].index);
     }
 }
 
@@ -434,7 +447,7 @@ void Compiler::varDeclaration_(bool isConst) {
     if( match_(Token::EQUAL) ){
         expression_();
     }else{
-        emitByte_(OpCode::NIL); // default value is nil
+        emitInstruction_(OpCode::NIL); // default value is nil
     }
     consume_(Token::SEMICOLON, "Expected ';' after var declaration.");
 
@@ -481,9 +494,9 @@ void Compiler::defineVariable_(uint8_t global, bool isConst, bool isLocal) {
     if( isLocal ){
         currentEnv_->defineLocal();
     }else if( isConst ){
-        emitBytes_(OpCode::DEFINE_GLOBAL_CONST, global);
+        emitInstruction_(OpCode::DEFINE_GLOBAL_CONST, global);
     }else{
-        emitBytes_(OpCode::DEFINE_GLOBAL_VAR, global);
+        emitInstruction_(OpCode::DEFINE_GLOBAL_VAR, global);
     }
 }
 
@@ -491,7 +504,7 @@ void Compiler::and_() {
     // left hand side has already been compiled, 
     // if its falsy, we want to jump over the right hand side (short circuiting)
     int jumpOverRhs = emitJump_(OpCode::JUMP_IF_FALSE);
-    emitByte_(OpCode::POP);   // don't need the lhs anymore, if we got here - its true!
+    emitInstruction_(OpCode::POP);   // don't need the lhs anymore, if we got here - its true!
     parse_(Precedence::AND);  // the rhs value
     setJumpDestination_(jumpOverRhs);
 }
@@ -500,7 +513,7 @@ void Compiler::or_() {
     // left hand side has already been compiled.
     // if its truthy, jump over the right hand side (short circuiting)
     int jumpOverRhs = emitJump_(OpCode::JUMP_IF_TRUE);
-    emitByte_(OpCode::POP);  // don't need the lhs anymore
+    emitInstruction_(OpCode::POP);  // don't need the lhs anymore
     parse_(Precedence::OR);  // the rhs value
     setJumpDestination_(jumpOverRhs);
 }
@@ -530,7 +543,7 @@ bool Compiler::statement_(bool canBeExpression) {
         }else{
             // the return value(s):
             expression_();
-            emitByte_(OpCode::RETURN);
+            emitInstruction_(OpCode::RETURN);
         }
     }else if( match_(Token::SEMICOLON) ){
         // Empty statement
@@ -543,11 +556,11 @@ bool Compiler::statement_(bool canBeExpression) {
     if( !canBeExpression ){
         // ordinary statement:
         consume_(Token::SEMICOLON, "Expected ';' after statement.");
-        emitByte_(OpCode::POP); // discard the result
+        emitInstruction_(OpCode::POP); // discard the result
         return false;
     }else if( match_(Token::SEMICOLON) ){
         // statement within an expression block:
-        emitByte_(OpCode::POP); // discard the result
+        emitInstruction_(OpCode::POP); // discard the result
         return false;
     }else if( check_(Token::RIGHT_BRACE) ){
         // The end of an expression block, leave the value on the stack:
@@ -609,7 +622,7 @@ bool Compiler::if_(bool canBeExpression) {
             }
         }else{
             // implicit else block for if expressions produces nil
-            emitByte_(OpCode::NIL);
+            emitInstruction_(OpCode::NIL);
         }
     }else{
         // no else block, so the last "jumpOver" goes to here:
@@ -650,7 +663,7 @@ bool Compiler::forBody_(bool canBeExpression, uint8_t outputLocal) {
     if( isExpression ) {
         if( canBeExpression ){
             // Accumulate the result into the output value
-            emitBytes_(OpCode::APPEND_LOCAL, outputLocal);
+            emitInstruction_(OpCode::APPEND_LOCAL, outputLocal);
         }else{
             errorAtPrevious_("Expected a statement not an expression.");
         }
@@ -662,7 +675,7 @@ bool Compiler::for_(bool canBeExpression) {
     // For-expressions need an output list value
     uint8_t outputLocal = 0;
     if( canBeExpression ){
-        emitBytes_(OpCode::MAKE_LIST, 0); // initially empty
+        emitInstruction_(OpCode::MAKE_LIST, 0); // initially empty
         if( !currentEnv_->addLocal(mem_->EMPTY_STRING, true) ){
             errorAtPrevious_("Too many local variables in function.");
         }
@@ -698,11 +711,11 @@ bool Compiler::for_(bool canBeExpression) {
         // This means we have an implicit start value
         // We need to rearrange.
         // Put the current iterator value where the end value goes:
-        emitBytes_(OpCode::GET_LOCAL, iteratorLocal);
+        emitInstruction_(OpCode::GET_LOCAL, iteratorLocal);
         // Set the iterator to zero:
-        emitByte_(OpCode::PUSH_ZERO);
-        emitBytes_(OpCode::SET_LOCAL, iteratorLocal);
-        emitByte_(OpCode::POP);  // Remove the zero
+        emitInstruction_(OpCode::PUSH_ZERO);
+        emitInstruction_(OpCode::SET_LOCAL, iteratorLocal);
+        emitInstruction_(OpCode::POP);  // Remove the zero
     }
 
     // At this point the stack is: (outputList,) iterator, endValue
@@ -718,7 +731,7 @@ bool Compiler::for_(bool canBeExpression) {
     }
     // Compare iterator to end value and put +1, -1 or 0 on the stack
     // This is used both to check when to exit and for the iteration direction
-    emitByte_(OpCode::COMPARE_ITERATOR);
+    emitInstruction_(OpCode::COMPARE_ITERATOR);
     int jumpToEnd = emitJump_(OpCode::JUMP_IF_ZERO);
 
     // At this point, the stack is: (outputList,) iterator, endValue, compareValue
@@ -728,10 +741,10 @@ bool Compiler::for_(bool canBeExpression) {
         isExpression = forBody_(canBeExpression, outputLocal);
     }
     // Add the compare value to the iterator:
-    emitBytes_(OpCode::GET_LOCAL, iteratorLocal);
-    emitByte_(OpCode::ADD);
-    emitBytes_(OpCode::SET_LOCAL, iteratorLocal);
-    emitByte_(OpCode::POP);  // Clean up the new loop value
+    emitInstruction_(OpCode::GET_LOCAL, iteratorLocal);
+    emitInstruction_(OpCode::ADD);
+    emitInstruction_(OpCode::SET_LOCAL, iteratorLocal);
+    emitInstruction_(OpCode::POP);  // Clean up the new loop value
 
     // Loop back 
     emitLoop_(loopStart);
@@ -739,8 +752,8 @@ bool Compiler::for_(bool canBeExpression) {
     // This is where we exit
     setJumpDestination_(jumpToEnd);
 
-    emitByte_(OpCode::POP);  // Clean up the compare value
-    emitByte_(OpCode::POP);  // Clean up the end value
+    emitInstruction_(OpCode::POP);  // Clean up the compare value
+    emitInstruction_(OpCode::POP);  // Clean up the end value
 
     // Pop the iterator
     currentEnv_->endScope(this);
@@ -837,11 +850,11 @@ uint8_t Compiler::makeIdentifierLiteral_(ObjString * name) {
     return makeLiteral_(Value::string(name));
 }
 
-int Compiler::emitJump_(uint8_t instr) {
-    emitByte_(instr);
+int Compiler::emitJump_(OpCode instr) {
+    emitInstruction_(instr);
     // placeholder value:
-    emitByte_(0xFF);
-    emitByte_(0xFF);
+    emitInstructionArg_(0xFF);
+    emitInstructionArg_(0xFF);
     // location of placeholder
     return getCurrentChunk_()->count() - 2;
 }
@@ -860,11 +873,11 @@ void Compiler::setJumpDestination_(int offset) {
 }
 
 void Compiler::emitLoop_(int loopStart) {
-    emitByte_(OpCode::LOOP);
+    emitInstruction_(OpCode::LOOP);
     int offset = getCurrentChunk_()->count() - loopStart + 2;
     if( offset > UINT16_MAX ) errorAtPrevious_("Loop body is too large.");
-    emitByte_((uint8_t)((offset >> 8) & 0xff));
-    emitByte_((uint8_t)(offset & 0xff));
+    emitInstructionArg_((uint8_t)((offset >> 8) & 0xff));
+    emitInstructionArg_((uint8_t)(offset & 0xff));
 }
 
 void Compiler::grouping_() {
@@ -877,20 +890,19 @@ void Compiler::grouping_() {
 
 void Compiler::unary_() {
     Token::Type operatorType = previousToken_.type;
-    uint16_t line = previousToken_.line;
 
     // Compile the operand evaluation first:
     parse_(Precedence::UNARY);
 
     // Result of the operand gets negated:
     switch( operatorType ){
-        case Token::BANG:  emitByteAtLine_(OpCode::NOT, line); break;
-        case Token::MINUS: emitByteAtLine_(OpCode::NEGATE, line); break;
+        case Token::BANG:  emitInstruction_(OpCode::NOT); break;
+        case Token::MINUS: emitInstruction_(OpCode::NEGATE); break;
         default: break;
     }
 }
 
-void Compiler::binary_(uint8_t opCode) {
+void Compiler::binary_(OpCode opCode) {
     // infix operator just got consumed, next token is the start of the second operand
     // the first operand is already compiled and will end up on the stack first
     Token::Type operatorType = previousToken_.type;
@@ -901,7 +913,7 @@ void Compiler::binary_(uint8_t opCode) {
     parse_((Precedence)(precedence + 1));
 
     // now both operand values will end up on the stack. emit the operation to combine theM
-    emitByte_(opCode);
+    emitInstruction_(opCode);
 }
 
 void Compiler::call_() {
@@ -918,7 +930,7 @@ void Compiler::call_() {
     }
     consume_(Token::RIGHT_PAREN, "Expected ')' after arguments.");
 
-    emitBytes_(OpCode::CALL, argCount);
+    emitInstruction_(OpCode::CALL, argCount);
 }
 
 void Compiler::list_() {
@@ -934,7 +946,7 @@ void Compiler::list_() {
     }
     consume_(Token::RIGHT_BRACKET, "Expected ']' after list elements.");
 
-    emitBytes_(OpCode::MAKE_LIST, numEntries);
+    emitInstruction_(OpCode::MAKE_LIST, numEntries);
 }
 
 void Compiler::type_() {
@@ -942,7 +954,7 @@ void Compiler::type_() {
     // type built-in takes a single value:
     expression_();
     consume_(Token::RIGHT_PAREN, "Expected ')' after argument.");
-    emitByte_(OpCode::TYPE);
+    emitInstruction_(OpCode::TYPE);
 }
 
 void Compiler::print_() {
@@ -950,19 +962,19 @@ void Compiler::print_() {
     // print built-in takes a single value:
     expression_();
     consume_(Token::RIGHT_PAREN, "Expected ')' after argument.");
-    emitByte_(OpCode::PRINT);
+    emitInstruction_(OpCode::PRINT);
 }
 
 void Compiler::echo_() {
     // print built-in takes a single value:
     expression_();
-    emitByte_(OpCode::ECHO);
+    emitInstruction_(OpCode::ECHO);
 }
 
 void Compiler::index_() {
     expression_();
     consume_(Token::RIGHT_BRACKET, "Expected ']' after index.");
-    emitByte_(OpCode::INDEX_GET);
+    emitInstruction_(OpCode::INDEX_GET);
 }
 
 void Compiler::number_() {
@@ -971,11 +983,11 @@ void Compiler::number_() {
     
     // simplify operation for common values:
     if( n == 0 ){
-        emitByte_(OpCode::PUSH_ZERO);
+        emitInstruction_(OpCode::PUSH_ZERO);
     }else if( n == 1 ){
-        emitByte_(OpCode::PUSH_ONE);
+        emitInstruction_(OpCode::PUSH_ONE);
     }else if( n == 2 ){
-        emitByte_(OpCode::PUSH_TWO);
+        emitInstruction_(OpCode::PUSH_TWO);
     }else{
         emitLiteral_(Value::number(n));
     }
@@ -990,7 +1002,8 @@ void Compiler::variable_(bool canAssign) {
 }
 
 void Compiler::getSetVariable_(ObjString * name, bool canAssign) {
-    uint8_t getOp, setOp, arg; // opcodes for getting and setting the variable, and their argument
+    OpCode getOp, setOp;  // opcodes for getting and setting the variable
+    uint8_t arg;          // instruction argument
 
     // first, try to look up
     bool isConst;
@@ -1022,10 +1035,10 @@ void Compiler::getSetVariable_(ObjString * name, bool canAssign) {
         }
         // setting the variable:
         expression_();  // the value to set
-        emitBytes_(setOp, arg);
+        emitInstruction_(setOp, arg);
     }else{
         // getting the variable:
-        emitBytes_(getOp, arg);
+        emitInstruction_(getOp, arg);
     }
 }
 

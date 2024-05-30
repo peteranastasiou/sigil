@@ -120,7 +120,7 @@ Value Vm::peek(int index) {
     return stackTop_[-1 - index];
 }
 
-bool Vm::binaryOp_(uint8_t op) {
+bool Vm::binaryOp_(OpCode op) {
     if( !peek(0).isNumber() || !peek(1).isNumber() ){
         runtimeError_("Operands must be numbers.");
         return false;
@@ -136,6 +136,7 @@ bool Vm::binaryOp_(uint8_t op) {
         case OpCode::SUBTRACT:      push(Value::number( a - b )); break;
         case OpCode::MULTIPLY:      push(Value::number( a * b )); break;
         case OpCode::DIVIDE:        push(Value::number( a / b )); break;
+        default: break;
     }
     return true;
 }
@@ -292,7 +293,7 @@ InterpretResult Vm::run_() {
         }
 #endif
 
-        uint8_t instr = frame->readByte();
+        OpCode instr = (OpCode)frame->readByte();
         switch( instr ){
             case OpCode::PUSH_ZERO:{
                 push(Value::number(0));

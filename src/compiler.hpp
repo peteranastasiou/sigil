@@ -165,7 +165,7 @@ private:
     void number_();
     void string_();
     void unary_();
-    void binary_(uint8_t opCode);
+    void binary_(OpCode opCode);
     void grouping_();  // parentheses in expressions
 
     // parsing functions:
@@ -184,9 +184,10 @@ private:
     void getSetVariable_(ObjString * name, bool canAssign);
 
     // bytecode helpers:
-    void emitByte_(uint8_t byte);
-    void emitByteAtLine_(uint8_t byte, uint16_t line);
-    inline void emitBytes_(uint8_t b1, uint8_t b2){ emitByte_(b1); emitByte_(b2); }
+    void emitInstruction_(OpCode instr);
+    void emitInstructionArg_(uint8_t arg);
+    void emitInstruction_(OpCode instr, uint8_t arg);
+    void writeToCodeChunk_(uint8_t byte);
     void emitTrue_();
     void emitFalse_();
     void emitNil_();
@@ -199,7 +200,7 @@ private:
     void emitLiteral_(Value value);
     uint8_t makeLiteral_(Value value);
     uint8_t makeIdentifierLiteral_(ObjString * name);
-    int emitJump_(uint8_t instr);
+    int emitJump_(OpCode instr);
     void setJumpDestination_(int offset);
     void emitLoop_(int loopStart);
 
