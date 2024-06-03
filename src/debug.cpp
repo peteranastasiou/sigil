@@ -18,19 +18,22 @@ void Disassembler::disassembleChunk(Chunk * chunk, char const * name){
 
     for( int offset = 0; offset < chunk->count(); ) {
         int line = chunk->getLineNumber(offset);
-        int incr = disassembleInstruction_(chunk, offset, line);
+        int frameSize = chunk->getPredictedFrameSize(offset);
+        int incr = disassembleInstruction_(chunk, offset, line, frameSize);
         offset += incr;
     }
 }
 
 int Disassembler::disassembleInstruction(Chunk * chunk, int offset){
     int line = chunk->getLineNumber(offset);
-    return disassembleInstruction_(chunk, offset, line);
+    int frameSize = chunk->getPredictedFrameSize(offset);
+    return disassembleInstruction_(chunk, offset, line, frameSize);
 }
 
-int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
+int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line, int frameSize){
     printf("%04i ", offset);
     printf("%4d ", line);
+    printf("frame:%2d ", frameSize);
 
     OpCode instr = (OpCode)chunk->code[(size_t)offset];
     switch(instr){
@@ -161,11 +164,11 @@ int Disassembler::jumpInstruction_(const char* name, int sign, Chunk* chunk, int
 // }
 
 // void printToken(Token token) {
-//     printf("%s '%.*s'", tokenTypeToStr(token.type), token.length, token.start); 
+//     printf("%s '%.*s'", tokenTypeToStr(token.type), token.length, token.start);
 // }
 
 char const * tokenTypeToStr(Token::Type t) {
-    switch(t) {           
+    switch(t) {
         case Token::LEFT_PAREN:     return "LEFT_PAREN";
         case Token::RIGHT_PAREN:    return "RIGHT_PAREN";
         case Token::LEFT_BRACE:     return "LEFT_BRACE";
