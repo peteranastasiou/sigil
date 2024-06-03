@@ -17,7 +17,7 @@ public:
     int disassembleInstruction(Chunk * chunk, int offset);
 
 private:
-    int disassembleInstruction_(Chunk * chunk, int offset, int line, int stackSize);
+    int disassembleInstruction_(Chunk * chunk, int offset, int line);
     int literalInstruction_(char const * name, Chunk * chunk, int offset);
     int closureInstruction_(char const * name, Chunk * chunk, int offset);
     int byteInstruction_(char const * name, Chunk * chunk, int offset);

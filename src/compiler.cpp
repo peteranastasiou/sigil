@@ -14,6 +14,7 @@
 Environment::Environment(Mem * mem, ObjString * name, Type t) {
     type = t;
     localCount = 0;
+    frameSize = 1;
     scopeDepth = 0;
     function = new ObjFunction(mem, name);
 
