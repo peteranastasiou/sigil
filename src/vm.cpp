@@ -269,28 +269,24 @@ InterpretResult Vm::run_() {
     for(;;) {
 
 #ifdef DEBUG_TRACE_EXECUTION
-        // Check frame size against predicted size
-        int frameSize = frame->closure->function->chunk.getPredictedFrameSize(frame->chunkOffsetOf(frame->ip));
-
        {
            printf("stack: ");
            for( Value * stackPos = stack_; stackPos < stackTop_; stackPos++ ){
                if ( stackPos != stack_ ) printf(" | ");
                if ( stackPos == frame->slots ){
-                  printf("FP"); // Frame pointer
-               } else {
-                  stackPos->print(true);
+                  printf("SF: "); // Stack Frame
                }
+               stackPos->print(true);
            }
            printf("\n");
-        //    printf("open-upvalues: ");
-        //    ObjUpvalue * upvalue = mem_.getRootOpenUpvalue();
-        //    while( upvalue != nullptr ){
-        //        upvalue->print(true);
-        //        upvalue = upvalue->getNextUpvalue();
-        //        if ( upvalue != nullptr ) printf(" | ");
-        //    }
-        //    printf("\n");
+           printf("open-upvalues: ");
+           ObjUpvalue * upvalue = mem_.getRootOpenUpvalue();
+           while( upvalue != nullptr ){
+               upvalue->print(true);
+               upvalue = upvalue->getNextUpvalue();
+               if ( upvalue != nullptr ) printf(" | ");
+           }
+           printf("\n");
 
            disasm.disassembleInstruction(&frame->closure->function->chunk,
                frame->chunkOffsetOf(frame->ip));
@@ -298,10 +294,6 @@ InterpretResult Vm::run_() {
 #endif
 
         OpCode instr = (OpCode)frame->readByte();
-
-        // Debug only:
-        int stackSize = frame->closure->function->chunk.getPredictedFrameSize(frame->chunkOffsetOf(frame->ip));
-
         switch( instr ){
             case OpCode::PUSH_ZERO:{
                 push(Value::number(0));
@@ -609,10 +601,6 @@ InterpretResult Vm::run_() {
             default:
                 return runtimeError_("Fatal: unknown opcode %d\n", (int)instr);
         }
-
-#ifdef DEBUG_TRACE_EXECUTION
-        printf("Frame size: actual = %li, predicted = %i\n", stackTop_ - frame->slots, frameSize);
-#endif
     }
 }
 
