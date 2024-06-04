@@ -11,7 +11,10 @@
       []- Larger issue with local var references, assumes that stack contains only locals by the time each one executes
           Actually, expressions like "a"+{var b="b" .... } has a literal on the stack, which offsets the locals.
           How do we know when pushing to the stack whether it will remain?
-          -> Create a separate 
+          [-]- tried tracking stack location of temporary values, complexities around jumps
+          []- Only allow expression control structures at the start of an expression.
+
+ []- if const, if var type. Check works with expression block
  []- check zeroth stack element is correct. filename until first function call, then becomes destroyed?
  []- expression block should create a scope rather than define globals when used on top level
  []- functions: len, toString
@@ -27,7 +30,7 @@
  []- test for multiple upvalues captured - editing changes all references
  []- error types - @ catch block after function  -- does return output a value or return from surrounding function?
  []- better internal error management (reified errors)
- []- 
+ []-
  []- structs / objects
 
 ideas
