@@ -161,11 +161,11 @@ int Disassembler::jumpInstruction_(const char* name, int sign, Chunk* chunk, int
 // }
 
 // void printToken(Token token) {
-//     printf("%s '%.*s'", tokenTypeToStr(token.type), token.length, token.start);
+//     printf("%s '%.*s'", tokenTypeToStr(token.type), token.length, token.start); 
 // }
 
 char const * tokenTypeToStr(Token::Type t) {
-    switch(t) {
+    switch(t) {           
         case Token::LEFT_PAREN:     return "LEFT_PAREN";
         case Token::RIGHT_PAREN:    return "RIGHT_PAREN";
         case Token::LEFT_BRACE:     return "LEFT_BRACE";

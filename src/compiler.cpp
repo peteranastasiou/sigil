@@ -30,9 +30,6 @@ Environment::Environment(Mem * mem, ObjString * name, Type t) {
     localCount = 1;
 }
 
-void Environment::updateFrameSize(int16_t diff) {
-    frameSize = (uint16_t)(frameSize + diff);
-}
 
 bool Environment::addLocal(ObjString * name, bool isConst) {
     if( localCount == MAX_LOCALS ){
@@ -158,7 +155,7 @@ ObjFunction * Compiler::compile(const char * name, InputStream * stream) {
     panicMode_ = false;
 
     advance_();  // get the first token
-
+    
     // compile declarations until we hit the end
     while( !match_(Token::END) ){
         declaration_(false);
@@ -261,26 +258,21 @@ Chunk * Compiler::getCurrentChunk_() {
 
 void Compiler::emitInstruction_(OpCode instr) {
     // Work out the stack impact of the instruction:
-    int8_t impact = Chunk::frameImpact(instr);
-    writeToCodeChunk_((uint8_t)instr, impact);
+    writeToCodeChunk_((uint8_t)instr);
 }
 
 void Compiler::emitInstruction_(OpCode instr, uint8_t arg) {
-    int8_t impact = Chunk::frameImpact(instr, arg);
-    writeToCodeChunk_((uint8_t)instr, impact);
-    writeToCodeChunk_(arg, 0);
+    emitInstruction_(instr);
+    writeToCodeChunk_(arg);
 }
 
 void Compiler::emitInstructionArg_(uint8_t arg) {
-    writeToCodeChunk_(arg, 0);
+    writeToCodeChunk_(arg);
 }
 
-void Compiler::writeToCodeChunk_(uint8_t byte, int16_t frameImpact) {
-    // TODO separate local array position from local predicted stack position
-    currentEnv_->updateFrameSize(frameImpact);
-
+void Compiler::writeToCodeChunk_(uint8_t byte) {
     uint16_t line = previousToken_.line;
-    if( !getCurrentChunk_()->write((uint8_t)byte, line, currentEnv_->frameSize) ){
+    if( !getCurrentChunk_()->write((uint8_t)byte, line) ){
         if( currentEnv_->type == Environment::FUNCTION ){
             fatalError_("Too much code in function.");
         }else{
@@ -293,6 +285,8 @@ void Compiler::emitReturn_() {
     emitInstruction_(OpCode::NIL); // implicit return value
     emitInstruction_(OpCode::RETURN);
 }
+
+// TODO abstract all use of opcode to emit functions so we can predict stack loc
 
 void Compiler::emitTrue_() {
     emitInstruction_(OpCode::TRUE);
@@ -486,7 +480,7 @@ void Compiler::declareLocal_(bool isConst) {
             break;  // left the scope - stop searching
         }
         if( name == local->name ){
-            errorAtPrevious_("Already a variable called '%s' in this scope.",
+            errorAtPrevious_("Already a variable called '%s' in this scope.", 
                              name->getCString());
         }
     }
@@ -508,7 +502,7 @@ void Compiler::defineVariable_(uint8_t global, bool isConst, bool isLocal) {
 }
 
 void Compiler::and_() {
-    // left hand side has already been compiled,
+    // left hand side has already been compiled, 
     // if its falsy, we want to jump over the right hand side (short circuiting)
     int jumpOverRhs = emitJump_(OpCode::JUMP_IF_FALSE);
     emitInstruction_(OpCode::POP);   // don't need the lhs anymore, if we got here - its true!
@@ -753,7 +747,7 @@ bool Compiler::for_(bool canBeExpression) {
     emitInstruction_(OpCode::SET_LOCAL, iteratorLocal);
     emitInstruction_(OpCode::POP);  // Clean up the new loop value
 
-    // Loop back
+    // Loop back 
     emitLoop_(loopStart);
 
     // This is where we exit
@@ -768,7 +762,7 @@ bool Compiler::for_(bool canBeExpression) {
 }
 
 void Compiler::synchronise_() {
-    // don't stop panicking if we have had a fatal error:
+    // don't stop panicking if we have had a fatal error: 
     if( hadFatalError_ ) return;
 
     // try and find a boundary which seems like a good sync point
@@ -987,7 +981,7 @@ void Compiler::index_() {
 void Compiler::number_() {
     // shouldn't fail as we already validated the token as a number:
     double n = strtod(previousToken_.string->getCString(), nullptr);
-
+    
     // simplify operation for common values:
     if( n == 0 ){
         emitInstruction_(OpCode::PUSH_ZERO);

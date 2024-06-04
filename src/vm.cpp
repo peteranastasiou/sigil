@@ -331,7 +331,7 @@ InterpretResult Vm::run_() {
                     uint8_t index = frame->readByte();
 
                     closure->upvalues.push_back(
-                        isLocal ?
+                        isLocal ? 
                         // capture local value to upvalue:
                         ObjUpvalue::newUpvalue(&mem_, &frame->slots[index]) :
                         // else, reference existing upvalue
@@ -474,7 +474,7 @@ InterpretResult Vm::run_() {
                     push( Value::list(list) );
 
                 }else{
-                    return runtimeError_("Invalid operands for '+': %s, %s",
+                    return runtimeError_("Invalid operands for '+': %s, %s", 
                         Value::typeToString(peek(1).type), Value::typeToString(peek(0).type));
                 }
                 break;
@@ -576,7 +576,7 @@ InterpretResult Vm::run_() {
 
 #ifdef DEBUG_TRACE_EXECUTION
                 disasm.disassembleChunk(
-                    &frame->closure->function->chunk,
+                    &frame->closure->function->chunk, 
                     frame->closure->function->name->get());
                 printf("====\n");
 #endif
@@ -627,7 +627,7 @@ InterpretResult Vm::runtimeError_(const char* format, ...) {
         CallFrame * frame = &frames_[i];
         ObjFunction * fn = frame->closure->function;
         int offset = frame->chunkOffsetOf(frame->ip - 1);
-        fprintf(stderr, "[line %d] in %s\n",
+        fprintf(stderr, "[line %d] in %s\n", 
                 fn->chunk.getLineNumber(offset),
                 fn->name->get());
     }

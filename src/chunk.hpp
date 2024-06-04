@@ -21,7 +21,6 @@ enum class OpCode {
     TYPE_FUNCTION,  // TypeId of Object
     TYPE_STRING,    // TypeId of String
     TYPE_TYPEID,    // TypeId of TypeId
-
     // Stack and variable manipulation
     POP,            // Pop 1 value from the stack
     DEFINE_GLOBAL_VAR,   // Define a global variable
@@ -58,8 +57,8 @@ enum class OpCode {
     INDEX_GET,          // Pop 2 values as a,i, Push a[i]
     INDEX_SET,          // TODO Pop 3 values as a,i,b; set a[i] = b; Push ???
     // Control flow:
-    JUMP,               // Unconditionally jump forward by bytecode offset
-    LOOP,               // Unconditionally jump backwards by bytecode offset
+    JUMP,               // Unconditionally jump forward by bytecode offset 
+    LOOP,               // Unconditionally jump backwards by bytecode offset 
     JUMP_IF_TRUE,       // If top of stack is truthy, jump fwd by bytecode offset
     JUMP_IF_FALSE,      // If top of stack is falsy, jump fwd by bytecode offset
     JUMP_IF_TRUE_POP,   // Same as JUMP_IF_FALSE, but also pops the value
@@ -81,12 +80,10 @@ public:
     ~Chunk();
 
     // append to bytecode array
-    bool write(uint8_t byte, uint16_t line, uint16_t frameSize);
-
+    bool write(uint8_t byte, uint16_t line);
+    
     // Get a line number corresponding to position in bytecode array
     uint16_t getLineNumber(int offset);
-
-    uint16_t getPredictedFrameSize(int offset);
 
     // Get the length of the bytecode array
     int count();
@@ -107,14 +104,9 @@ public:
 
     static uint8_t const MAX_LITERALS = 255;  // literal index must fit in a byte (for now)
 
-    // Get the stack impact of an operation
-    // e.g. +1 means the stack will be 1 value longer after executing
-    static int8_t frameImpact(OpCode op, uint8_t arg=0);
-
 private:
     std::vector<uint8_t> code;
     std::vector<uint16_t> lines;    // line numbers corresponding to bytecode array
-    std::vector<uint16_t> predictedFrameSize;
     std::vector<Value> literals;
 
     // Disassembler needs access within the chunk:

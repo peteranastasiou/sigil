@@ -25,7 +25,6 @@ enum class Precedence {
 struct Local {
     ObjString * name;
     int16_t depth;
-    uint16_t framePosition;
     bool isDefined;
     bool isConst;
     bool isCaptured;  // whether it is referenced by another function
@@ -44,7 +43,7 @@ struct Upvalue {
 };
 
 /**
- * Environment tracks the local variables and upvalues associated
+ * Environment tracks the local variables and upvalues associated 
  * with each function as it is compiled
  */
 struct Environment {
@@ -61,15 +60,9 @@ struct Environment {
     Upvalue upvalues[MAX_UPVALUES];
     Local locals[MAX_LOCALS];
     uint8_t localCount;
-    uint16_t frameSize;
     uint16_t scopeDepth;
 
     Environment(Mem * mem, ObjString * name, Type t);
-
-    /**
-     * Track stack size so as to predict local positions correctly
-     */
-    void updateFrameSize(int16_t diff);
 
     /**
      * track a local variables position in the stack
@@ -79,7 +72,7 @@ struct Environment {
 
     /**
      * lookup a local variables position in the stack
-     * Searches innermost to outermost scope within the environment
+     * Searches innermost to outermost scope within the environment 
      * for a matching name (to support shadowing)
      * @return positional index or NOT_FOUND or NOT_INITIALISED
      */
@@ -194,7 +187,7 @@ private:
     void emitInstruction_(OpCode instr);
     void emitInstructionArg_(uint8_t arg);
     void emitInstruction_(OpCode instr, uint8_t arg);
-    void writeToCodeChunk_(uint8_t byte, int16_t frameImpact);
+    void writeToCodeChunk_(uint8_t byte);
     void emitTrue_();
     void emitFalse_();
     void emitNil_();
