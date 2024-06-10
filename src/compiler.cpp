@@ -154,7 +154,7 @@ ObjFunction * Compiler::compile(const char * name, InputStream * stream) {
     panicMode_ = false;
 
     advance_();  // get the first token
-    
+
     // compile declarations until we hit the end
     while( !match_(Token::END) ){
         declaration_(false);
@@ -285,8 +285,6 @@ void Compiler::emitReturn_() {
     emitInstruction_(OpCode::RETURN);
 }
 
-// TODO abstract all use of opcode to emit functions so we can predict stack loc
-
 void Compiler::emitTrue_() {
     emitInstruction_(OpCode::TRUE);
 }
@@ -332,8 +330,12 @@ uint8_t Compiler::makeLiteral_(Value value) {
     return literal;
 }
 
-void Compiler::expression_() {
+void Compiler::expressionWhole_() {
     parse_(Precedence::ASSIGNMENT);
+}
+
+void Compiler::expressionPartial_() {
+    parse_(Precedence::PARTIAL);
 }
 
 bool Compiler::declaration_(bool canBeExpression) {
@@ -445,7 +447,7 @@ void Compiler::varDeclaration_(bool isConst) {
 
     // assigned an initial value?
     if( match_(Token::EQUAL) ){
-        expression_();
+        expressionWhole_();
     }else{
         emitInstruction_(OpCode::NIL); // default value is nil
     }
@@ -479,7 +481,7 @@ void Compiler::declareLocal_(bool isConst) {
             break;  // left the scope - stop searching
         }
         if( name == local->name ){
-            errorAtPrevious_("Already a variable called '%s' in this scope.", 
+            errorAtPrevious_("Already a variable called '%s' in this scope.",
                              name->getCString());
         }
     }
@@ -501,7 +503,7 @@ void Compiler::defineVariable_(uint8_t global, bool isConst, bool isLocal) {
 }
 
 void Compiler::and_() {
-    // left hand side has already been compiled, 
+    // left hand side has already been compiled,
     // if its falsy, we want to jump over the right hand side (short circuiting)
     int jumpOverRhs = emitJump_(OpCode::JUMP_IF_FALSE);
     emitInstruction_(OpCode::POP);   // don't need the lhs anymore, if we got here - its true!
@@ -518,7 +520,9 @@ void Compiler::or_() {
     setJumpDestination_(jumpOverRhs);
 }
 
-// Can this return true if canBeExpression is false?
+// NOTE: In an expression control block, each statement "can" be an expression
+//       because we don't know which will be the last. In actuality, they all
+//       must be statements except the last which must be an expression (drop the semicolon).
 bool Compiler::statement_(bool canBeExpression) {
     if( match_(Token::IF) ){
         return if_(canBeExpression);
@@ -542,15 +546,19 @@ bool Compiler::statement_(bool canBeExpression) {
             emitReturn_();
         }else{
             // the return value(s):
-            expression_();
+            expressionWhole_();
             emitInstruction_(OpCode::RETURN);
         }
+    }else if( match_(Token::ECHO) ){
+        echo_();
+        return false;
+
     }else if( match_(Token::SEMICOLON) ){
         // Empty statement
         return false;
     }else{
         // expression-statement:
-        expression_();
+        expressionWhole_();
     }
     // what we expect next depends on the context of the expression-statement:
     if( !canBeExpression ){
@@ -580,7 +588,7 @@ void Compiler::ifExpression_() {
 
 bool Compiler::if_(bool canBeExpression) {
     // the condition part:
-    expression_();
+    expressionPartial_();
     // jump over the block to the next part:
     int jumpOver = emitJump_(OpCode::JUMP_IF_FALSE_POP);
     // the block
@@ -597,7 +605,7 @@ bool Compiler::if_(bool canBeExpression) {
         // jump over the previous if/elif-block to here:
         setJumpDestination_(jumpOver);
         // the condition part:
-        expression_();
+        expressionPartial_();
         // jump over the block to the next part:
         jumpOver = emitJump_(OpCode::JUMP_IF_FALSE_POP);
         // the block
@@ -639,7 +647,7 @@ bool Compiler::if_(bool canBeExpression) {
 void Compiler::whileStatement_() {
     // check the condition (this is where we loop):
     int loopStart = getCurrentChunk_()->count();
-    expression_();
+    expressionPartial_();
     // jump over the body if falsy
     int jumpToEnd = emitJump_(OpCode::JUMP_IF_FALSE_POP);
     consume_(Token::LEFT_BRACE, "Expected '{' after condition.");
@@ -650,7 +658,7 @@ void Compiler::whileStatement_() {
     setJumpDestination_(jumpToEnd);
 }
 
-void Compiler::forExpression_() {
+void Compiler::forExpression_(bool canAssign) {
     bool isExpression = for_(true);
     if( !isExpression ){
         errorAtPrevious_("Expected for-expression, not for-statement.");
@@ -693,15 +701,14 @@ bool Compiler::for_(bool canBeExpression) {
     consume_(Token::IN, "Expected 'in' after iterator.");
 
     // The initial value (or the end value if there is no range separator)
-    expression_();
+    expressionPartial_();
     uint8_t iteratorLocal = currentEnv_->defineLocal();
-    printf("iterator is at %i\n", iteratorLocal);
 
     // Ranges are denoted by : or := (indicating exclusive and inclusive of end value)
     bool inclusiveRange = check_(Token::COLON_EQUAL);
     if( match_(Token::COLON) || match_(Token::COLON_EQUAL) ){
         // Evaluate the end value.
-        expression_();
+        expressionPartial_();
 
         consume_(Token::LEFT_BRACE, "Expected '{' after range.");
 
@@ -746,7 +753,7 @@ bool Compiler::for_(bool canBeExpression) {
     emitInstruction_(OpCode::SET_LOCAL, iteratorLocal);
     emitInstruction_(OpCode::POP);  // Clean up the new loop value
 
-    // Loop back 
+    // Loop back
     emitLoop_(loopStart);
 
     // This is where we exit
@@ -761,7 +768,7 @@ bool Compiler::for_(bool canBeExpression) {
 }
 
 void Compiler::synchronise_() {
-    // don't stop panicking if we have had a fatal error: 
+    // don't stop panicking if we have had a fatal error:
     if( hadFatalError_ ) return;
 
     // try and find a boundary which seems like a good sync point
@@ -882,7 +889,7 @@ void Compiler::emitLoop_(int loopStart) {
 
 void Compiler::grouping_() {
     // The opening '( is already consumed, expect an expression next:
-    expression_();
+    expressionPartial_();
 
     // consume the closing brace:
     consume_(Token::RIGHT_PAREN, "Expected ')' after expression");
@@ -921,7 +928,7 @@ void Compiler::call_() {
     uint8_t argCount = 0;
     if( !check_(Token::RIGHT_PAREN) ) {
         do {
-            expression_();
+            expressionPartial_();
             if( argCount == 255 ) {
                 errorAtPrevious_("Can't have more than 255 arguments.");
             }
@@ -937,7 +944,7 @@ void Compiler::list_() {
     uint8_t numEntries = 0;
     if( !check_(Token::RIGHT_BRACKET) ) {
         do {
-            expression_();
+            expressionPartial_();
             if( numEntries == 255 ){
                 errorAtPrevious_("Can't have more than 255 elements in list initialiser.");
             }
@@ -952,7 +959,7 @@ void Compiler::list_() {
 void Compiler::type_() {
     consume_(Token::LEFT_PAREN, "Expected '(' after 'type'.");
     // type built-in takes a single value:
-    expression_();
+    expressionPartial_();
     consume_(Token::RIGHT_PAREN, "Expected ')' after argument.");
     emitInstruction_(OpCode::TYPE);
 }
@@ -960,19 +967,18 @@ void Compiler::type_() {
 void Compiler::print_() {
     consume_(Token::LEFT_PAREN, "Expected '(' after 'print'.");
     // print built-in takes a single value:
-    expression_();
+    expressionPartial_();
     consume_(Token::RIGHT_PAREN, "Expected ')' after argument.");
     emitInstruction_(OpCode::PRINT);
 }
 
 void Compiler::echo_() {
-    // print built-in takes a single value:
-    expression_();
+    expressionWhole_();
     emitInstruction_(OpCode::ECHO);
 }
 
 void Compiler::index_() {
-    expression_();
+    expressionPartial_();
     consume_(Token::RIGHT_BRACKET, "Expected ']' after index.");
     emitInstruction_(OpCode::INDEX_GET);
 }
@@ -980,7 +986,7 @@ void Compiler::index_() {
 void Compiler::number_() {
     // shouldn't fail as we already validated the token as a number:
     double n = strtod(previousToken_.string->getCString(), nullptr);
-    
+
     // simplify operation for common values:
     if( n == 0 ){
         emitInstruction_(OpCode::PUSH_ZERO);
@@ -1034,7 +1040,7 @@ void Compiler::getSetVariable_(ObjString * name, bool canAssign) {
             errorAtPrevious_("Cannot redefine a const variable.");
         }
         // setting the variable:
-        expression_();  // the value to set
+        expressionWhole_();  // the value to set
         emitInstruction_(setOp, arg);
     }else{
         // getting the variable:
@@ -1178,7 +1184,7 @@ bool Compiler::prefixOperation_(Token::Type type, bool canAssign) {
         case Token::LEFT_BRACKET:  list_(); return true;
         case Token::LEFT_BRACE:    expressionBlock_(); return true;
         case Token::IF:            ifExpression_(); return true;
-        case Token::FOR:           forExpression_(); return true;
+        case Token::FOR:           forExpression_(canAssign); return true;
         case Token::FN:            funcAnonymous_(); return true;
 
         // Math
@@ -1204,7 +1210,6 @@ bool Compiler::prefixOperation_(Token::Type type, bool canAssign) {
 
         // Built-in functions
         case Token::PRINT:         print_(); return true;
-        case Token::ECHO:          echo_(); return true;
         case Token::TYPE:          type_(); return true;
 
         // TODO while-expressions
@@ -1227,6 +1232,7 @@ bool Compiler::prefixOperation_(Token::Type type, bool canAssign) {
         case Token::ELIF:
         case Token::ELSE:
         case Token::BANG_EQUAL:
+        case Token::ECHO:
         case Token::EQUAL:
         case Token::EQUAL_EQUAL:
         case Token::GREATER:

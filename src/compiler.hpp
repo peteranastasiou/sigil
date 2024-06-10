@@ -10,7 +10,8 @@ class Compiler;
 // Precedence order from lowest to highest:
 enum class Precedence {
   NONE,
-  ASSIGNMENT,  // =
+  ASSIGNMENT,  // can be assigned, whole expression
+  PARTIAL,     // part of an expression
   OR,          // or
   AND,         // and
   EQUALITY,    // == !=
@@ -43,7 +44,7 @@ struct Upvalue {
 };
 
 /**
- * Environment tracks the local variables and upvalues associated 
+ * Environment tracks the local variables and upvalues associated
  * with each function as it is compiled
  */
 struct Environment {
@@ -72,7 +73,7 @@ struct Environment {
 
     /**
      * lookup a local variables position in the stack
-     * Searches innermost to outermost scope within the environment 
+     * Searches innermost to outermost scope within the environment
      * for a matching name (to support shadowing)
      * @return positional index or NOT_FOUND or NOT_INITIALISED
      */
@@ -134,13 +135,14 @@ private:
     Chunk * getCurrentChunk_();
 
     // parsing code structures:
-    void expression_();
+    void expressionWhole_();
+    void expressionPartial_();
     bool declaration_(bool canBeExpression);  // returns isExpression
     bool statement_(bool canBeExpression);    // returns isExpression
     void ifExpression_();
     bool if_(bool canBeExpression);           // returns isExpression
     void whileStatement_();
-    void forExpression_();
+    void forExpression_(bool canAssign);
     bool for_(bool canBeExpression);          // returns isExpression
     bool forBody_(bool canBeExpression, uint8_t outputLocal);
     bool block_(bool canBeExpression);        // returns isExpression
