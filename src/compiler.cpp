@@ -330,10 +330,12 @@ uint8_t Compiler::makeLiteral_(Value value) {
     return literal;
 }
 
+// Can take any expression
 void Compiler::expressionWhole_() {
     parse_(Precedence::ASSIGNMENT);
 }
 
+// Can take any expression except for assignment-only types (e.g. expression control block)
 void Compiler::expressionPartial_() {
     parse_(Precedence::PARTIAL);
 }
@@ -659,6 +661,11 @@ void Compiler::whileStatement_() {
 }
 
 void Compiler::forExpression_(bool canAssign) {
+    // Don't allow for expressions in partial expressions
+    if( !canAssign ){
+        errorAtPrevious_("For-expression not allowed in this context.");
+    }
+
     bool isExpression = for_(true);
     if( !isExpression ){
         errorAtPrevious_("Expected for-expression, not for-statement.");
@@ -688,7 +695,6 @@ bool Compiler::for_(bool canBeExpression) {
             errorAtPrevious_("Too many local variables in function.");
         }
         outputLocal = currentEnv_->defineLocal();
-        printf("output is at %i\n", outputLocal);
     }
 
     // Scope for the iterator value
