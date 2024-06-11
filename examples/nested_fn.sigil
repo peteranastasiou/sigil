@@ -1,0 +1,21 @@
+
+fn f1(c) {
+    const a = 1;
+    const b = 2;
+    return a + b + c;
+}
+
+fn f2() {
+    const c = 3;
+    const d = f1(c);
+    print(d);
+    return d;
+}
+
+fn f3() {
+    const e = 7;
+    print(f2());
+}
+
+f2();
+f3();
