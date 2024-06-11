@@ -7,5 +7,5 @@ var a = {if arg1 == "hello" { print("A1"); "A2" } else { "A3" }};
 print(a);   # should be A2
 
 # Test with locals
-var f = fn(){ print("a"+{ var b = "b"; var c = "c"; b+c }); };
-f(); 
+var f = fn(){ print({ var b = "b"; var c = "c"; "a"+b+c }); };
+f();

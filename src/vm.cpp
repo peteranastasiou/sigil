@@ -488,7 +488,6 @@ InterpretResult Vm::run_() {
             case OpCode::ECHO:{
                 pop().print(true);
                 printf("\n");
-                push(Value::nil());  // echo returns nil
                 break;
             }
             case OpCode::PRINT:{
