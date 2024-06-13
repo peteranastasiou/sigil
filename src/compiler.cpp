@@ -581,7 +581,12 @@ bool Compiler::statement_(bool canBeExpression) {
     }
 }
 
-void Compiler::ifExpression_() {
+void Compiler::ifExpression_(bool canAssign) {
+    // Don't allow for expressions in partial expressions
+    if( !canAssign ){
+        errorAtPrevious_("If-expression not allowed in this context.");
+    }
+
     bool isExpression = if_(true);
     if( !isExpression ){
         errorAtPrevious_("Expected if-expression, not if-statement.");
@@ -1189,7 +1194,7 @@ bool Compiler::prefixOperation_(Token::Type type, bool canAssign) {
         case Token::LEFT_PAREN:    grouping_(); return true;
         case Token::LEFT_BRACKET:  list_(); return true;
         case Token::LEFT_BRACE:    expressionBlock_(); return true;
-        case Token::IF:            ifExpression_(); return true;
+        case Token::IF:            ifExpression_(canAssign); return true;
         case Token::FOR:           forExpression_(canAssign); return true;
         case Token::FN:            funcAnonymous_(); return true;
 

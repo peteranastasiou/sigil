@@ -139,10 +139,8 @@ private:
     void expressionPartial_();
     bool declaration_(bool canBeExpression);  // returns isExpression
     bool statement_(bool canBeExpression);    // returns isExpression
-    void ifExpression_();
     bool if_(bool canBeExpression);           // returns isExpression
     void whileStatement_();
-    void forExpression_(bool canAssign);
     bool for_(bool canBeExpression);          // returns isExpression
     bool forBody_(bool canBeExpression, uint8_t outputLocal);
     bool block_(bool canBeExpression);        // returns isExpression
@@ -150,6 +148,10 @@ private:
     bool nestedBlock_(bool canBeExpression);  // returns isExpression
     void synchronise_();
     void parse_(Precedence precedence);  // parse expressions with >= precendence
+
+    // expression-control-blocks
+    void ifExpression_(bool canAssign);
+    void forExpression_(bool canAssign);
 
     // parsing operations:
     // all return true if the token was valid for the operation and the operation created
