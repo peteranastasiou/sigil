@@ -7,7 +7,7 @@
 
  [x]- for loops
  [x]- for expression using expression block accumulation
- []- fix local variable reference e.g. in echo ""+for i in 0:10 {2*i}; # local for loop outputVar points to ""!
+ [x]- fix local variable reference e.g. in echo ""+for i in 0:10 {2*i}; # local for loop outputVar points to ""!
       []- Larger issue with local var references, assumes that stack contains only locals by the time each one executes
           Actually, expressions like "a"+{var b="b" .... } has a literal on the stack, which offsets the locals.
           How do we know when pushing to the stack whether it will remain?
@@ -15,26 +15,27 @@
           [-]- tried tracking stack location of temporary values, complexities around jumps
           [-]- Only allow expression control structures (ECS) at the start of an expression.
             - Doesn't support passing ECS to functions, lists, because the stack has temporaries
-          []- Give up, only allow in assignment or return?
+          [x]- Give up, only allow in assignment or return?
 
- []- if const, if var type. Check works with expression block
+ []- objects from lox?
+ []- functions: .length(), .toString(), .set(i, v)
+ []- auto echo and semicolon in interpreter mode --- maybe add ability to retrieve last element on stack? lua_call style.
  []- check zeroth stack element is correct. filename until first function call, then becomes destroyed?
- []- expression block should create a scope rather than define globals when used on top level
- []- functions: len, toString
- []- for expression using break value
- []- for loop on list
- []- same for while loop
- []- list get/set by index
- []- bytecode intermediate format, output/input from file
  []- replace all stdlib stuff with c from lox impl so it can be wasmd
+ []- properly trigger garbage collection
  []- intermediate format can be used to generate syntax highlighting
+ []- release alpha as "try-it" editor
 
- []- continue following book from 25.4.4
+ []- custom c function integration
  []- test for multiple upvalues captured - editing changes all references
  []- error types - @ catch block after function  -- does return output a value or return from surrounding function?
  []- better internal error management (reified errors)
- []-
- []- structs / objects
+ []- if-const, if-var type. Check works with expression block
+ []- expression block should create a scope rather than define globals when used on top level
+ []- for expression using break value
+ []- for loop on list
+ []- while expression
+  []- bytecode intermediate format, output/input from file
 
 ideas
  []- usage as preprocessor with -pp

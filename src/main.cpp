@@ -18,9 +18,9 @@ static void repl() {
     vm.init();
 
     // Use for debugging:
-    const char * line = "var a = \"abc\";";
-    StringInputStream s(line);
-    vm.interpret("(debug)", &s);
+    // const char * line = "var a = \"abc\";";
+    // StringInputStream s(line);
+    // vm.interpret("(debug)", &s);
 
     for( ;; ){
         char * line = readline("> ");
@@ -29,11 +29,11 @@ static void repl() {
         if( strlen(line) > 0 ){
             add_history(line);
         }
-        
+
         StringInputStream stream(line);
 
         // TODO try to compile with "echo " on the front, then try to compile without.
-        // This requires better error handling instead of printf everywhere! 
+        // This requires better error handling instead of printf everywhere!
         vm.interpret("(stdin)", &stream);
 
         free(line);

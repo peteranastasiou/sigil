@@ -15,3 +15,6 @@ return a, b, c
 var a, b, c = list;
 
 # the reason destructure doesn't have [] is common case is to destructure return values:
+var a, b, c = get3();
+
+# Objects and types, not classes
