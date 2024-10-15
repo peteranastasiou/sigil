@@ -19,6 +19,7 @@ struct Token {
         GREATER, GREATER_EQUAL,
         LESS, LESS_EQUAL,
         COLON, COLON_EQUAL,
+        ARROW,                        // ->
         // Literals:
         IDENTIFIER, STRING, NUMBER,   // TODO int
         // Keywords:
@@ -43,7 +44,7 @@ struct Token {
 class Scanner {
 public:
     Scanner();
-    
+
     ~Scanner();
 
     void init(Mem * mem, InputStream * stream);
@@ -70,7 +71,7 @@ private:
     void incrementLine_();
     void skipWhitespace_();
     bool matchNext_(char expected);
-    
+
     Token makeToken_(Token::Type type);
     Token makeErrorToken_(const char* message);
     Token makeStringToken_();

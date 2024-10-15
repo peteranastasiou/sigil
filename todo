@@ -12,19 +12,25 @@
           Actually, expressions like "a"+{var b="b" .... } has a literal on the stack, which offsets the locals.
           How do we know when pushing to the stack whether it will remain?
           [-]- explored idea of temporary vars with different frame point, but complexities around upvalues, nested temporary frames
-          [-]- tried tracking stack location of temporary values, complexities around jumps
+          [-]- tried tracking stack location of temporary values, complexities around jumps and branches
           [-]- Only allow expression control structures (ECS) at the start of an expression.
             - Doesn't support passing ECS to functions, lists, because the stack has temporaries
           [x]- Give up, only allow in assignment or return?
+          [ ]- redesign around the problem:
+            l = for source -> fn -> fn -> dest;
+            don't allow declaring vars mid expression.
+            make function syntax even shorter $ args {body}
 
- []- objects from lox?
- []- functions: .length(), .toString(), .set(i, v)
- []- auto echo and semicolon in interpreter mode --- maybe add ability to retrieve last element on stack? lua_call style.
- []- check zeroth stack element is correct. filename until first function call, then becomes destroyed?
+
  []- replace all stdlib stuff with c from lox impl so it can be wasmd
  []- properly trigger garbage collection
  []- intermediate format can be used to generate syntax highlighting
  []- release alpha as "try-it" editor
+
+ []- objects & types from lox
+ []- functions: .length(), .toString(), .set(i, v)
+ []- auto echo and semicolon in interpreter mode --- maybe add ability to retrieve last element on stack? lua_call style.
+ []- check zeroth stack element is correct. filename until first function call, then becomes destroyed?
 
  []- custom c function integration
  []- test for multiple upvalues captured - editing changes all references

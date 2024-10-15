@@ -1,5 +1,8 @@
 
-echo for i in 1:3 {2*i} + "";
 
-fn g() { return for i in 4:7 {2*i} + 0; }
+echo for range(3) -> fn(i){2*i};
+
+fn g() { return (for range(2) -> fn(i){2*i} -> tolist()) + 0; }
 print(g());
+
+print(for range(2) -> fn(i){2*i} -> tolist());

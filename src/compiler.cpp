@@ -666,11 +666,6 @@ void Compiler::whileStatement_() {
 }
 
 void Compiler::forExpression_(bool canAssign) {
-    // Don't allow for expressions in partial expressions
-    if( !canAssign ){
-        errorAtPrevious_("For-expression not allowed in this context.");
-    }
-
     bool isExpression = for_(true);
     if( !isExpression ){
         errorAtPrevious_("Expected for-expression, not for-statement.");
