@@ -54,7 +54,7 @@ public:
     void gcMarkRoots();
 
     // stack operations:
-    Value indexStack(CallFrame * currentFrame, int8_t index);
+    Value indexStack(int8_t index);
     void push(Value value);
     Value pop();
     void pop(int n);
@@ -77,7 +77,8 @@ private:
 
     Mem mem_;
     Compiler * compiler_;
-    CallFrame frames_[FRAMES_MAX];  // TODO to allow continuations/generators, this can't be a stack, GC instead
+    CallFrame frames_[FRAMES_MAX];
+    CallFrame * frame_;  // the current call frame
     int frameCount_;
     Value stack_[STACK_MAX];
     Value * stackTop_;  // points past the last value in the stack
