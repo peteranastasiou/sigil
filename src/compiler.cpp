@@ -3,6 +3,7 @@
 #include "debug.hpp"
 #include "mem.hpp"
 #include "function.hpp"
+#include "encode.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -156,7 +157,7 @@ ObjFunction * Compiler::compile(const char * name, InputStream * stream) {
     advance_();  // get the first token
 
     // compile declarations until we hit the end
-    while( !match_(Token::END) ){
+    while( !match_(Token::FILE_END) ){
         declaration_(false);
 
         if( hadFatalError_ ) break;
@@ -204,13 +205,13 @@ ObjFunction * Compiler::endEnvironment_() {
 void Compiler::advance_() {
     // record last token
     previousToken_ = currentToken_;
-    // spin until we get a valid token (or END):
+    // spin until we get a valid token (or FILE_END):
     for(;;) {
         currentToken_ = scanner_.scanToken();
         if( currentToken_.line == Scanner::MAX_LINES ){
             fatalError_("Too many lines in script");
             // pretend this is the end of the script
-            currentToken_.type = Token::END;
+            currentToken_.type = Token::FILE_END;
             return;
         }
 
@@ -271,7 +272,7 @@ void Compiler::emitInstructionArg_(uint8_t arg) {
 
 void Compiler::writeToCodeChunk_(uint8_t byte) {
     uint16_t line = previousToken_.line;
-    if( !getCurrentChunk_()->write((uint8_t)byte, line) ){
+    if( !getCurrentChunk_()->write(byte, line) ){
         if( currentEnv_->type == Environment::FUNCTION ){
             fatalError_("Too much code in function.");
         }else{
@@ -295,6 +296,10 @@ void Compiler::emitFalse_() {
 
 void Compiler::emitNil_() {
     emitInstruction_(OpCode::NIL);
+}
+
+void Compiler::emitEnd_() {
+    emitInstruction_(OpCode::END);
 }
 
 void Compiler::emitBoolType_() {
@@ -507,7 +512,7 @@ void Compiler::defineVariable_(uint8_t global, bool isConst, bool isLocal) {
 void Compiler::and_() {
     // left hand side has already been compiled,
     // if its falsy, we want to jump over the right hand side (short circuiting)
-    int jumpOverRhs = emitJump_(OpCode::JUMP_IF_FALSE);
+    int jumpOverRhs = emitJumpPlaceholder_(OpCode::JUMP_IF_FALSE);
     emitInstruction_(OpCode::POP);   // don't need the lhs anymore, if we got here - its true!
     parse_(Precedence::AND);  // the rhs value
     setJumpDestination_(jumpOverRhs);
@@ -516,7 +521,7 @@ void Compiler::and_() {
 void Compiler::or_() {
     // left hand side has already been compiled.
     // if its truthy, jump over the right hand side (short circuiting)
-    int jumpOverRhs = emitJump_(OpCode::JUMP_IF_TRUE);
+    int jumpOverRhs = emitJumpPlaceholder_(OpCode::JUMP_IF_TRUE);
     emitInstruction_(OpCode::POP);  // don't need the lhs anymore
     parse_(Precedence::OR);  // the rhs value
     setJumpDestination_(jumpOverRhs);
@@ -532,9 +537,6 @@ bool Compiler::statement_(bool canBeExpression) {
     }else if( match_(Token::WHILE) ){
         whileStatement_();
         return false;  // statement only (for now!)
-
-    }else if( match_(Token::FOR) ){
-        return for_(canBeExpression);
 
     }else if( match_(Token::LEFT_BRACE) ){
         // recurse into a nested scope:
@@ -597,7 +599,7 @@ bool Compiler::if_(bool canBeExpression) {
     // the condition part:
     expressionPartial_();
     // jump over the block to the next part:
-    int jumpOver = emitJump_(OpCode::JUMP_IF_FALSE_POP);
+    int jumpOver = emitJumpPlaceholder_(OpCode::JUMP_IF_FALSE_POP);
     // the block
     consume_(Token::LEFT_BRACE, "Expected '{' after condition.");
     bool isExpression = nestedBlock_(canBeExpression);
@@ -608,13 +610,13 @@ bool Compiler::if_(bool canBeExpression) {
     // optional `elif` blocks:
     while( match_(Token::ELIF) ){
         // protect against fallthrough
-        jumpsToEnd.push_back(emitJump_(OpCode::JUMP));
+        jumpsToEnd.push_back(emitJumpPlaceholder_(OpCode::JUMP));
         // jump over the previous if/elif-block to here:
         setJumpDestination_(jumpOver);
         // the condition part:
         expressionPartial_();
         // jump over the block to the next part:
-        jumpOver = emitJump_(OpCode::JUMP_IF_FALSE_POP);
+        jumpOver = emitJumpPlaceholder_(OpCode::JUMP_IF_FALSE_POP);
         // the block
         consume_(Token::LEFT_BRACE, "Expected '{' after 'elif'.");
         if( nestedBlock_(canBeExpression) != isExpression ){
@@ -626,7 +628,7 @@ bool Compiler::if_(bool canBeExpression) {
     bool hasElse = match_(Token::ELSE);
     if( hasElse || isExpression ){
         // protect against fallthrough
-        jumpsToEnd.push_back(emitJump_(OpCode::JUMP));
+        jumpsToEnd.push_back(emitJumpPlaceholder_(OpCode::JUMP));
         // jump over the previous if/elif-block to here:
         setJumpDestination_(jumpOver);
         if( hasElse ){
@@ -656,121 +658,71 @@ void Compiler::whileStatement_() {
     int loopStart = getCurrentChunk_()->count();
     expressionPartial_();
     // jump over the body if falsy
-    int jumpToEnd = emitJump_(OpCode::JUMP_IF_FALSE_POP);
+    int jumpToEnd = emitJumpPlaceholder_(OpCode::JUMP_IF_FALSE_POP);
     consume_(Token::LEFT_BRACE, "Expected '{' after condition.");
     nestedBlock_(false);
     // loop back up
-    emitLoop_(loopStart);
+    emitJumpBack_(OpCode::JUMP, loopStart);
     // escape the loop to here:
     setJumpDestination_(jumpToEnd);
 }
 
-void Compiler::forExpression_(bool canAssign) {
-    bool isExpression = for_(true);
-    if( !isExpression ){
-        errorAtPrevious_("Expected for-expression, not for-statement.");
-    }
-}
+/**
+ * Example run through:
+ * compile each part separated by ->, counting them
+ * for f -> g -> h
+ * put placeholder, and each fn
+ * stack: 0,f,g,h
+ * :start
+ * place in reverse order:
+ * stack: 0,f,g,h,h,g,f
+ * call with 0 args
+ * stack: 0,f,g,h,h,g,res
+ * check res is null: reset stack and jumpTo :start
+ * call with 1 arg
+ * stack: 0,f,g,h,h,res
+ * call with 1 arg
+ * stack: 0,f,g,h,res
+ * if is not `end`: jumpTo :start
+ * :end
+ * set placeholder
+ * stack: res,f,g,h,res
+ * pop 4
+ * stack: res
+ *
+ * TODO check who decides whether the final result is popped
+ *
+ */
+void Compiler::for_() {
+    // Placeholder in the stack for the final result
+    emitInstruction_(OpCode::PUSH_ZERO);
 
-bool Compiler::forBody_(bool canBeExpression, uint8_t outputLocal) {
-    // Compile the body of the for loop
-    bool isExpression = nestedBlock_(canBeExpression);
-    if( isExpression ) {
-        if( canBeExpression ){
-            // Accumulate the result into the output value
-            emitInstruction_(OpCode::APPEND_LOCAL, outputLocal);
-        }else{
-            errorAtPrevious_("Expected a statement not an expression.");
-        }
-    }
-    return isExpression;
-}
-
-bool Compiler::for_(bool canBeExpression) {
-    // For-expressions need an output list value
-    uint8_t outputLocal = 0;
-    if( canBeExpression ){
-        emitInstruction_(OpCode::MAKE_LIST, 0); // initially empty
-        if( !currentEnv_->addLocal(mem_->EMPTY_STRING, true) ){
-            errorAtPrevious_("Too many local variables in function.");
-        }
-        outputLocal = currentEnv_->defineLocal();
-    }
-
-    // Scope for the iterator value
-    currentEnv_->beginScope();
-
-    // Next up is the iterator
-    bool isConst = true;  // iterator is const for the user, but vm can increment it!
-    bool isLocal = true;
-    parseVariable_("Expected iterator name.", isConst, isLocal);
-    consume_(Token::IN, "Expected 'in' after iterator.");
-
-    // The initial value (or the end value if there is no range separator)
-    expressionPartial_();
-    uint8_t iteratorLocal = currentEnv_->defineLocal();
-
-    // Ranges are denoted by : or := (indicating exclusive and inclusive of end value)
-    bool inclusiveRange = check_(Token::COLON_EQUAL);
-    if( match_(Token::COLON) || match_(Token::COLON_EQUAL) ){
-        // Evaluate the end value.
-        expressionPartial_();
-
-        consume_(Token::LEFT_BRACE, "Expected '{' after range.");
-
-    }else{
-        consume_(Token::LEFT_BRACE, "Expected ':', ':=' or '{' after value");
-
-        // This means we have an implicit start value
-        // We need to rearrange.
-        // Put the current iterator value where the end value goes:
-        emitInstruction_(OpCode::GET_LOCAL, iteratorLocal);
-        // Set the iterator to zero:
-        emitInstruction_(OpCode::PUSH_ZERO);
-        emitInstruction_(OpCode::SET_LOCAL, iteratorLocal);
-        emitInstruction_(OpCode::POP);  // Remove the zero
+    // compile each stream-part, separated by '->', each result is left on the stack
+    parse_(Precedence::ARROW);
+    uint8_t numFuncs = 0;
+    while( match_(Token::ARROW) ) {
+        numFuncs ++; // TODO check for max funcs
+        parse_(Precedence::ARROW);  // TODO tests that this does precedence right
     }
 
-    // At this point the stack is: (outputList,) iterator, endValue
+    // Place stream functions back on stack in reverse order
+    for( uint8_t i = 0; i < numFuncs; i++ ){
+        emitInstruction_(OpCode::GET_LOCAL, -4);  // TODO negative offset
+    }
 
-    // Remember where to loop back to
+    // This is where we loop:
     int loopStart = getCurrentChunk_()->count();
 
-    bool isExpression = false;
-
-    // To include the final value, do the body before the check
-    if( inclusiveRange ){
-        isExpression = forBody_(canBeExpression, outputLocal);
+    // Emit a call and check result for each function in the stream
+    emitInstruction_(OpCode::CALL, 0); // first one takes no args
+    for( uint8_t i = 1; i < numFuncs; i++ ){
+        emitInstruction_(OpCode::CALL, 1);
     }
-    // Compare iterator to end value and put +1, -1 or 0 on the stack
-    // This is used both to check when to exit and for the iteration direction
-    emitInstruction_(OpCode::COMPARE_ITERATOR);
-    int jumpToEnd = emitJump_(OpCode::JUMP_IF_ZERO);
 
-    // At this point, the stack is: (outputList,) iterator, endValue, compareValue
+    // set placeholder
 
-    // To exclude the final value, we do the body after the check
-    if( !inclusiveRange ) {
-        isExpression = forBody_(canBeExpression, outputLocal);
-    }
-    // Add the compare value to the iterator:
-    emitInstruction_(OpCode::GET_LOCAL, iteratorLocal);
-    emitInstruction_(OpCode::ADD);
-    emitInstruction_(OpCode::SET_LOCAL, iteratorLocal);
-    emitInstruction_(OpCode::POP);  // Clean up the new loop value
+    // pop 4
 
-    // Loop back
-    emitLoop_(loopStart);
-
-    // This is where we exit
-    setJumpDestination_(jumpToEnd);
-
-    emitInstruction_(OpCode::POP);  // Clean up the compare value
-    emitInstruction_(OpCode::POP);  // Clean up the end value
-
-    // Pop the iterator
-    currentEnv_->endScope(this);
-    return isExpression;
 }
 
 void Compiler::synchronise_() {
@@ -779,7 +731,7 @@ void Compiler::synchronise_() {
 
     // try and find a boundary which seems like a good sync point
     panicMode_ = false;
-    while( currentToken_.type != Token::END ){
+    while( currentToken_.type != Token::FILE_END ){
         // stop if the previous token looks like the end of a declaration/statement:
         if( previousToken_.type == Token::SEMICOLON ) return;
 
@@ -812,7 +764,7 @@ void Compiler::expressionBlock_() {
 bool Compiler::block_(bool canBeExpression) {
     // parse declarations (and statements) until hit the closing brace
     bool isExpression = false;
-    while( !check_(Token::RIGHT_BRACE) && !check_(Token::END) ){
+    while( !check_(Token::RIGHT_BRACE) && !check_(Token::FILE_END) ){
         if( isExpression ){
             errorAtPrevious_("Expression only allowed at end of block.");
         }
@@ -863,34 +815,40 @@ uint8_t Compiler::makeIdentifierLiteral_(ObjString * name) {
     return makeLiteral_(Value::string(name));
 }
 
-int Compiler::emitJump_(OpCode instr) {
+void Compiler::emitJumpBack_(OpCode instr, int loopStart) {
+    emitInstruction_(instr);
+    // Offset will be negative
+    int offset = loopStart - getCurrentChunk_()->count() - 2;  // Why is it -2?
+    if( offset >= INT16_MAX || offset <= INT16_MIN ) {
+        errorAtPrevious_("Loop body is too large.");
+    }
+
+    // Encode first and second half of the offset
+    emitInstructionArg_(encode::packInt16a((int16_t)offset));
+    emitInstructionArg_(encode::packInt16b((int16_t)offset));
+}
+
+int Compiler::emitJumpPlaceholder_(OpCode instr) {
     emitInstruction_(instr);
     // placeholder value:
     emitInstructionArg_(0xFF);
     emitInstructionArg_(0xFF);
     // location of placeholder
-    return getCurrentChunk_()->count() - 2;
+    return getCurrentChunk_()->count() - 2; // TODO can remove - 2?
 }
 
 void Compiler::setJumpDestination_(int offset) {
     Chunk * chunk = getCurrentChunk_();
 
     // how far to jump:
-    int jumpLen = chunk->count() - offset - 2;
-    if( jumpLen > UINT16_MAX ){
+    int jumpLen = chunk->count() - offset - 2; // TODO can remove -2?
+    if( jumpLen >= INT16_MAX || jumpLen <= INT16_MIN ){
         errorAtPrevious_("Too much code to jump over.");
     }
-    // set value:
-    chunk->getCode()[offset] = (uint8_t)(jumpLen >> 8);
-    chunk->getCode()[offset+1] = (uint8_t)(jumpLen & 0xFF);
-}
 
-void Compiler::emitLoop_(int loopStart) {
-    emitInstruction_(OpCode::LOOP);
-    int offset = getCurrentChunk_()->count() - loopStart + 2;
-    if( offset > UINT16_MAX ) errorAtPrevious_("Loop body is too large.");
-    emitInstructionArg_((uint8_t)((offset >> 8) & 0xff));
-    emitInstructionArg_((uint8_t)(offset & 0xff));
+    // write first and second half of the jump length to the code offset
+    chunk->getCode()[offset] = encode::packInt16a((int16_t)jumpLen);
+    chunk->getCode()[offset + 1] = encode::packInt16b((int16_t)jumpLen);
 }
 
 void Compiler::grouping_() {
@@ -1084,6 +1042,9 @@ Precedence Compiler::getInfixPrecedence_(Token::Type type) {
         case Token::OR:
             return Precedence::OR;
 
+        case Token::ARROW:
+            return Precedence::ARROW;
+
         case Token::LEFT_BRACE:
         case Token::EQUAL:
         case Token::BANG:
@@ -1099,6 +1060,7 @@ Precedence Compiler::getInfixPrecedence_(Token::Type type) {
         case Token::CONST:
         case Token::ELIF:
         case Token::ELSE:
+        case Token::END:
         case Token::FALSE:
         case Token::FOR:
         case Token::FN:
@@ -1116,7 +1078,7 @@ Precedence Compiler::getInfixPrecedence_(Token::Type type) {
         case Token::VAR:
         case Token::WHILE:
         case Token::ERROR:
-        case Token::END:
+        case Token::FILE_END:
         default:
             return Precedence::NONE;
     }
@@ -1160,6 +1122,7 @@ bool Compiler::infixOperation_(Token::Type type) {
         case Token::CONST:
         case Token::ELIF:
         case Token::ELSE:
+        case Token::END:
         case Token::FALSE:
         case Token::FOR:
         case Token::FN:
@@ -1177,7 +1140,7 @@ bool Compiler::infixOperation_(Token::Type type) {
         case Token::VAR:
         case Token::WHILE:
         case Token::ERROR:
-        case Token::END:
+        case Token::FILE_END:
         default:
             return false;
     }
@@ -1190,7 +1153,7 @@ bool Compiler::prefixOperation_(Token::Type type, bool canAssign) {
         case Token::LEFT_BRACKET:  list_(); return true;
         case Token::LEFT_BRACE:    expressionBlock_(); return true;
         case Token::IF:            ifExpression_(canAssign); return true;
-        case Token::FOR:           forExpression_(canAssign); return true;
+        case Token::FOR:           for_(); return true;
         case Token::FN:            funcAnonymous_(); return true;
 
         // Math
@@ -1203,6 +1166,7 @@ bool Compiler::prefixOperation_(Token::Type type, bool canAssign) {
         case Token::TRUE:          emitTrue_(); return true;
         case Token::FALSE:         emitFalse_(); return true;
         case Token::NIL:           emitNil_(); return true;
+        case Token::END:           emitEnd_(); return true;
 
         // Variables
         case Token::IDENTIFIER:    variable_(canAssign);return true;
@@ -1247,7 +1211,7 @@ bool Compiler::prefixOperation_(Token::Type type, bool canAssign) {
         case Token::LESS_EQUAL:
         case Token::VAR:
         case Token::ERROR:
-        case Token::END:
+        case Token::FILE_END:
         default:
             return false;
     }

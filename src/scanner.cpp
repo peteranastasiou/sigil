@@ -35,7 +35,7 @@ Token Scanner::scanToken() {
     tokenStrLen_ = 0;
 
     // check for EOF:
-    if( isAtEnd_() ) return makeToken_(Token::END);
+    if( isAtEnd_() ) return makeToken_(Token::FILE_END);
 
     char c = nextChar_();
 
@@ -55,7 +55,7 @@ Token Scanner::scanToken() {
         case ']': return makeToken_(Token::RIGHT_BRACKET);
         case ';': return makeToken_(Token::SEMICOLON);
         case ',': return makeToken_(Token::COMMA);
-        case '-': return makeToken_(Token::MINUS);
+        case '-': return makeToken_(matchNext_('>') ? Token::ARROW : Token::MINUS);
         case '+': return makeToken_(Token::PLUS);
         case '/': return makeToken_(Token::SLASH);
         case '*': return makeToken_(Token::STAR);
@@ -64,7 +64,6 @@ Token Scanner::scanToken() {
         case '=': return makeToken_(matchNext_('=') ? Token::EQUAL_EQUAL : Token::EQUAL);
         case '<': return makeToken_(matchNext_('=') ? Token::LESS_EQUAL : Token::LESS);
         case '>': return makeToken_(matchNext_('=') ? Token::GREATER_EQUAL : Token::GREATER);
-        case ':': return makeToken_(matchNext_('=') ? Token::COLON_EQUAL : Token::COLON);
         case '"': return makeStringToken_();
     }
 
@@ -201,15 +200,18 @@ Token::Type Scanner::identifierType_() {
         case 'b': return checkKeyword_(1, 3, "ool", Token::BOOL);
         case 'c': return checkKeyword_(1, 4, "onst", Token::CONST);
         case 'e': {
-            // "e..." might be "echo", "else" or "elif":
+            // "e..." might be "echo", "else", "elif" or "end":
             // check correct number of chars, and that next char is l:
             if( tokenStrLen_ == 4 ){
-                if( tokenStr_[1] == 'c' ){
-                    return checkKeyword_(2, 2, "ho", Token::ECHO);
-                } else if( tokenStr_[1] == 'l' ){
-                    if( tokenStr_[2] == 's' && tokenStr_[3] == 'e' ) return Token::ELSE;
-                    if( tokenStr_[2] == 'i' && tokenStr_[3] == 'f' ) return Token::ELIF;
+                switch( tokenStr_[1] ){
+                    case 'c': return checkKeyword_(2, 2, "ho", Token::ECHO);
+                    case 'l': {
+                        if( tokenStr_[2] == 's' && tokenStr_[3] == 'e' ) return Token::ELSE;
+                        if( tokenStr_[2] == 'i' && tokenStr_[3] == 'f' ) return Token::ELIF;
+                    }
                 }
+            } else if ( tokenStrLen_ == 3 ){
+                return checkKeyword_(1, 2, "nd", Token::END);
             }
             break;
         }
@@ -226,15 +228,7 @@ Token::Type Scanner::identifierType_() {
             }
             break;
         }
-        case 'i': {
-            if( tokenStrLen_ == 2 ){
-                switch( tokenStr_[1] ){
-                    case 'f': return Token::IF;
-                    case 'n': return Token::IN;
-                }
-            }
-            break;
-        }
+        case 'i': return checkKeyword_(1, 1, "f", Token::IF);
         case 'n': return checkKeyword_(1, 2, "il", Token::NIL);
         case 'o': {
             if( tokenStrLen_ > 1 ){

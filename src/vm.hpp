@@ -21,6 +21,7 @@ enum class InterpretResult {
 struct CallFrame {
     inline uint8_t readByte() { return *ip++; }
     uint16_t readUint16();
+    int16_t readInt16();
     Value readLiteral();
     ObjString * readString();
     int chunkOffsetOf(uint8_t * addr);  // instruction address to chunk offset
@@ -53,6 +54,7 @@ public:
     void gcMarkRoots();
 
     // stack operations:
+    Value indexStack(CallFrame * currentFrame, int8_t index);
     void push(Value value);
     Value pop();
     void pop(int n);
@@ -79,5 +81,5 @@ private:
     int frameCount_;
     Value stack_[STACK_MAX];
     Value * stackTop_;  // points past the last value in the stack
-    HashMap<Global> globals_; 
+    HashMap<Global> globals_;
 };

@@ -16,6 +16,7 @@ struct Value {
     enum Type {
         // Primitive types:
         NIL = 0,  // Must be 0 so we can clear memory to NIL
+        END,
         BOOL,
         NUMBER,  // TODO rename to FLOAT, add INT type
         TYPEID,
@@ -36,6 +37,7 @@ struct Value {
 
     // Constructor-likes:
     static inline Value nil() { return (Value){NIL, {.number = 0}}; }
+    static inline Value end() { return (Value){END, {.number = 0}}; }
     static inline Value boolean(bool b) { return (Value){BOOL, {.boolean = b}}; }
     static inline Value number(double n) { return (Value){NUMBER, {.number = n}}; }
     static inline Value typeId(Type t) {
@@ -53,6 +55,7 @@ struct Value {
 
     // Helpers for value types
     inline bool isNil() const { return type == NIL; }
+    inline bool isEnd() const { return type == END; }
     inline bool isBoolean() const { return type == BOOL; }
     inline bool isNumber() const { return type == NUMBER; }
     inline bool isTypeId() const { return type == TYPEID; }

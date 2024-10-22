@@ -12,6 +12,7 @@ enum class Precedence {
   NONE,
   ASSIGNMENT,  // can be assigned, whole expression
   PARTIAL,     // part of an expression
+  ARROW,       // ->
   OR,          // or
   AND,         // and
   EQUALITY,    // == !=
@@ -141,8 +142,7 @@ private:
     bool statement_(bool canBeExpression);    // returns isExpression
     bool if_(bool canBeExpression);           // returns isExpression
     void whileStatement_();
-    bool for_(bool canBeExpression);          // returns isExpression
-    bool forBody_(bool canBeExpression, uint8_t outputLocal);
+    void for_();
     bool block_(bool canBeExpression);        // returns isExpression
     void expressionBlock_();
     bool nestedBlock_(bool canBeExpression);  // returns isExpression
@@ -195,6 +195,7 @@ private:
     void emitTrue_();
     void emitFalse_();
     void emitNil_();
+    void emitEnd_();
     void emitReturn_();
     void emitBoolType_();
     void emitFloatType_();
@@ -204,9 +205,9 @@ private:
     void emitLiteral_(Value value);
     uint8_t makeLiteral_(Value value);
     uint8_t makeIdentifierLiteral_(ObjString * name);
-    int emitJump_(OpCode instr);
+    void emitJumpBack_(OpCode instr, int loopStart);
+    int emitJumpPlaceholder_(OpCode instr);
     void setJumpDestination_(int offset);
-    void emitLoop_(int loopStart);
 
     // Environment:
     void initEnvironment_(Environment & env);

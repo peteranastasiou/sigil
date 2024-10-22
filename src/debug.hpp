@@ -18,12 +18,12 @@ public:
 
 private:
     int disassembleInstruction_(Chunk * chunk, int offset, int line);
-    int literalInstruction_(char const * name, Chunk * chunk, int offset);
-    int closureInstruction_(char const * name, Chunk * chunk, int offset);
-    int byteInstruction_(char const * name, Chunk * chunk, int offset);
-    int argInstruction_(char const * name, Chunk * chunk, int offset);
-    int simpleInstruction_(char const * name);
-    int jumpInstruction_(const char* name, int sign, Chunk* chunk, int offset);
+    int instrLiteral_(char const * name, Chunk * chunk, int offset);
+    int instrClosure_(char const * name, Chunk * chunk, int offset);
+    int instrArgUint8_(char const * name, Chunk * chunk, int offset);
+    int instrArgInt8_(char const * name, Chunk * chunk, int offset);
+    int instrSimple_(char const * name);
+    int instrJump_(const char* name, int sign, Chunk* chunk, int offset);
 };
 
 #ifdef DEBUG_GC

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "function.hpp"
+#include "encode.hpp"
 
 
 Disassembler::Disassembler(){
@@ -16,8 +17,14 @@ Disassembler::~Disassembler(){
 void Disassembler::disassembleChunk(Chunk * chunk, char const * name){
     printf("== %s ==\n", name);
 
+    int lastLine = -1;
+
     for( int offset = 0; offset < chunk->count(); ) {
         int line = chunk->getLineNumber(offset);
+        if( line != lastLine ) {
+            printf("LINE %i: todo print it\n", line); // refer newCopyOfStream
+        }
+        lastLine = line;
         int incr = disassembleInstruction_(chunk, offset, line);
         offset += incr;
     }
@@ -34,62 +41,62 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
 
     OpCode instr = (OpCode)chunk->code[(size_t)offset];
     switch(instr){
-        case OpCode::PUSH_ZERO:     return simpleInstruction_("PUSH_ZERO");
-        case OpCode::PUSH_ONE:      return simpleInstruction_("PUSH_ONE");
-        case OpCode::PUSH_TWO:      return simpleInstruction_("PUSH_TWO");
-        case OpCode::LITERAL:       return literalInstruction_("LITERAL", chunk, offset);
-        case OpCode::CLOSURE:       return closureInstruction_("CLOSURE", chunk, offset);
-        case OpCode::NIL:           return simpleInstruction_("NIL");
-        case OpCode::TRUE:          return simpleInstruction_("TRUE");
-        case OpCode::FALSE:         return simpleInstruction_("FALSE");
-        case OpCode::TYPE_BOOL:     return simpleInstruction_("TYPE_BOOL");
-        case OpCode::TYPE_FLOAT:    return simpleInstruction_("TYPE_FLOAT");
-        case OpCode::TYPE_FUNCTION: return simpleInstruction_("TYPE_FUNCTION");
-        case OpCode::TYPE_STRING:   return simpleInstruction_("TYPE_STRING");
-        case OpCode::ADD:           return simpleInstruction_("ADD");
-        case OpCode::POP:           return simpleInstruction_("POP");
-        case OpCode::CLOSE_UPVALUE:       return simpleInstruction_("CLOSE_UPVALUE");
-        case OpCode::DEFINE_GLOBAL_VAR:   return literalInstruction_("DEFINE_GLOBAL_VAR", chunk, offset);
-        case OpCode::DEFINE_GLOBAL_CONST: return literalInstruction_("DEFINE_GLOBAL_CONST", chunk, offset);
-        case OpCode::GET_GLOBAL:    return byteInstruction_("GET_GLOBAL", chunk, offset);
-        case OpCode::SET_GLOBAL:    return byteInstruction_("SET_GLOBAL", chunk, offset);
-        case OpCode::GET_LOCAL:     return argInstruction_("GET_LOCAL", chunk, offset);
-        case OpCode::SET_LOCAL:     return argInstruction_("SET_LOCAL", chunk, offset);
-        case OpCode::APPEND_LOCAL:  return argInstruction_("APPEND_LOCAL", chunk, offset);
-        case OpCode::GET_UPVALUE:   return argInstruction_("GET_UPVALUE", chunk, offset);
-        case OpCode::SET_UPVALUE:   return argInstruction_("SET_UPVALUE", chunk, offset);
-        case OpCode::EQUAL:         return simpleInstruction_("EQUAL");
-        case OpCode::NOT_EQUAL:     return simpleInstruction_("NOT_EQUAL");
-        case OpCode::GREATER:       return simpleInstruction_("GREATER");
-        case OpCode::GREATER_EQUAL: return simpleInstruction_("GREATER_EQUAL");
-        case OpCode::LESS:          return simpleInstruction_("LESS");
-        case OpCode::LESS_EQUAL:    return simpleInstruction_("LESS_EQUAL");
-        case OpCode::SUBTRACT:      return simpleInstruction_("SUBTRACT");
-        case OpCode::MULTIPLY:      return simpleInstruction_("MULTIPLY");
-        case OpCode::DIVIDE:        return simpleInstruction_("DIVIDE");
-        case OpCode::NEGATE:        return simpleInstruction_("NEGATE");
-        case OpCode::NOT:           return simpleInstruction_("NOT");
-        case OpCode::COMPARE_ITERATOR:   return simpleInstruction_("COMPARE_ITERATOR");
-        case OpCode::MAKE_LIST:     return argInstruction_("MAKE_LIST", chunk, offset);
-        case OpCode::PRINT:         return simpleInstruction_("PRINT");
-        case OpCode::ECHO:          return simpleInstruction_("ECHO");
-        case OpCode::TYPE:          return simpleInstruction_("TYPE");
-        case OpCode::JUMP:          return jumpInstruction_("JUMP", 1, chunk, offset);
-        case OpCode::LOOP:          return jumpInstruction_("LOOP", -1, chunk, offset);
-        case OpCode::JUMP_IF_TRUE:  return jumpInstruction_("JUMP_IF_TRUE", 1, chunk, offset);
-        case OpCode::JUMP_IF_FALSE: return jumpInstruction_("JUMP_IF_FALSE", 1, chunk, offset);
-        case OpCode::JUMP_IF_TRUE_POP: return jumpInstruction_("JUMP_IF_TRUE_POP", 1, chunk, offset);
-        case OpCode::JUMP_IF_FALSE_POP: return jumpInstruction_("JUMP_IF_FALSE_POP", 1, chunk, offset);
-        case OpCode::JUMP_IF_ZERO:  return jumpInstruction_("JUMP_IF_ZERO", 1, chunk, offset);
-        case OpCode::CALL:          return byteInstruction_("CALL", chunk, offset);
-        case OpCode::RETURN:        return simpleInstruction_("RETURN");
+        case OpCode::PUSH_ZERO:     return instrSimple_("PUSH_ZERO");
+        case OpCode::PUSH_ONE:      return instrSimple_("PUSH_ONE");
+        case OpCode::PUSH_TWO:      return instrSimple_("PUSH_TWO");
+        case OpCode::LITERAL:       return instrLiteral_("LITERAL", chunk, offset);
+        case OpCode::CLOSURE:       return instrClosure_("CLOSURE", chunk, offset);
+        case OpCode::NIL:           return instrSimple_("NIL");
+        case OpCode::END:           return instrSimple_("END");
+        case OpCode::TRUE:          return instrSimple_("TRUE");
+        case OpCode::FALSE:         return instrSimple_("FALSE");
+        case OpCode::TYPE_BOOL:     return instrSimple_("TYPE_BOOL");
+        case OpCode::TYPE_FLOAT:    return instrSimple_("TYPE_FLOAT");
+        case OpCode::TYPE_FUNCTION: return instrSimple_("TYPE_FUNCTION");
+        case OpCode::TYPE_STRING:   return instrSimple_("TYPE_STRING");
+        case OpCode::ADD:           return instrSimple_("ADD");
+        case OpCode::POP:           return instrSimple_("POP");
+        case OpCode::CLOSE_UPVALUE:       return instrSimple_("CLOSE_UPVALUE");
+        case OpCode::DEFINE_GLOBAL_VAR:   return instrLiteral_("DEFINE_GLOBAL_VAR", chunk, offset);
+        case OpCode::DEFINE_GLOBAL_CONST: return instrLiteral_("DEFINE_GLOBAL_CONST", chunk, offset);
+        case OpCode::GET_GLOBAL:    return instrArgUint8_("GET_GLOBAL", chunk, offset);
+        case OpCode::SET_GLOBAL:    return instrArgUint8_("SET_GLOBAL", chunk, offset);
+        case OpCode::GET_LOCAL:     return instrArgInt8_("GET_LOCAL", chunk, offset);
+        case OpCode::SET_LOCAL:     return instrArgInt8_("SET_LOCAL", chunk, offset);
+        case OpCode::APPEND_LOCAL:  return instrArgInt8_("APPEND_LOCAL", chunk, offset);
+        case OpCode::GET_UPVALUE:   return instrArgUint8_("GET_UPVALUE", chunk, offset);
+        case OpCode::SET_UPVALUE:   return instrArgUint8_("SET_UPVALUE", chunk, offset);
+        case OpCode::EQUAL:         return instrSimple_("EQUAL");
+        case OpCode::NOT_EQUAL:     return instrSimple_("NOT_EQUAL");
+        case OpCode::GREATER:       return instrSimple_("GREATER");
+        case OpCode::GREATER_EQUAL: return instrSimple_("GREATER_EQUAL");
+        case OpCode::LESS:          return instrSimple_("LESS");
+        case OpCode::LESS_EQUAL:    return instrSimple_("LESS_EQUAL");
+        case OpCode::SUBTRACT:      return instrSimple_("SUBTRACT");
+        case OpCode::MULTIPLY:      return instrSimple_("MULTIPLY");
+        case OpCode::DIVIDE:        return instrSimple_("DIVIDE");
+        case OpCode::NEGATE:        return instrSimple_("NEGATE");
+        case OpCode::NOT:           return instrSimple_("NOT");
+        case OpCode::COMPARE_ITERATOR:   return instrSimple_("COMPARE_ITERATOR");
+        case OpCode::MAKE_LIST:     return instrArgUint8_("MAKE_LIST", chunk, offset);
+        case OpCode::PRINT:         return instrSimple_("PRINT");
+        case OpCode::ECHO:          return instrSimple_("ECHO");
+        case OpCode::TYPE:          return instrSimple_("TYPE");
+        case OpCode::JUMP:          return instrJump_("JUMP", 1, chunk, offset);
+        case OpCode::JUMP_IF_TRUE:  return instrJump_("JUMP_IF_TRUE", 1, chunk, offset);
+        case OpCode::JUMP_IF_FALSE: return instrJump_("JUMP_IF_FALSE", 1, chunk, offset);
+        case OpCode::JUMP_IF_TRUE_POP: return instrJump_("JUMP_IF_TRUE_POP", 1, chunk, offset);
+        case OpCode::JUMP_IF_FALSE_POP: return instrJump_("JUMP_IF_FALSE_POP", 1, chunk, offset);
+        case OpCode::JUMP_IF_ZERO:  return instrJump_("JUMP_IF_ZERO", 1, chunk, offset);
+        case OpCode::CALL:          return instrArgUint8_("CALL", chunk, offset);
+        case OpCode::RETURN:        return instrSimple_("RETURN");
         default:
             printf("Unknown opcode %i\n", (int)instr);
             return 1;
     }
 }
 
-int Disassembler::literalInstruction_(char const * name, Chunk * chunk, int offset){
+int Disassembler::instrLiteral_(char const * name, Chunk * chunk, int offset){
     uint8_t literalIdx = chunk->code[offset + 1];
     printf("%-16s %4d ", name, literalIdx);
     chunk->literals[literalIdx].print(true);
@@ -97,7 +104,7 @@ int Disassembler::literalInstruction_(char const * name, Chunk * chunk, int offs
     return 2;
 }
 
-int Disassembler::closureInstruction_(char const * name, Chunk * chunk, int offset){
+int Disassembler::instrClosure_(char const * name, Chunk * chunk, int offset){
     int initialOffset = offset;
     offset ++;
     uint8_t literalIdx = chunk->code[offset++];
@@ -116,25 +123,25 @@ int Disassembler::closureInstruction_(char const * name, Chunk * chunk, int offs
     return offset - initialOffset;
 }
 
-int Disassembler::byteInstruction_(const char* name, Chunk* chunk, int offset) {
-  uint8_t b = chunk->code[offset + 1];
-  printf("%-16s %4d\n", name, b);
-  return 2;
+int Disassembler::instrArgUint8_(const char* name, Chunk* chunk, int offset) {
+    uint8_t b = chunk->code[offset + 1];
+    printf("%-16s %4d\n", name, b);
+    return 2;
 }
 
-int Disassembler::argInstruction_(char const * name, Chunk * chunk, int offset){
-    uint8_t arg = chunk->code[offset + 1];
+int Disassembler::instrArgInt8_(char const * name, Chunk * chunk, int offset){
+    int8_t arg = (int8_t)(chunk->code[offset + 1]);
     printf("%-16s %4d\n", name, arg);
     return 2;
 }
 
-int Disassembler::simpleInstruction_(char const * name){
+int Disassembler::instrSimple_(char const * name){
     printf("%s\n", name);
     return 1;
 }
 
-int Disassembler::jumpInstruction_(const char* name, int sign, Chunk* chunk, int offset) {
-    int jumpLen = (chunk->code[offset + 1] << 8) | chunk->code[offset + 2];
+int Disassembler::instrJump_(const char* name, int sign, Chunk* chunk, int offset) {
+    int jumpLen = encode::unpackInt16(chunk->code[offset + 1], chunk->code[offset + 2]);
     printf("%-16s %4d -> %d\n", name, offset,
             offset + 3 + sign * jumpLen);
     return 3;
@@ -154,7 +161,7 @@ int Disassembler::jumpInstruction_(const char* name, int sign, Chunk* chunk, int
 //         }
 //         printToken(token);
 //         printf("\n");
-//         if( token.type == Token::END ){
+//         if( token.type == Token::FILE_END ){
 //             break;
 //         }
 //     }
@@ -184,12 +191,14 @@ char const * tokenTypeToStr(Token::Type t) {
         case Token::GREATER_EQUAL:  return "GREATER_EQUAL";
         case Token::LESS:           return "LESS";
         case Token::LESS_EQUAL:     return "LESS_EQUAL";
+        case Token::ARROW:          return "ARROW";
         case Token::IDENTIFIER:     return "IDENTIFIER";
         case Token::STRING:         return "STRING";
         case Token::NUMBER:         return "NUMBER";
         case Token::AND:            return "AND";
         case Token::CONST:          return "CONST";
         case Token::ELSE:           return "ELSE";
+        case Token::END:            return "END";
         case Token::FALSE:          return "FALSE";
         case Token::FOR:            return "FOR";
         case Token::FN:             return "FN";
@@ -203,7 +212,7 @@ char const * tokenTypeToStr(Token::Type t) {
         case Token::VAR:            return "VAR";
         case Token::WHILE:          return "WHILE";
         case Token::ERROR:          return "ERROR";
-        case Token::END:            return "END";
+        case Token::FILE_END:       return "FILE_END";
         default:                    return "UNIDENTIFIED";
     }
 }

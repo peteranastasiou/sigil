@@ -4,6 +4,7 @@
 #include "compiler.hpp"
 #include "list.hpp"
 #include "function.hpp"
+#include "encode.hpp"
 
 #include <assert.h>
 #include <stdio.h>
@@ -12,8 +13,14 @@
 
 
 uint16_t CallFrame::readUint16() {
+    // TODO try one line: return encode::unpackUint16(ip += 2);
     ip += 2;
-    return (uint16_t)((ip[-2] << 8) | ip[-1]);
+    return encode::unpackUint16(ip[-2], ip[-1]);
+}
+
+int16_t CallFrame::readInt16() {
+    ip += 2;
+    return encode::unpackInt16(ip[-2], ip[-1]);
 }
 
 Value CallFrame::readLiteral() {
@@ -334,6 +341,7 @@ InterpretResult Vm::run_() {
                 break;
             }
             case OpCode::NIL: push(Value::nil()); break;
+            case OpCode::END: push(Value::end()); break;
             case OpCode::TRUE: push(Value::boolean(true)); break;
             case OpCode::FALSE: push(Value::boolean(false)); break;
             case OpCode::TYPE_BOOL: push(Value::typeId(Value::BOOL)); break;
@@ -376,19 +384,20 @@ InterpretResult Vm::run_() {
                 break;
             }
             case OpCode::GET_LOCAL: {
-                // local is already on the stack at the predicted index:
-                uint8_t slot = frame->readByte();
-                push(frame->slots[slot]);
+                // Get a value from the stack at the predicted location
+                int8_t index = frame->readByte();
+                push(indexStack(frame, index));
                 break;
             }
             case OpCode::SET_LOCAL: {
-                uint8_t slot = frame->readByte();  // stack position of the local
-                frame->slots[slot] = peek(0);      // note: no pop: assignment can be an expression
+                // Get a value from the stack at the predicted location
+                Value dest = indexStack(frame, frame->readByte());
+                dest = peek(0); // Not popping as assignment can be an expression
                 break;
             }
             case OpCode::APPEND_LOCAL: {
-                uint8_t slot = frame->readByte();  // stack position of the local
-                Value dest = frame->slots[slot];
+                // Push to a value on the stack (if supported)
+                Value dest = indexStack(frame, frame->readByte());
                 Value src = pop();
                 if( !dest.isList() ) {
                     return runtimeError_("Cannot append to %s type",
@@ -523,27 +532,22 @@ InterpretResult Vm::run_() {
                 break;
             }
             case OpCode::JUMP:{
-                uint16_t offset = frame->readUint16();
-                frame->ip += offset;  // jump forwards
-                break;
-            }
-            case OpCode::LOOP:{
-                uint16_t offset = frame->readUint16();
-                frame->ip -= offset;  // jump backwards
+                int16_t offset = frame->readInt16();
+                frame->ip += offset;
                 break;
             }
             case OpCode::JUMP_IF_TRUE:{
-                uint16_t offset = frame->readUint16();
+                uint16_t offset = frame->readInt16();
                 if( isTruthy_(peek(0)) ) frame->ip += offset;
                 break;
             }
             case OpCode::JUMP_IF_FALSE:{
-                uint16_t offset = frame->readUint16();
+                uint16_t offset = frame->readInt16();
                 if( !isTruthy_(peek(0)) ) frame->ip += offset;
                 break;
             }
             case OpCode::JUMP_IF_TRUE_POP:{
-                uint16_t offset = frame->readUint16();
+                uint16_t offset = frame->readInt16();
                 if( isTruthy_(pop()) ) frame->ip += offset;
                 break;
             }
@@ -601,6 +605,17 @@ InterpretResult Vm::run_() {
             default:
                 return runtimeError_("Fatal: unknown opcode %d\n", (int)instr);
         }
+    }
+}
+
+
+Value Vm::indexStack(CallFrame * currentFrame, int8_t index) {
+    if( index < 0 ){
+        // Negative values index backwards from the top of the stack
+        return stackTop_[-index];
+    }else{
+        // Positive values index forwards from the current stack frame (aka slots ptr)
+        return currentFrame->slots[index];
     }
 }
 

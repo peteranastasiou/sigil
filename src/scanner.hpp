@@ -18,17 +18,16 @@ struct Token {
         EQUAL, EQUAL_EQUAL,
         GREATER, GREATER_EQUAL,
         LESS, LESS_EQUAL,
-        COLON, COLON_EQUAL,
         ARROW,                        // ->
         // Literals:
         IDENTIFIER, STRING, NUMBER,   // TODO int
         // Keywords:
-        AND, BOOL, CONST, ELIF, ELSE, FALSE,
-        FOR, FN, FLOAT, IF, IN, NIL, OR, OBJECT,
+        AND, BOOL, CONST, ELIF, ELSE, FALSE, END,
+        FOR, FN, FLOAT, IF, NIL, OR, OBJECT,
         PRINT, ECHO, RETURN, STRING_TYPE,
         TRUE, TYPE, TYPEID, VAR, WHILE,
         // Special tokens:
-        ERROR, END
+        ERROR, FILE_END
     };
 
     Type type;

@@ -14,6 +14,7 @@ enum class OpCode {
     LITERAL,        // Push a literal value from the chunk
     CLOSURE,        // Instantiate a function literal, making a closure
     NIL,            // Push nil to the stack
+    END,            // Push end to the stack
     TRUE,           // Push true to the stack
     FALSE,          // Push false to the stack
     TYPE_BOOL,      // TypeId of bool
@@ -57,13 +58,12 @@ enum class OpCode {
     INDEX_GET,          // Pop 2 values as a,i, Push a[i]
     INDEX_SET,          // TODO Pop 3 values as a,i,b; set a[i] = b; Push ???
     // Control flow:
-    JUMP,               // Unconditionally jump forward by bytecode offset 
-    LOOP,               // Unconditionally jump backwards by bytecode offset 
-    JUMP_IF_TRUE,       // If top of stack is truthy, jump fwd by bytecode offset
-    JUMP_IF_FALSE,      // If top of stack is falsy, jump fwd by bytecode offset
+    JUMP,               // Unconditionally jump by bytecode offset
+    JUMP_IF_TRUE,       // If top of stack is truthy, jump by bytecode offset
+    JUMP_IF_FALSE,      // If top of stack is falsy, jump by bytecode offset
     JUMP_IF_TRUE_POP,   // Same as JUMP_IF_FALSE, but also pops the value
     JUMP_IF_FALSE_POP,  // Same as JUMP_IF_TRUE, but also pops the value
-    JUMP_IF_ZERO,       // If top of stack is zero, jump fwd by bytecode offset
+    JUMP_IF_ZERO,       // If top of stack is zero, jump by bytecode offset
     CALL,               // call function
     RETURN,
 };
@@ -81,7 +81,7 @@ public:
 
     // append to bytecode array
     bool write(uint8_t byte, uint16_t line);
-    
+
     // Get a line number corresponding to position in bytecode array
     uint16_t getLineNumber(int offset);
 
