@@ -287,6 +287,10 @@ bool Vm::call_(ObjClosure * closure, uint8_t argCount) {
 void Vm::resetStack_() {
     stackTop_ = stack_;
     frameCount_ = 0;
+
+    // Ready the first callframe for use before we start running
+    frame_ = &frames_[0];
+    frame_->slots = stack_;
 }
 
 InterpretResult Vm::run_() {
@@ -652,6 +656,10 @@ InterpretResult Vm::run_() {
                 return runtimeError_("Fatal: unknown opcode %d\n", (int)instr);
         }
     }
+}
+
+int Vm::stackSizeInFrame() {
+    return (int)(stackTop_ - frame_->slots);
 }
 
 Value Vm::indexStack(int8_t index) {

@@ -64,6 +64,7 @@ public:
     bool isTruthy(Value value);
 
     // stack operations:
+    int stackSizeInFrame();
     Value indexStack(int8_t index);
     void push(Value value);
     Value pop();

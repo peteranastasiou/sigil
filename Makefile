@@ -1,7 +1,7 @@
 #
 # Usage: `make -j` to build
 #        use `VERBOSE=1` to get stack traces
-#        use `VERBOSE_GC=1` to get garbage collection traces 
+#        use `VERBOSE_GC=1` to get garbage collection traces
 
 .DEFAULT_GOAL := all
 
@@ -24,14 +24,15 @@ else
 endif
 
 # Linker flags
-LDFLAGS = 
+LDFLAGS =
 ifeq ($(DEBUG), 1)
-	LDFLAGS += 
+	LDFLAGS +=
 else
 	LDFLAGS += -O2
 endif
 
 TARGET = bin/sigil
+TEST = bin/test_sigil
 
 OBJECTS = $(patsubst src/%.cpp, build/%.o, $(wildcard src/*.cpp))
 OBJECTS += $(patsubst src/inputstream/%.cpp, build/inputstream__%.o, $(wildcard src/inputstream/*.cpp))
@@ -48,7 +49,7 @@ else
 endif
 
 # Defines
-DEFINES = 
+DEFINES =
 
 # Enable debug messages:
 ifeq ($(VERBOSE), 1)
@@ -86,7 +87,18 @@ build/inputstream__%.o: src/inputstream/%.cpp
 	@$(MKDIR_BUILD)
 	$(CC) $(CFLAGS) $(DEFINES) -c $< -o $@
 
+build/unittests.o: test/unittests.cpp
+	@$(MKDIR_BUILD)
+	$(CC) $(CFLAGS) $(DEFINES) -Isrc -c $< -o $@
+
 .PHONY: clean
+
+$(TEST): build/unittests.o $(OBJECTS)
+	@$(MKDIR_BIN)
+	$(CC) -o $@ $(OBJECTS) $(LDFLAGS) $(LIBS)
+
+unittest: $(TEST)
+	./$(TEST)
 
 clean:
 	$(RMDIR) build
