@@ -127,6 +127,94 @@ Value Vm::peek(int index) {
     return stackTop_[-1 - index];
 }
 
+bool Vm::defineGlobal(ObjString * name, Value v, bool isConst) {
+    return globals_.add(name, {v, isConst});
+}
+
+bool Vm::getGlobal(ObjString * name, Global & g) {
+    if( !globals_.get(name, g) ) {
+        runtimeError_("Undefined variable '%s'.", name->get());
+        return false;
+    }
+    return true;
+}
+
+bool Vm::setGlobal(ObjString * name, Value v) {
+    Global global;
+    if( !globals_.get(name, global) ){
+        runtimeError_("Undefined variable '%s'.", name->get());
+        return false;
+    }
+    if( global.isConst ){
+        runtimeError_("Cannot redefine const variable '%s'.", name->get());
+        return false;
+    }
+    if( !globals_.set(name, {v, false}) ){
+        // Unexpected
+        runtimeError_("Failed to set variable '%s'.", name->get());
+        return false;
+    }
+    return true;
+}
+
+bool Vm::getUpvalue(uint8_t upvalueIdx, Value & v) {
+    if( upvalueIdx >= frame_->closure->upvalues.size() ){
+        runtimeError_("Upvalue out of range.");
+        return false;
+    }
+    v = frame_->closure->upvalues[upvalueIdx]->get();
+    return true;
+}
+
+bool Vm::setUpvalue(uint8_t upvalueIdx, Value v) {
+    if( upvalueIdx >= frame_->closure->upvalues.size() ){
+        runtimeError_("Upvalue out of range.");
+        return false;
+    }
+    v = frame_->closure->upvalues[upvalueIdx]->get();
+    return true;
+}
+
+bool Vm::isTruthy(Value value) {
+    switch( value.type ){
+        case Value::NIL:  return false;
+        case Value::BOOL: return value.as.boolean;
+        default:          return true;  // All other types are true!
+    }
+}
+
+bool Vm::indexValue(Value value, Value index) {
+    if( !index.isNumber() ){
+        runtimeError_("Index must be a number");
+        return false;
+    }
+    int i = (int) index.as.number;
+
+    switch( value.type ){
+    case Value::STRING:{
+        char c;
+        if( !value.asObjString()->get(i, c) ){
+            runtimeError_("Index out of bounds: %i", i);
+            return false;
+        }
+        push( Value::string(ObjString::newString(&mem_, &c, 1)) );
+        return true;
+    }
+    case Value::LIST:{
+        Value v;
+        if( !value.asObjList()->get(i, v) ){
+            runtimeError_("Index out of bounds: %i", i);
+            return false;
+        }
+        push(v);
+        return true;
+    }
+    default:
+        runtimeError_("Cannot index %s", Value::typeToString(value.type));
+        return false;
+    }
+}
+
 bool Vm::binaryOp_(OpCode op) {
     if( !peek(0).isNumber() || !peek(1).isNumber() ){
         runtimeError_("Operands must be numbers.");
@@ -194,52 +282,6 @@ bool Vm::call_(ObjClosure * closure, uint8_t argCount) {
     frame->ip = closure->function->chunk.getCode();
     frame->slots = stackTop_ - argCount - 1;
     return true;
-}
-
-bool Vm::isTruthy_(Value value) {
-    switch( value.type ){
-        case Value::NIL:  return false;
-        case Value::BOOL: return value.as.boolean;
-        default:          return true;  // All other types are true!
-    }
-}
-
-void Vm::concatenate_() {
-}
-
-bool Vm::indexGet_() {
-    Value index = pop();
-    Value value = pop();
-
-    if( !index.isNumber() ){
-        runtimeError_("Index must be a number");
-        return false;
-    }
-    int i = (int) index.as.number;
-
-    switch( value.type ){
-    case Value::STRING:{
-        char c;
-        if( !value.asObjString()->get(i, c) ){
-            runtimeError_("Index out of bounds: %i", i);
-            return false;
-        }
-        push( Value::string(ObjString::newString(&mem_, &c, 1)) );
-        return true;
-    }
-    case Value::LIST:{
-        Value v;
-        if( !value.asObjList()->get(i, v) ){
-            runtimeError_("Index out of bounds: %i", i);
-            return false;
-        }
-        push(v);
-        return true;
-    }
-    default:
-        runtimeError_("Cannot index %s", Value::typeToString(value.type));
-        return false;
-    }
 }
 
 void Vm::resetStack_() {
@@ -355,7 +397,7 @@ InterpretResult Vm::run_() {
             case OpCode::DEFINE_GLOBAL_CONST: {
                 ObjString * name = frame_->readString();
                 bool isConst = instr==OpCode::DEFINE_GLOBAL_CONST;
-                if( !globals_.add(name, {peek(0), isConst}) ){
+                if( !defineGlobal(name, peek(0), isConst) ){
                     return runtimeError_("Redeclaration of variable '%s'.", name->get());
                 }
                 pop(); // Note: lox has this late pop as `set` might trigger garbage collection
@@ -364,23 +406,18 @@ InterpretResult Vm::run_() {
             case OpCode::GET_GLOBAL: {
                 ObjString * name = frame_->readString();
                 Global global;
-                if( !globals_.get(name, global) ){
-                    return runtimeError_("Undefined variable '%s'.", name->get());
+                if( !getGlobal(name, global) ){
+                    return InterpretResult::RUNTIME_ERR;
                 }
                 push(global.value);
                 break;
             }
             case OpCode::SET_GLOBAL: {
                 ObjString * name = frame_->readString();
-                Global global;
-                if( !globals_.get(name, global) ){
-                    return runtimeError_("Undefined variable '%s'.", name->get());
+                // just peek so the assignment can be used in an expression
+                if( !setGlobal(name, peek(0)) ){
+                    return InterpretResult::RUNTIME_ERR;
                 }
-                if( global.isConst ){
-                    return runtimeError_("Cannot redefine const variable '%s'.", name->get());
-                }
-                globals_.set(name, {peek(0), false});
-                // don't pop: the assignment can be used in an expression
                 break;
             }
             case OpCode::GET_LOCAL: {
@@ -408,12 +445,19 @@ InterpretResult Vm::run_() {
             }
             case OpCode::GET_UPVALUE: {
                 uint8_t upvalueIdx = frame_->readByte();
-                push( frame_->closure->upvalues[upvalueIdx]->get() );
+                Value v;
+                if( !getUpvalue(upvalueIdx, v) ){
+                    return InterpretResult::RUNTIME_ERR;
+                }
+                push(v);
                 break;
             }
             case OpCode::SET_UPVALUE: {
                 uint8_t upvalueIdx = frame_->readByte();
-                frame_->closure->upvalues[upvalueIdx]->set( peek(0) );
+                // Not popping as assignment can be an expression
+                if( !setUpvalue( upvalueIdx, peek(0) ) ) {
+                    return InterpretResult::RUNTIME_ERR;
+                }
                 break;
             }
             case OpCode::CLOSE_UPVALUE: {
@@ -427,7 +471,7 @@ InterpretResult Vm::run_() {
                 break;
             }
             case OpCode::COMPARE_ITERATOR: {
-                compareIterator_();
+                compareIterator_(); // TODO remove
                 break;
             }
             case OpCode::NOT_EQUAL: {
@@ -491,7 +535,7 @@ InterpretResult Vm::run_() {
                 break;
             }
             case OpCode::NOT:{
-                push(Value::boolean(!isTruthy_(pop())));
+                push(Value::boolean(!isTruthy(pop())));
                 break;
             }
             case OpCode::ECHO:{
@@ -522,7 +566,9 @@ InterpretResult Vm::run_() {
                 break;
             }
             case OpCode::INDEX_GET:{
-                if( !indexGet_() ){
+                Value index = pop();
+                Value value = pop();
+                if( !indexValue(value, index) ){
                     return InterpretResult::RUNTIME_ERR;
                 }
                 break;
@@ -538,22 +584,22 @@ InterpretResult Vm::run_() {
             }
             case OpCode::JUMP_IF_TRUE:{
                 uint16_t offset = frame_->readInt16();
-                if( isTruthy_(peek(0)) ) frame_->ip += offset;
+                if( isTruthy(peek(0)) ) frame_->ip += offset;
                 break;
             }
             case OpCode::JUMP_IF_FALSE:{
                 uint16_t offset = frame_->readInt16();
-                if( !isTruthy_(peek(0)) ) frame_->ip += offset;
+                if( !isTruthy(peek(0)) ) frame_->ip += offset;
                 break;
             }
             case OpCode::JUMP_IF_TRUE_POP:{
                 uint16_t offset = frame_->readInt16();
-                if( isTruthy_(pop()) ) frame_->ip += offset;
+                if( isTruthy(pop()) ) frame_->ip += offset;
                 break;
             }
             case OpCode::JUMP_IF_FALSE_POP:{
                 uint16_t offset = frame_->readUint16();
-                if( !isTruthy_(pop()) ) frame_->ip += offset;
+                if( !isTruthy(pop()) ) frame_->ip += offset;
                 break;
             }
             case OpCode::JUMP_IF_ZERO:{

@@ -8,19 +8,25 @@
  [x]- for loops
  [x]- for expression using expression block accumulation
  [x]- fix local variable reference e.g. in echo ""+for i in 0:10 {2*i}; # local for loop outputVar points to ""!
-      []- Larger issue with local var references, assumes that stack contains only locals by the time each one executes
+      [x]- Larger issue with local var references, assumes that stack contains only locals by the time each one executes
           Actually, expressions like "a"+{var b="b" .... } has a literal on the stack, which offsets the locals.
           How do we know when pushing to the stack whether it will remain?
           [-]- explored idea of temporary vars with different frame point, but complexities around upvalues, nested temporary frames
           [-]- tried tracking stack location of temporary values, complexities around jumps and branches
           [-]- Only allow expression control structures (ECS) at the start of an expression.
             - Doesn't support passing ECS to functions, lists, because the stack has temporaries
-          [x]- Give up, only allow in assignment or return?
-          [ ]- redesign around the problem:
+          [.]- Give up, only allow in assignment or return?
+          [x]- redesign around the problem:
             l = for source -> fn -> fn -> dest;
             don't allow declaring vars mid expression.
-            make function syntax even shorter $ args {body}
+            make function syntax even shorter with: $ args {body}
 
+ [x]- encode uint16, int16, use for signed jump
+ []- get_local instruction takes negative values from end of stack
+ []- for stream
+ []- native func for range + vm api
+ []- prevent declarations in expression-if statements
+ []- isEmpty native func e.g. isEmpty([]) === true; isEmpty("") === true
 
  []- replace all stdlib stuff with c from lox impl so it can be wasmd
  []- properly trigger garbage collection

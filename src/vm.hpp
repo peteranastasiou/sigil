@@ -53,6 +53,16 @@ public:
     // Mark root objects to preserve from garbage collection:
     void gcMarkRoots();
 
+    // VM API
+    // returns false on failure (attempt to redeclare)
+    bool defineGlobal(ObjString * name, Value v, bool isConst);
+    bool getGlobal(ObjString * name, Global & g);
+    bool setGlobal(ObjString * name, Value v);
+    bool getUpvalue(uint8_t upvalueIdx, Value & v);
+    bool setUpvalue(uint8_t upvalueIdx, Value v);
+    bool indexValue(Value collection, Value index);
+    bool isTruthy(Value value);
+
     // stack operations:
     Value indexStack(int8_t index);
     void push(Value value);
@@ -67,9 +77,6 @@ private:
     bool callValue_(Value value, uint8_t argCount);
     bool binaryOp_(OpCode op);
     bool compareIterator_();
-    bool isTruthy_(Value value);
-    void concatenate_();
-    bool indexGet_();
     InterpretResult runtimeError_(const char* format, ...);
 
     static int const FRAMES_MAX = 64;
