@@ -22,7 +22,7 @@
             make function syntax even shorter with: $ args {body}
 
  [x]- encode uint16, int16, use for signed jump
- []- get_local instruction takes negative values from end of stack
+ [x]- get_local instruction takes negative values from end of stack
  []- for stream
  []- native func for range + vm api
  []- prevent declarations in expression-if statements
