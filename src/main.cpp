@@ -1,9 +1,9 @@
 
-#include "vm.hpp"
-#include "chunk.hpp"
-#include "debug.hpp"
-#include "inputstream/fileinputstream.hpp"
-#include "inputstream/stringinputstream.hpp"
+#include "sigil/vm.hpp"
+#include "sigil/chunk.hpp"
+#include "sigil/debug.hpp"
+#include "sigil/inputstream/fileinputstream.hpp"
+#include "sigil/inputstream/stringinputstream.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>

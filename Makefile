@@ -34,8 +34,8 @@ endif
 TARGET = bin/sigil
 TEST = bin/test_sigil
 
-OBJECTS = $(patsubst src/sigil/%.cpp, build/%.o, $(wildcard src/*.cpp))
-OBJECTS += $(patsubst src/sigil/inputstream/%.cpp, build/inputstream__%.o, $(wildcard src/inputstream/*.cpp))
+OBJECTS = $(patsubst src/sigil/%.cpp, build/%.o, $(wildcard src/sigil/*.cpp))
+OBJECTS += $(patsubst src/sigil/inputstream/%.cpp, build/inputstream__%.o, $(wildcard src/sigil/inputstream/*.cpp))
 DEPS = $(OBJECTS:.o=.d)
 
 ifeq ($(OS), Windows_NT)
@@ -95,11 +95,11 @@ build/unittests.o: test/unittests.cpp
 # Link
 $(TARGET): build/main.o $(OBJECTS)
 	@$(MKDIR_BIN)
-	$(CC) -o $@ $(OBJECTS) $(LDFLAGS) $(LIBS)
+	$(CC) -o $@ $^ $(LDFLAGS) $(LIBS)
 
 $(TEST): build/unittests.o $(OBJECTS)
 	@$(MKDIR_BIN)
-	$(CC) -o $@ $(OBJECTS) $(LDFLAGS) $(LIBS)
+	$(CC) -o $@ $^ $(LDFLAGS) $(LIBS)
 
 unittest: $(TEST)
 	./$(TEST)
