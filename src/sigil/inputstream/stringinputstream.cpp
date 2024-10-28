@@ -15,7 +15,9 @@ StringInputStream::~StringInputStream() {
 }
 
 char StringInputStream::peek() {
-  if( index_ >= len_ ){
+  if( index_ == len_ ) {
+    return ';';  // implicit semicolon hack!
+  } else if( index_ > len_ ){
     return '\0';
   } else {
     return line_[index_];
