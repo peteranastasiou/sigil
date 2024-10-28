@@ -34,8 +34,8 @@ endif
 TARGET = bin/sigil
 TEST = bin/test_sigil
 
-OBJECTS = $(patsubst src/%.cpp, build/%.o, $(wildcard src/*.cpp))
-OBJECTS += $(patsubst src/inputstream/%.cpp, build/inputstream__%.o, $(wildcard src/inputstream/*.cpp))
+OBJECTS = $(patsubst src/sigil/%.cpp, build/%.o, $(wildcard src/*.cpp))
+OBJECTS += $(patsubst src/sigil/inputstream/%.cpp, build/inputstream__%.o, $(wildcard src/inputstream/*.cpp))
 DEPS = $(OBJECTS:.o=.d)
 
 ifeq ($(OS), Windows_NT)
@@ -71,27 +71,31 @@ endif
 
 LIBS = -lreadline
 
+INCS = -Isrc/sigil
+
 all: $(TARGET)
 
-# Link
-$(TARGET): $(OBJECTS)
-	@$(MKDIR_BIN)
-	$(CC) -o $@ $(OBJECTS) $(LDFLAGS) $(LIBS)
-
 # Compile sources
-build/%.o: src/%.cpp
+build/%.o: src/sigil/%.cpp
 	@$(MKDIR_BUILD)
-	$(CC) $(CFLAGS) $(DEFINES) -c $< -o $@
+	$(CC) $(CFLAGS) $(INCS) $(DEFINES) -c $< -o $@
 
-build/inputstream__%.o: src/inputstream/%.cpp
+build/inputstream__%.o: src/sigil/inputstream/%.cpp
 	@$(MKDIR_BUILD)
-	$(CC) $(CFLAGS) $(DEFINES) -c $< -o $@
+	$(CC) $(CFLAGS) $(INCS) $(DEFINES) -c $< -o $@
+
+build/main.o: src/main.cpp
+	@$(MKDIR_BUILD)
+	$(CC) $(CFLAGS) $(INCS) $(DEFINES) -c $< -o $@
 
 build/unittests.o: test/unittests.cpp
 	@$(MKDIR_BUILD)
-	$(CC) $(CFLAGS) $(DEFINES) -Isrc -c $< -o $@
+	$(CC) $(CFLAGS) $(INCS) $(DEFINES) -Isrc -c $< -o $@
 
-.PHONY: clean
+# Link
+$(TARGET): build/main.o $(OBJECTS)
+	@$(MKDIR_BIN)
+	$(CC) -o $@ $(OBJECTS) $(LDFLAGS) $(LIBS)
 
 $(TEST): build/unittests.o $(OBJECTS)
 	@$(MKDIR_BIN)
@@ -99,6 +103,8 @@ $(TEST): build/unittests.o $(OBJECTS)
 
 unittest: $(TEST)
 	./$(TEST)
+
+.PHONY: clean
 
 clean:
 	$(RMDIR) build
