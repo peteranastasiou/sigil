@@ -665,7 +665,7 @@ int Vm::stackSizeInFrame() {
 Value Vm::indexStack(int8_t index) {
     if( index < 0 ){
         // Negative values index backwards from the top of the stack
-        return stackTop_[-index];
+        return *(stackTop_ + index);
     }else{
         // Positive values index forwards from the current stack frame (aka slots ptr)
         return frame_->slots[index];
