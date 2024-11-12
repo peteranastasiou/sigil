@@ -12,7 +12,6 @@ enum class Precedence {
   NONE,
   ASSIGNMENT,  // can be assigned, whole expression
   PARTIAL,     // part of an expression
-  ARROW,       // ->
   OR,          // or
   AND,         // and
   EQUALITY,    // == !=

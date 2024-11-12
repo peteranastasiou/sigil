@@ -257,7 +257,6 @@ Chunk * Compiler::getCurrentChunk_() {
 }
 
 void Compiler::emitInstruction_(OpCode instr) {
-    // Work out the stack impact of the instruction:
     writeToCodeChunk_((uint8_t)instr);
 }
 
@@ -698,16 +697,17 @@ void Compiler::for_() {
     emitInstruction_(OpCode::PUSH_ZERO);
 
     // compile each stream-part, separated by '->', each result is left on the stack
-    parse_(Precedence::ARROW);
-    uint8_t numFuncs = 0;
+    expressionPartial_();
+    uint8_t numFuncs = 1;
     while( match_(Token::ARROW) ) {
         numFuncs ++; // TODO check for max funcs
-        parse_(Precedence::ARROW);  // TODO tests that this does precedence right
+        expressionPartial_();
     }
 
     // Place stream functions back on stack in reverse order
-    for( uint8_t i = 0; i < numFuncs; i++ ){
-        emitInstruction_(OpCode::GET_LOCAL, -4);  // TODO negative offset
+    for( int8_t i = 1; i <= numFuncs; i++ ){
+        // index as -1, -2, ..., -numFuncs
+        emitInstruction_(OpCode::GET_LOCAL, (uint8_t)-i);
     }
 
     // This is where we loop:
@@ -1043,8 +1043,6 @@ Precedence Compiler::getInfixPrecedence_(Token::Type type) {
             return Precedence::OR;
 
         case Token::ARROW:
-            return Precedence::ARROW;
-
         case Token::LEFT_BRACE:
         case Token::EQUAL:
         case Token::BANG:
