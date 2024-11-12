@@ -16,10 +16,14 @@ ObjString * ObjFunction::toString() {
 }
 
 void ObjFunction::print(bool verbose) {
+    const char * n = name->get();
+    if( n[0] == '\0' ) {
+        n = "{anon}";
+    }
     if( verbose ){
-        printf("<fn:%s>", name->get());
+        printf("<fn:%s>", n);
     }else{
-        puts(name->get());
+        puts(n);
     }
 }
 
@@ -43,7 +47,15 @@ ObjString * ObjClosure::toString() {
 }
 
 void ObjClosure::print(bool verbose) {
-    printf("%s", function->name->get());
+    const char * n = function->name->get();
+    if( n[0] == '\0' ) {
+        n = "{anon}";
+    }
+    if( verbose ){
+        printf("<cl:%s>", n);
+    }else{
+        puts(n);
+    }
 }
 
 void ObjClosure::gcMarkRefs() {

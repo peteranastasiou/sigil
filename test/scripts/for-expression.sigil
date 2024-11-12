@@ -1,8 +1,20 @@
+fn range(n) {
+    var i = 0;
+    return fn(i) {
+        i = i + 1;
+        if i < n { i } else { end }   # end keyword flushes and completes the stream
+    }
+}
 
+fn printIt(s) { # TODO make print a proper function which is referencable
+    print(s);
+}
 
-echo for range(3) -> fn(i){2*i};
+for range -> fn(i){2*i} -> fn(i){i+1} -> printIt;
 
-fn g() { return (for range(2) -> fn(i){2*i} -> tolist()) + 0; }
-print(g());
-
-print(for range(2) -> fn(i){2*i} -> tolist());
+#echo for range(3) -> fn(i){2*i};  # last value (6)
+#
+#fn g() { return (for range(2) -> fn(i){2*i} -> tolist()) + 0; }
+#print(g());
+#
+#print(for range(2) -> fn(i){2*i} -> tolist());

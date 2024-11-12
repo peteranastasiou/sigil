@@ -674,6 +674,11 @@ void Compiler::whileStatement_() {
  * stack: 0,f,g,h
  * :start
  * place in reverse order:
+ * get -1:  # i=0 -> -i*2-1=-1
+ * 0,f,g,h,h
+ * get -3:  # i=1 -> -i*2-1=-3
+ * 0,f,g,h,h,g
+ * get -5:  # i=2 -> -i*2-1=-5
  * stack: 0,f,g,h,h,g,f
  * call with 0 args
  * stack: 0,f,g,h,h,g,res
@@ -700,29 +705,43 @@ void Compiler::for_() {
     expressionPartial_();
     uint8_t numFuncs = 1;
     while( match_(Token::ARROW) ) {
-        numFuncs ++; // TODO check for max funcs
+        numFuncs ++;
+        if( numFuncs >= UINT8_MAX / 2 - 2 ) {
+            errorAtPrevious_("Too many functions in for-expression");
+            return;
+        }
         expressionPartial_();
     }
-
-    // Place stream functions back on stack in reverse order
-    for( int8_t i = 1; i <= numFuncs; i++ ){
-        // index as -1, -2, ..., -numFuncs
-        emitInstruction_(OpCode::GET_LOCAL, (uint8_t)-i);
-    }
+    // Stack is e.g.: 0,f,g,h
 
     // This is where we loop:
     int loopStart = getCurrentChunk_()->count();
 
+    // Place stream functions back on stack in reverse order
+    // so we can call them in the order they need to be
+    // and so the originals are preserved
+    for( int8_t i = 0; i < numFuncs; i++ ){
+        // index as -1, -3, -5, ... as we need to keep reaching past the newly placed duplicates
+        emitInstruction_(OpCode::GET_LOCAL, (uint8_t)(-i*2-1));
+    }
+    // Stack is e.g. 0,f,g,h,h,g,f
+
     // Emit a call and check result for each function in the stream
     emitInstruction_(OpCode::CALL, 0); // first one takes no args
+    // TODO LOOP IF NIL (filter)
     for( uint8_t i = 1; i < numFuncs; i++ ){
-        emitInstruction_(OpCode::CALL, 1);
+        emitInstruction_(OpCode::CALL, 1); // subsequent funcs take the previous arg
+        // TODO LOOP IF NIL (filter)
     }
+    // TODO LOOP IF NOT `end`
 
-    // set placeholder
+    // Stack is e.g. 0,f,g,h,result
+    // Set result placeholder in stack
+    emitInstruction_(OpCode::SET_LOCAL, (uint8_t)(-numFuncs-2));
 
-    // pop 4
-
+    // Pop all functions and the temporary result
+    emitInstruction_(OpCode::POP, (uint8_t)(numFuncs+1));
+    // stack is: result
 }
 
 void Compiler::synchronise_() {
