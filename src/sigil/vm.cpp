@@ -298,8 +298,6 @@ InterpretResult Vm::run_() {
     frame_ = &frames_[frameCount_ - 1];
 
 #ifdef DEBUG_TRACE_EXECUTION
-    Disassembler disasm;
-
     // internedStrings_.debug();
     // debugObjectLinkedList(objects_);
 
@@ -314,7 +312,7 @@ InterpretResult Vm::run_() {
     // globals_.debug();
     // printf("====\n");
 
-    disasm.disassembleChunk(&frame_->closure->function->chunk, "Main");
+    Disassembler::disassembleChunk(&frame_->closure->function->chunk, "Main");
     printf("====\n");
 
 #endif
@@ -329,7 +327,7 @@ InterpretResult Vm::run_() {
                if ( stackPos == frame_->slots ){
                   printf("[FP]"); // Frame Pointer
                }else{
-                stackPos->print(true);
+                  stackPos->print(true);
                }
            }
            printf("\n");
@@ -342,7 +340,7 @@ InterpretResult Vm::run_() {
            }
            printf("\n");
 
-           disasm.disassembleInstruction(&frame_->closure->function->chunk,
+           Disassembler::disassembleInstruction(&frame_->closure->function->chunk,
                frame_->chunkOffsetOf(frame_->ip));
         }
 #endif
@@ -621,7 +619,7 @@ InterpretResult Vm::run_() {
                 frame_ = &frames_[frameCount_ - 1];
 
 #ifdef DEBUG_TRACE_EXECUTION
-                disasm.disassembleChunk(
+                Disassembler::disassembleChunk(
                     &frame_->closure->function->chunk,
                     frame_->closure->function->name->get());
                 printf("====\n");

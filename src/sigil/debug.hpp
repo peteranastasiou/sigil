@@ -10,20 +10,17 @@
 
 class Disassembler {
 public:
-    Disassembler();
-    ~Disassembler();
-
-    void disassembleChunk(Chunk * chunk, char const * name);
-    int disassembleInstruction(Chunk * chunk, int offset);
+    static void disassembleChunk(Chunk * chunk, char const * name);
+    static int disassembleInstruction(Chunk * chunk, int offset);
 
 private:
-    int disassembleInstruction_(Chunk * chunk, int offset, int line);
-    int instrLiteral_(char const * name, Chunk * chunk, int offset);
-    int instrClosure_(char const * name, Chunk * chunk, int offset);
-    int instrArgUint8_(char const * name, Chunk * chunk, int offset);
-    int instrArgInt8_(char const * name, Chunk * chunk, int offset);
-    int instrSimple_(char const * name);
-    int instrJump_(const char* name, int sign, Chunk* chunk, int offset);
+    static int disassembleInstruction_(Chunk * chunk, int offset, int line);
+    static int instrLiteral_(char const * name, Chunk * chunk, int offset);
+    static int instrClosure_(char const * name, Chunk * chunk, int offset);
+    static int instrArgUint8_(char const * name, Chunk * chunk, int offset);
+    static int instrArgInt8_(char const * name, Chunk * chunk, int offset);
+    static int instrSimple_(char const * name);
+    static int instrJump_(const char* name, int sign, Chunk* chunk, int offset);
 };
 
 #ifdef DEBUG_GC

@@ -8,12 +8,6 @@
 #include "encode.hpp"
 
 
-Disassembler::Disassembler(){
-}
-
-Disassembler::~Disassembler(){
-}
-
 void Disassembler::disassembleChunk(Chunk * chunk, char const * name){
     printf("== %s ==\n", name);
 
@@ -22,7 +16,7 @@ void Disassembler::disassembleChunk(Chunk * chunk, char const * name){
     for( int offset = 0; offset < chunk->count(); ) {
         int line = chunk->getLineNumber(offset);
         if( line != lastLine ) {
-            printf("LINE %i: todo print it\n", line); // refer newCopyOfStream
+            printf("LINE %i:\n", line); // refer newCopyOfStream
         }
         lastLine = line;
         int incr = disassembleInstruction_(chunk, offset, line);
