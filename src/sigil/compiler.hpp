@@ -190,6 +190,7 @@ private:
     void emitInstruction_(OpCode instr);
     void emitInstructionArg_(uint8_t arg);
     void emitInstruction_(OpCode instr, uint8_t arg);
+    void emitInstruction_(OpCode instr, uint8_t arg1, uint8_t arg2);
     void writeToCodeChunk_(uint8_t byte);
     void emitTrue_();
     void emitFalse_();

@@ -1,0 +1,85 @@
+int jumpOverRhs = emitJumpPlaceholder_(OpCode::JUMP_IF_FALSE);
+emitInstruction_(OpCode::POP);   // 11
+parse_(Precedence::AND);  // last line is 20
+setJumpDestination_(jumpOverRhs);
+
+
+int Compiler::emitJumpForward_(OpCode instr) {
+    emitInstruction_(instr); // 8
+    // placeholder value:
+    emitInstructionArg_(0xFF); // 9
+    emitInstructionArg_(0xFF); // 10
+    // location of placeholder
+    return getCurrentChunk_()->count(); // 10
+}
+
+void Compiler::setJumpDestination_(int offset) {
+    Chunk * chunk = getCurrentChunk_();
+
+    // how far to jump:
+    int jumpLen = chunk->count() - offset; // 20 - 10 = 10
+
+    // write first and second half of the jump length to the code offset
+    chunk->getCode()[offset] = encode::packInt16a(jumpLen);
+    chunk->getCode()[offset + 1] = encode::packInt16b(jumpLen);
+}
+
+ip = 8: jump
+ip = 9: readInt16a
+ip = 10: readInt16b
+ip += offset 10
+ip = 20: last line
+
+// TODO check that is right! Removed -2 +2
+
+/**
+ * Original loop back
+ */
+
+int loopStart = getCurrentChunk_()->count();  // 10
+expressionPartial_(); // last line is 20
+// loop back up
+emitLoop(loopStart);
+
+void Compiler::emitLoop_(OpCode instr, int loopStart) {
+    emitInstruction_(instr); // 21
+    int offset = getCurrentChunk_()->count() - loopStart + 2; // 21 - 10 + 2 = 13
+
+    // Encode first and second half of the offset
+    emitInstructionArg_(encode::packInt16a(offset));
+    emitInstructionArg_(encode::packInt16b(offset));
+}
+
+ip = 10: first instr
+ip = 20: last instr
+ip = 21: loop
+ip = 22: a
+ip = 23: b
+ip -= offset 13
+ip = 10: first instr
+
+/**
+ * New signed jump back
+ */
+
+int loopStart = getCurrentChunk_()->count();  // 10
+expressionPartial_(); // last line is 20
+// loop back up
+emitJumpBack_(OpCode::Jump, loopStart);
+
+void Compiler::emitJumpBack_(OpCode instr, int loopStart) {
+    emitInstruction_(instr); // 21
+    int offset = loopStart - getCurrentChunk_()->count() - 2; // 10 - 21 - 2 = -13
+
+    // Encode first and second half of the offset
+    emitInstructionArg_(encode::packInt16a(offset));
+    emitInstructionArg_(encode::packInt16b(offset));
+}
+
+ip = 10: first instr
+ip = 20: last instr
+ip = 21: loop
+ip = 22: a
+ip = 23: b
+ip += offset (-13)
+ip = 10: first instr

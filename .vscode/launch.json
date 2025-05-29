@@ -6,7 +6,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/bin/sigil",
-            "args": [],
+            "args": ["test/scripts/for-expression.sigil"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

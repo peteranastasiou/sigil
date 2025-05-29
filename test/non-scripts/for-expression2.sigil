@@ -1,0 +1,2 @@
+# <print> is already on the stack
+print(for i in 1:3 {2*i} + "");

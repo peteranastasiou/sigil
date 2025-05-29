@@ -265,6 +265,12 @@ void Compiler::emitInstruction_(OpCode instr, uint8_t arg) {
     writeToCodeChunk_(arg);
 }
 
+void Compiler::emitInstruction_(OpCode instr, uint8_t arg1, uint8_t arg2) {
+    emitInstruction_(instr);
+    writeToCodeChunk_(arg1);
+    writeToCodeChunk_(arg2);
+}
+
 void Compiler::emitInstructionArg_(uint8_t arg) {
     writeToCodeChunk_(arg);
 }
@@ -703,35 +709,32 @@ void Compiler::for_() {
 
     // compile each stream-part, separated by '->', each result is left on the stack
     expressionPartial_();
-    uint8_t numFuncs = 1;
+    int8_t numFuncs = 1;
     while( match_(Token::ARROW) ) {
         numFuncs ++;
-        if( numFuncs >= UINT8_MAX / 2 - 2 ) {
+        if( numFuncs >= INT8_MAX - 1 ) {
             errorAtPrevious_("Too many functions in for-expression");
             return;
         }
         expressionPartial_();
     }
     // Stack is e.g.: 0,f,g,h
+    // Relative stack positions are f:-3, g:-2, h:-1
 
     // This is where we loop:
     int loopStart = getCurrentChunk_()->count();
 
-    // Place stream functions back on stack in reverse order
-    // so we can call them in the order they need to be
-    // and so the originals are preserved
-    for( int8_t i = 0; i < numFuncs; i++ ){
-        // index as -1, -3, -5, ... as we need to keep reaching past the newly placed duplicates
-        emitInstruction_(OpCode::GET_LOCAL, (uint8_t)(-i*2-1));
-    }
-    // Stack is e.g. 0,f,g,h,h,g,f
-
     // Emit a call and check result for each function in the stream
-    emitInstruction_(OpCode::CALL, 0); // first one takes no args
+    // CALL_AT takes: function_stack_pos, n_args
+    emitInstruction_(OpCode::CALL_AT, (uint8_t)(-numFuncs), 0); // no args for first function
     // TODO LOOP IF NIL (filter)
-    for( uint8_t i = 1; i < numFuncs; i++ ){
-        emitInstruction_(OpCode::CALL, 1); // subsequent funcs take the previous arg
+
+    // Stack is e.g.: 0,f,g,h,result
+    // Relative stack positions are f:-4, g:-3, h:-2
+    for( int i = -numFuncs; i < -1; i++ ){
+        emitInstruction_(OpCode::CALL_AT, (uint8_t)i, 1); // subsequent funcs take the previous arg
         // TODO LOOP IF NIL (filter)
+        printf("call at %i\n", i);
     }
     // TODO LOOP IF NOT `end`
 

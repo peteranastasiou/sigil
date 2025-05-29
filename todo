@@ -21,6 +21,7 @@
             don't allow declaring vars mid expression.
             make function syntax even shorter with: $ args {body}
 
+UNTESTED:
  [x]- encode uint16, int16, use for signed jump
  [x]- get_local instruction takes negative values from end of stack
  []- for stream

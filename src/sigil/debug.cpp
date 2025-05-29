@@ -83,6 +83,7 @@ int Disassembler::disassembleInstruction_(Chunk * chunk, int offset, int line){
         case OpCode::JUMP_IF_FALSE_POP: return instrJump_("JUMP_IF_FALSE_POP", 1, chunk, offset);
         case OpCode::JUMP_IF_ZERO:  return instrJump_("JUMP_IF_ZERO", 1, chunk, offset);
         case OpCode::CALL:          return instrArgUint8_("CALL", chunk, offset);
+        case OpCode::CALL_AT:       return instrArgUint8_("CALL_AT", chunk, offset);
         case OpCode::RETURN:        return instrSimple_("RETURN");
         default:
             printf("Unknown opcode %i\n", (int)instr);

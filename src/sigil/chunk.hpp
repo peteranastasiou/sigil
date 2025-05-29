@@ -64,7 +64,8 @@ enum class OpCode {
     JUMP_IF_TRUE_POP,   // Same as JUMP_IF_FALSE, but also pops the value
     JUMP_IF_FALSE_POP,  // Same as JUMP_IF_TRUE, but also pops the value
     JUMP_IF_ZERO,       // If top of stack is zero, jump by bytecode offset
-    CALL,               // call function
+    CALL,               // call function, pops a closure from top of stack
+    CALL_AT,            // call function, references a closure at stack position
     RETURN,
 };
 
